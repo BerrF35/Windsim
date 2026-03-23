@@ -1,0 +1,849 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>WindSim — Aerodynamic Simulation Lab</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+:root {
+  --bg:      #06090f;
+  --surf:    #0b1018;
+  --surf2:   #0f1520;
+  --bdr:     #1a2535;
+  --bdr2:    #243040;
+  --cyan:    #00d4ff;
+  --green:   #10d9a0;
+  --amber:   #f59e0b;
+  --red:     #ef4444;
+  --violet:  #a78bfa;
+  --txt:     #c8d8e8;
+  --txt2:    #6888aa;
+  --txt3:    #3a5070;
+}
+
+html, body { height: 100%; overflow: hidden; }
+
+body {
+  font-family: 'Rajdhani', sans-serif;
+  background: var(--bg);
+  color: var(--txt);
+  display: flex;
+}
+
+::-webkit-scrollbar { width: 4px; }
+::-webkit-scrollbar-track { background: var(--bg); }
+::-webkit-scrollbar-thumb { background: var(--bdr2); border-radius: 2px; }
+
+/* ── Sidebar ───────────────────────────────────────────── */
+#sidebar {
+  width: 272px; min-width: 272px;
+  background: var(--surf);
+  border-right: 1px solid var(--bdr);
+  display: flex; flex-direction: column;
+  overflow-y: auto; overflow-x: hidden;
+}
+
+.sb-logo { padding: 16px 18px 14px; border-bottom: 1px solid var(--bdr); }
+.logo-txt {
+  font-size: 22px; font-weight: 700;
+  letter-spacing: 5px; line-height: 1;
+}
+.lw { color: var(--cyan); }
+.ls { color: var(--txt2); }
+.logo-sub {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 8px; letter-spacing: 2px;
+  color: var(--txt3); margin-top: 5px;
+  text-transform: uppercase;
+}
+
+.sec {
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--bdr);
+}
+.sec-hd {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 8.5px; letter-spacing: 2.5px;
+  color: var(--txt3); text-transform: uppercase;
+  margin-bottom: 10px;
+  display: flex; align-items: center; gap: 7px;
+}
+.sec-hd::after { content: ''; flex: 1; height: 1px; background: var(--bdr); }
+
+/* Sliders */
+.ctl { margin-bottom: 10px; }
+.ctl:last-child { margin-bottom: 0; }
+.ctl-row { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 5px; }
+.ctl-lbl { font-size: 11px; color: var(--txt2); font-weight: 600; letter-spacing: .5px; }
+.ctl-val {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px; color: var(--cyan); font-weight: 600;
+}
+
+input[type=range] {
+  width: 100%; height: 3px;
+  appearance: none; -webkit-appearance: none;
+  background: var(--bdr2); border-radius: 2px;
+  outline: none; cursor: pointer;
+}
+input[type=range]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 13px; height: 13px; border-radius: 50%;
+  background: var(--cyan); cursor: pointer;
+  box-shadow: 0 0 8px var(--cyan);
+}
+.sub-lbl {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 8.5px; color: var(--txt3);
+  margin-top: 3px; letter-spacing: .5px;
+}
+
+/* Object grid */
+.obj-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 5px; }
+.obj-btn {
+  background: var(--surf2);
+  border: 1px solid var(--bdr);
+  border-radius: 6px;
+  padding: 7px 5px 5px;
+  cursor: pointer; text-align: center;
+  font-family: 'Rajdhani', sans-serif;
+  color: var(--txt2); font-size: 10px;
+  font-weight: 600; letter-spacing: .5px;
+  transition: border-color .14s, color .14s;
+  line-height: 1.3;
+}
+.obj-btn .ic { font-size: 18px; display: block; margin-bottom: 2px; line-height: 1.1; }
+.obj-btn:hover { border-color: var(--bdr2); color: var(--txt); }
+.obj-btn.sel {
+  background: rgba(0,212,255,.06);
+  border-color: var(--cyan);
+  color: var(--cyan);
+}
+
+#obj-info {
+  background: var(--surf2); border: 1px solid var(--bdr);
+  border-radius: 5px; padding: 7px 10px;
+  margin-top: 7px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 9px;
+  display: grid; grid-template-columns: 1fr 1fr 1fr;
+  gap: 3px 0;
+}
+.oi-l { color: var(--txt3); }
+.oi-v { color: var(--txt2); font-weight: 600; }
+
+/* Toggles */
+.tgl-row {
+  display: flex; justify-content: space-between;
+  align-items: center; margin-bottom: 8px;
+  font-size: 11px; color: var(--txt2); font-weight: 500;
+}
+.tgl-row:last-child { margin-bottom: 0; }
+.tgl {
+  width: 34px; height: 16px;
+  background: var(--bdr2); border-radius: 8px;
+  position: relative; cursor: pointer;
+  transition: background .18s; flex-shrink: 0;
+}
+.tgl::after {
+  content: ''; position: absolute;
+  width: 12px; height: 12px; border-radius: 50%;
+  background: var(--txt3); top: 2px; left: 2px;
+  transition: left .18s, background .18s;
+}
+.tgl.on { background: rgba(0,212,255,.2); }
+.tgl.on::after { left: 20px; background: var(--cyan); box-shadow: 0 0 5px var(--cyan); }
+
+/* Buttons */
+.btn {
+  display: block; width: 100%;
+  padding: 8px 12px; border-radius: 5px; border: none;
+  font-family: 'Rajdhani', sans-serif;
+  font-size: 12px; font-weight: 700; letter-spacing: 1px;
+  cursor: pointer; transition: all .14s;
+  margin-bottom: 5px; text-transform: uppercase;
+}
+.btn:last-child { margin-bottom: 0; }
+.btn-c { background: rgba(0,212,255,.1); color: var(--cyan); border: 1px solid rgba(0,212,255,.25); }
+.btn-c:hover { background: rgba(0,212,255,.18); }
+.btn-r { background: rgba(239,68,68,.1); color: var(--red); border: 1px solid rgba(239,68,68,.25); }
+.btn-r:hover { background: rgba(239,68,68,.18); }
+.btn-g { background: rgba(16,217,160,.1); color: var(--green); border: 1px solid rgba(16,217,160,.25); }
+.btn-g:hover { background: rgba(16,217,160,.18); }
+.btn-d { background: var(--surf2); color: var(--txt2); border: 1px solid var(--bdr); }
+.btn-d:hover { border-color: var(--bdr2); }
+
+#tcount {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 8.5px; color: var(--txt3);
+  text-align: center; margin-top: 5px; letter-spacing: .5px;
+}
+.kbd { font-family: 'JetBrains Mono', monospace; font-size: 8px; color: var(--txt3); text-align: center; margin-top: 6px; letter-spacing: .5px; }
+
+/* ── Main ──────────────────────────────────────────────── */
+#main { flex: 1; position: relative; overflow: hidden; }
+canvas { display: block; position: absolute; inset: 0; }
+
+#status-pill {
+  position: absolute; top: 12px; right: 12px;
+  background: rgba(11,16,24,.92);
+  border: 1px solid var(--bdr); border-radius: 20px;
+  padding: 4px 12px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 9px; letter-spacing: 2px;
+  backdrop-filter: blur(4px);
+  pointer-events: none;
+}
+.sr { color: var(--green); }
+.sp { color: var(--amber); }
+
+/* HUD */
+#hud {
+  position: absolute; bottom: 0; left: 0; right: 0;
+  background: rgba(6,9,15,.92);
+  border-top: 1px solid var(--bdr);
+  display: flex; backdrop-filter: blur(4px);
+}
+.hi { flex: 1; padding: 6px 10px; border-right: 1px solid var(--bdr); }
+.hi:last-child { border-right: none; }
+.hl {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 7.5px; letter-spacing: 1.5px;
+  color: var(--txt3); text-transform: uppercase;
+  margin-bottom: 2px;
+}
+.hv {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px; font-weight: 600; color: var(--cyan);
+}
+</style>
+</head>
+<body>
+
+<!-- ═══ SIDEBAR ═══════════════════════════════════════════ -->
+<div id="sidebar">
+
+  <div class="sb-logo">
+    <div class="logo-txt"><span class="lw">WIND</span><span class="ls">SIM</span></div>
+    <div class="logo-sub">Aerodynamic Simulation Lab · v1.0</div>
+  </div>
+
+  <!-- Wind Controls -->
+  <div class="sec">
+    <div class="sec-hd">Wind</div>
+    <div class="ctl">
+      <div class="ctl-row"><span class="ctl-lbl">Speed</span><span class="ctl-val" id="vSpeed">20.0 m/s</span></div>
+      <input type="range" id="sSpeed" min="0" max="60" value="20" step="0.5">
+      <div class="sub-lbl" id="beaufort">Gale</div>
+    </div>
+    <div class="ctl">
+      <div class="ctl-row"><span class="ctl-lbl">Direction</span><span class="ctl-val" id="vDir">0°</span></div>
+      <input type="range" id="sDir" min="-75" max="75" value="0">
+      <div class="sub-lbl" id="dirLbl">→ Horizontal</div>
+    </div>
+    <div class="ctl">
+      <div class="ctl-row"><span class="ctl-lbl">Turbulence</span><span class="ctl-val" id="vTurb">20%</span></div>
+      <input type="range" id="sTurb" min="0" max="100" value="20">
+    </div>
+  </div>
+
+  <!-- Object -->
+  <div class="sec">
+    <div class="sec-hd">Object</div>
+    <div class="obj-grid" id="objGrid"></div>
+    <div id="obj-info">
+      <span class="oi-l">MASS</span><span class="oi-l">Cd</span><span class="oi-l">AREA</span>
+      <span class="oi-v" id="iMass">—</span><span class="oi-v" id="iCd">—</span><span class="oi-v" id="iArea">—</span>
+    </div>
+  </div>
+
+  <!-- Environment -->
+  <div class="sec">
+    <div class="sec-hd">Environment</div>
+    <div class="tgl-row">Gravity (9.81 m/s²)<div class="tgl on" id="tGrav" onclick="toggleEnv('grav')"></div></div>
+    <div class="tgl-row">Wind Particles      <div class="tgl on" id="tPart" onclick="toggleEnv('part')"></div></div>
+    <div class="tgl-row">Object Trail        <div class="tgl on" id="tTrail" onclick="toggleEnv('trail')"></div></div>
+    <div class="tgl-row">Floor Bounce        <div class="tgl on" id="tBounce" onclick="toggleEnv('bounce')"></div></div>
+    <div class="tgl-row">Force Vectors       <div class="tgl on" id="tForce" onclick="toggleEnv('force')"></div></div>
+  </div>
+
+  <!-- Simulation -->
+  <div class="sec">
+    <div class="sec-hd">Simulation</div>
+    <button class="btn btn-c" id="pauseBtn" onclick="togglePause()">⏸  Pause</button>
+    <button class="btn btn-r" onclick="resetObj()">↺  Reset Object</button>
+    <div class="kbd">Space = pause · R = reset</div>
+  </div>
+
+  <!-- Telemetry -->
+  <div class="sec" style="flex:1; min-height:110px;">
+    <div class="sec-hd">Telemetry</div>
+    <button class="btn btn-g" onclick="downloadCSV()">⬇  Export CSV</button>
+    <button class="btn btn-d" onclick="clearTelemetry()">✕  Clear Data</button>
+    <div id="tcount">0 data points recorded</div>
+  </div>
+
+</div>
+
+<!-- ═══ CANVAS ════════════════════════════════════════════ -->
+<div id="main">
+  <canvas id="c"></canvas>
+  <div id="status-pill"><span id="sTxt" class="sr">● RUNNING</span></div>
+  <div id="hud">
+    <div class="hi"><div class="hl">OBJ Speed</div><div class="hv" id="hSpd">0.00 m/s</div></div>
+    <div class="hi"><div class="hl">Drag Force</div><div class="hv" id="hDrag">0.0000 N</div></div>
+    <div class="hi"><div class="hl">Net Force</div><div class="hv" id="hNet">0.0000 N</div></div>
+    <div class="hi"><div class="hl">Accel.</div><div class="hv" id="hAcc">0.00 m/s²</div></div>
+    <div class="hi"><div class="hl">Height</div><div class="hv" id="hH">0.00 m</div></div>
+    <div class="hi"><div class="hl">X Pos</div><div class="hv" id="hX">0.00 m</div></div>
+    <div class="hi"><div class="hl">Sim Time</div><div class="hv" id="hT">0.00 s</div></div>
+    <div class="hi"><div class="hl">Wind (eff)</div><div class="hv" id="hW">20.0 m/s</div></div>
+  </div>
+</div>
+
+<script>
+'use strict';
+
+// ═══════════════════════════════════════════════════════════════════
+// WINDSIM  — Physics engine (all in SI units)
+// Real physics: F_drag = ½ρCdAv²  |  F_gravity = mg
+// Display:  pixel = meter / SCALE
+// ═══════════════════════════════════════════════════════════════════
+
+const canvas = document.getElementById('c');
+const ctx    = canvas.getContext('2d');
+
+const SCALE      = 0.03;   // 1 px = 0.03 m  (canvas ~30 m wide at 1000px)
+const RHO        = 1.225;  // air density  kg/m³
+const GRAV       = 9.81;   // gravity      m/s²
+const GROUND_OFF = 55;     // px from bottom
+const N_PART     = 130;    // particle count
+const TELEM_RATE = 20;     // Hz
+
+// ── Object database ────────────────────────────────────────────────
+const OBJ_DEFS = {
+  leaf:     { label:'Leaf',        icon:'🍂', mass:0.003,  Cd:1.80, area:0.003,   r:13, col:'#fb923c' },
+  feather:  { label:'Feather',     icon:'🪶', mass:0.001,  Cd:2.00, area:0.002,   r:15, col:'#e2e8f0' },
+  tennis:   { label:'Tennis Ball', icon:'🎾', mass:0.058,  Cd:0.47, area:0.00346, r:11, col:'#bef264' },
+  paper:    { label:'Paper Ball',  icon:'📄', mass:0.005,  Cd:1.20, area:0.004,   r:11, col:'#93c5fd' },
+  umbrella: { label:'Umbrella',    icon:'☂️', mass:0.500,  Cd:1.80, area:0.280,   r:26, col:'#a78bfa' },
+  soccer:   { label:'Soccer Ball', icon:'⚽', mass:0.430,  Cd:0.25, area:0.038,   r:14, col:'#f1f5f9' },
+};
+
+// ── State ──────────────────────────────────────────────────────────
+let wind   = { speed: 20, dir: 0, turb: 20 };
+let env    = { grav: true, part: true, trail: true, bounce: true, force: true };
+let selObj = 'leaf';
+let paused = false;
+let simTime = 0;
+
+let obj        = {};          // physics body
+let trail      = [];          // trail points [{x,y} in pixels]
+let particles  = [];
+let telemetry  = [];
+let lastTelems = -1;
+let fw = { wx: 20, wy: 0 };  // frame wind (cached per tick)
+
+// ── Helpers ────────────────────────────────────────────────────────
+function beaufort(s) {
+  const B = ['Calm','Light Air','Light Breeze','Gentle Breeze','Moderate Breeze',
+             'Fresh Breeze','Strong Breeze','Near Gale','Gale','Strong Gale','Storm','Violent Storm','Hurricane'];
+  const T = [0.3,1.6,3.4,5.5,8,10.8,13.9,17.2,20.8,24.5,28.5,32.7];
+  for (let i = 0; i < T.length; i++) if (s < T[i]) return B[i];
+  return B[12];
+}
+
+function dirLabel(d) {
+  if (d === 0)  return '→  Horizontal';
+  return d > 0  ? `↘  ${d}° downward` : `↗  ${Math.abs(d)}° upward`;
+}
+
+// ── Canvas resize ──────────────────────────────────────────────────
+function resize() {
+  const m = document.getElementById('main');
+  canvas.width  = m.offsetWidth;
+  canvas.height = m.offsetHeight;
+}
+window.addEventListener('resize', () => { resize(); resetObj(); initParticles(); });
+
+// ── Object init ────────────────────────────────────────────────────
+function resetObj() {
+  obj = {
+    x:  canvas.width  * 0.15 * SCALE,   // meters
+    y:  canvas.height * 0.35 * SCALE,
+    vx: 0, vy: 0,
+    ax: 0, ay: 0,
+    Fd: 0, netF: 0,
+  };
+  trail = [];
+}
+
+// ── Particles ──────────────────────────────────────────────────────
+function initParticles() {
+  particles = [];
+  for (let i = 0; i < N_PART; i++) spawnParticle(true);
+}
+
+function spawnParticle(init) {
+  const rad  = wind.dir * Math.PI / 180;
+  const cos  = Math.cos(rad);
+  const sin  = Math.sin(rad);
+  const vspd = wind.speed * 7 + 8;   // visual px/s
+
+  let px, py;
+  if (init) {
+    px = Math.random() * canvas.width;
+    py = Math.random() * canvas.height;
+  } else {
+    // Spawn from the upwind edge
+    if (Math.abs(cos) >= Math.abs(sin)) {
+      px = cos > 0 ? -8 : canvas.width  + 8;
+      py = Math.random() * canvas.height;
+    } else {
+      px = Math.random() * canvas.width;
+      py = sin > 0 ? -8 : canvas.height + 8;
+    }
+  }
+
+  particles.push({
+    x: px, y: py,
+    vx: cos * vspd * (0.6 + Math.random() * 0.8),
+    vy: sin * vspd * (0.6 + Math.random() * 0.8),
+    life: init ? Math.random() : 0,
+    maxL: 2 + Math.random() * 2,
+    sz: 0.7 + Math.random() * 1.6,
+    nx: 0, ny: 0,   // turbulence drift
+  });
+}
+
+function updateParticles(dt) {
+  const tAmt = (wind.turb / 100) * wind.speed * 4;
+  for (let i = particles.length - 1; i >= 0; i--) {
+    const p = particles[i];
+    p.nx += (Math.random() - 0.5) * 0.4;  p.nx *= 0.9;
+    p.ny += (Math.random() - 0.5) * 0.4;  p.ny *= 0.9;
+    p.x  += (p.vx + p.nx * tAmt) * dt;
+    p.y  += (p.vy + p.ny * tAmt) * dt;
+    p.life += dt / p.maxL;
+    if (p.life >= 1 || p.x < -40 || p.x > canvas.width+40 || p.y < -40 || p.y > canvas.height+40) {
+      particles.splice(i, 1);
+      spawnParticle(false);
+    }
+  }
+}
+
+// ── Frame wind (with turbulence noise) ────────────────────────────
+function computeFrameWind() {
+  const rad = wind.dir * Math.PI / 180;
+  const n   = (Math.random() - 0.5) * (wind.turb / 100) * 0.38;
+  const eff = wind.speed * (1 + n);
+  fw.wx = Math.cos(rad) * eff;
+  fw.wy = Math.sin(rad) * eff;
+}
+
+// ── Physics update ─────────────────────────────────────────────────
+function updateObject(dt) {
+  const def = OBJ_DEFS[selObj];
+
+  // Relative wind velocity (air frame minus object frame)
+  const rvx = fw.wx - obj.vx;
+  const rvy = fw.wy - obj.vy;
+  const rv  = Math.sqrt(rvx * rvx + rvy * rvy);
+
+  // Aerodynamic drag:  F = ½ ρ Cd A v_rel²
+  const Fd = 0.5 * RHO * def.Cd * def.area * rv * rv;
+  obj.Fd   = Fd;
+
+  // Drag acceleration (direction of relative wind)
+  let ax = 0, ay = 0;
+  if (rv > 1e-9) {
+    const am = Fd / def.mass;
+    ax = am * rvx / rv;
+    ay = am * rvy / rv;
+  }
+
+  // Gravity (downward = positive y on canvas)
+  if (env.grav) ay += GRAV;
+
+  obj.ax   = ax;
+  obj.ay   = ay;
+  obj.netF = def.mass * Math.sqrt(ax * ax + ay * ay);
+
+  // Semi-implicit Euler integration
+  obj.vx += ax * dt;
+  obj.vy += ay * dt;
+  obj.x  += obj.vx * dt;
+  obj.y  += obj.vy * dt;
+
+  // Ground collision
+  const groundM = (canvas.height - GROUND_OFF) * SCALE;
+  const rM      = def.r * SCALE;
+  if (obj.y + rM >= groundM) {
+    obj.y = groundM - rM;
+    if (env.bounce) { obj.vy *= -0.45; obj.vx *= 0.78; }
+    else            { obj.vy  =  0;    obj.vx *= 0.82; }
+  }
+
+  // Ceiling
+  if (obj.y < rM) { obj.y = rM; obj.vy = Math.abs(obj.vy) * 0.3; }
+
+  // Horizontal wrap
+  const maxXm = canvas.width * SCALE;
+  if (obj.x >  maxXm + 0.5) obj.x = -0.5;
+  if (obj.x < -0.5)         obj.x  = maxXm + 0.5;
+
+  // Record trail
+  if (env.trail) {
+    trail.push({ x: obj.x / SCALE, y: obj.y / SCALE });
+    if (trail.length > 400) trail.shift();
+  }
+}
+
+// ── Drawing ────────────────────────────────────────────────────────
+function drawBackground() {
+  ctx.fillStyle = '#06090f';
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+  // Grid
+  ctx.strokeStyle = 'rgba(26,37,53,.38)';
+  ctx.lineWidth   = 1;
+  for (let x = 55; x < canvas.width;  x += 55) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, canvas.height); ctx.stroke(); }
+  for (let y = 55; y < canvas.height; y += 55) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(canvas.width, y);   ctx.stroke(); }
+
+  // Ground strip
+  const gy = canvas.height - GROUND_OFF;
+  const gg = ctx.createLinearGradient(0, gy, 0, canvas.height);
+  gg.addColorStop(0, 'rgba(0,212,255,.04)');
+  gg.addColorStop(1, 'rgba(0,212,255,.09)');
+  ctx.fillStyle = gg;
+  ctx.fillRect(0, gy, canvas.width, GROUND_OFF);
+
+  ctx.strokeStyle = 'rgba(0,212,255,.22)';
+  ctx.lineWidth   = 1;
+  ctx.setLineDash([6, 5]);
+  ctx.beginPath(); ctx.moveTo(0, gy); ctx.lineTo(canvas.width, gy); ctx.stroke();
+  ctx.setLineDash([]);
+
+  ctx.fillStyle = 'rgba(0,212,255,.2)';
+  ctx.font      = '9px JetBrains Mono, monospace';
+  ctx.fillText('GROUND  y = 0', 12, gy + 18);
+
+  // 10m scale bar
+  const tenPx = 10 / SCALE;
+  const bx    = canvas.width - tenPx - 20;
+  const by    = gy - 20;
+  ctx.strokeStyle = 'rgba(0,212,255,.28)';
+  ctx.lineWidth   = 1.5;
+  ctx.beginPath(); ctx.moveTo(bx, by); ctx.lineTo(bx + tenPx, by); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(bx, by-4); ctx.lineTo(bx, by+4); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(bx+tenPx, by-4); ctx.lineTo(bx+tenPx, by+4); ctx.stroke();
+  ctx.fillStyle   = 'rgba(0,212,255,.3)';
+  ctx.textAlign   = 'center';
+  ctx.fillText('10 m', bx + tenPx / 2, by - 7);
+  ctx.textAlign   = 'left';
+}
+
+function drawParticles() {
+  const rad = wind.dir * Math.PI / 180;
+  const sf  = Math.min(wind.speed / 22, 1);
+  for (const p of particles) {
+    const a = Math.sin(p.life * Math.PI) * 0.55;
+    if (a < 0.01) continue;
+    // Streak
+    const sl = p.sz * 4.5 * sf;
+    if (sl > 0.8) {
+      ctx.strokeStyle = `rgba(0,212,255,${a * 0.42})`;
+      ctx.lineWidth   = p.sz * 0.55;
+      ctx.beginPath();
+      ctx.moveTo(p.x, p.y);
+      ctx.lineTo(p.x - Math.cos(rad) * sl, p.y - Math.sin(rad) * sl);
+      ctx.stroke();
+    }
+    // Dot
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, p.sz, 0, Math.PI * 2);
+    ctx.fillStyle = `rgba(0,212,255,${a})`;
+    ctx.fill();
+  }
+}
+
+function drawTrail() {
+  if (!env.trail || trail.length < 2) return;
+  const col = OBJ_DEFS[selObj].col;
+  for (let i = 1; i < trail.length; i++) {
+    const t  = i / trail.length;
+    const ah = Math.floor(t * 0.55 * 255).toString(16).padStart(2, '0');
+    ctx.strokeStyle = col + ah;
+    ctx.lineWidth   = 1 + t * 2.8;
+    ctx.beginPath();
+    ctx.moveTo(trail[i-1].x, trail[i-1].y);
+    ctx.lineTo(trail[i].x,   trail[i].y);
+    ctx.stroke();
+  }
+}
+
+function drawObject() {
+  const def = OBJ_DEFS[selObj];
+  const px  = obj.x / SCALE;
+  const py  = obj.y / SCALE;
+  const r   = def.r;
+
+  // Glow
+  const grd = ctx.createRadialGradient(px, py, 0, px, py, r * 3.5);
+  grd.addColorStop(0,   def.col + '30');
+  grd.addColorStop(0.5, def.col + '10');
+  grd.addColorStop(1,   'transparent');
+  ctx.fillStyle = grd;
+  ctx.beginPath(); ctx.arc(px, py, r * 3.5, 0, Math.PI * 2); ctx.fill();
+
+  // Halo ring
+  ctx.beginPath(); ctx.arc(px, py, r + 2.5, 0, Math.PI * 2);
+  ctx.strokeStyle = def.col + '55'; ctx.lineWidth = 1.5; ctx.stroke();
+
+  // Body
+  ctx.beginPath(); ctx.arc(px, py, r, 0, Math.PI * 2);
+  ctx.fillStyle = def.col + 'cc'; ctx.fill();
+
+  // Icon
+  ctx.textAlign    = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.font         = `${Math.round(r * 1.4)}px serif`;
+  ctx.fillText(def.icon, px, py + 1);
+  ctx.textAlign    = 'left';
+  ctx.textBaseline = 'alphabetic';
+}
+
+function drawArrow(x1, y1, x2, y2, color, label) {
+  const dx  = x2 - x1, dy = y2 - y1;
+  if (Math.sqrt(dx*dx + dy*dy) < 3) return;
+  const ang = Math.atan2(dy, dx);
+
+  ctx.strokeStyle = color; ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke();
+
+  const h = 9;
+  ctx.fillStyle = color;
+  ctx.beginPath();
+  ctx.moveTo(x2, y2);
+  ctx.lineTo(x2 - h * Math.cos(ang - 0.42), y2 - h * Math.sin(ang - 0.42));
+  ctx.lineTo(x2 - h * Math.cos(ang + 0.42), y2 - h * Math.sin(ang + 0.42));
+  ctx.closePath(); ctx.fill();
+
+  ctx.font = '9px JetBrains Mono, monospace';
+  // Offset label perpendicular to arrow
+  ctx.fillText(label,
+    x2 + Math.cos(ang + Math.PI / 2) * 11,
+    y2 + Math.sin(ang + Math.PI / 2) * 11);
+}
+
+function drawForceVectors() {
+  if (!env.force) return;
+  const def = OBJ_DEFS[selObj];
+  const px  = obj.x / SCALE;
+  const py  = obj.y / SCALE;
+
+  // Drag  (direction of relative wind)
+  const rvx = fw.wx - obj.vx, rvy = fw.wy - obj.vy;
+  const rv  = Math.sqrt(rvx * rvx + rvy * rvy);
+  if (rv > 0.01 && obj.Fd > 0.0001) {
+    const sc = Math.min((obj.Fd / def.mass) * 1.8, 72);
+    drawArrow(px, py,
+      px + (rvx / rv) * sc, py + (rvy / rv) * sc,
+      'rgba(0,212,255,.85)', 'F_drag');
+  }
+
+  // Gravity
+  if (env.grav) {
+    drawArrow(px, py, px, py + Math.min(GRAV * 2.8, 65),
+      'rgba(248,113,113,.85)', 'F_g');
+  }
+
+  // Velocity
+  const spd = Math.sqrt(obj.vx * obj.vx + obj.vy * obj.vy);
+  if (spd > 0.05) {
+    const sc  = Math.min(spd * 2.8, 68);
+    const ang = Math.atan2(obj.vy, obj.vx);
+    drawArrow(px, py,
+      px + Math.cos(ang) * sc, py + Math.sin(ang) * sc,
+      'rgba(16,217,160,.85)', 'v');
+  }
+}
+
+// ── HUD update ────────────────────────────────────────────────────
+function updateHUD() {
+  const spd    = Math.sqrt(obj.vx * obj.vx + obj.vy * obj.vy);
+  const acc    = Math.sqrt(obj.ax * obj.ax + obj.ay * obj.ay);
+  const effSpd = Math.sqrt(fw.wx * fw.wx + fw.wy * fw.wy);
+  const height = Math.max(0, (canvas.height - GROUND_OFF) * SCALE - obj.y);
+
+  document.getElementById('hSpd') .textContent = spd.toFixed(2)    + ' m/s';
+  document.getElementById('hDrag').textContent = obj.Fd.toFixed(4) + ' N';
+  document.getElementById('hNet') .textContent = (obj.netF||0).toFixed(4) + ' N';
+  document.getElementById('hAcc') .textContent = acc.toFixed(2)    + ' m/s²';
+  document.getElementById('hH')   .textContent = height.toFixed(2) + ' m';
+  document.getElementById('hX')   .textContent = obj.x.toFixed(2)  + ' m';
+  document.getElementById('hT')   .textContent = simTime.toFixed(2)+ ' s';
+  document.getElementById('hW')   .textContent = effSpd.toFixed(1) + ' m/s';
+}
+
+// ── Telemetry ─────────────────────────────────────────────────────
+function recordTelemetry() {
+  if (simTime - lastTelems < 1 / TELEM_RATE) return;
+  lastTelems = simTime;
+
+  const def    = OBJ_DEFS[selObj];
+  const spd    = Math.sqrt(obj.vx * obj.vx + obj.vy * obj.vy);
+  const acc    = Math.sqrt(obj.ax * obj.ax + obj.ay * obj.ay);
+  const height = Math.max(0, (canvas.height - GROUND_OFF) * SCALE - obj.y);
+
+  telemetry.push({
+    time_s:           +simTime.toFixed(3),
+    object:           def.label,
+    x_m:              +obj.x.toFixed(4),
+    height_m:         +height.toFixed(4),
+    velocity_x_ms:    +obj.vx.toFixed(4),
+    velocity_y_ms:    +obj.vy.toFixed(4),
+    speed_ms:         +spd.toFixed(4),
+    drag_force_N:     +obj.Fd.toFixed(6),
+    net_force_N:      +(obj.netF||0).toFixed(6),
+    acceleration_ms2: +acc.toFixed(4),
+    wind_speed_ms:    wind.speed,
+    wind_dir_deg:     wind.dir,
+    turbulence_pct:   wind.turb,
+    eff_wind_ms:      +(Math.sqrt(fw.wx*fw.wx+fw.wy*fw.wy)).toFixed(3),
+  });
+
+  if (telemetry.length > 12000) telemetry.shift();
+  document.getElementById('tcount').textContent =
+    telemetry.length.toLocaleString() + ' data points recorded';
+}
+
+function downloadCSV() {
+  if (!telemetry.length) { alert('Run the simulation first to record data.'); return; }
+  const hdr  = Object.keys(telemetry[0]).join(',');
+  const rows = telemetry.map(r => Object.values(r).join(','));
+  const csv  = '# WindSim Telemetry Export\n# ' + new Date().toISOString() + '\n# Units: SI (m, m/s, N, m/s², degrees)\n'
+               + hdr + '\n' + rows.join('\n');
+  const blob = new Blob([csv], { type: 'text/csv' });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href     = url;
+  a.download = `windsim_${selObj}_${Date.now()}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+function clearTelemetry() {
+  telemetry = []; lastTelems = -1;
+  document.getElementById('tcount').textContent = '0 data points recorded';
+}
+
+// ── Controls ──────────────────────────────────────────────────────
+function togglePause() {
+  paused = !paused;
+  document.getElementById('pauseBtn').textContent = paused ? '▶  Resume' : '⏸  Pause';
+  const el = document.getElementById('sTxt');
+  el.textContent = paused ? '● PAUSED' : '● RUNNING';
+  el.className   = paused ? 'sp' : 'sr';
+}
+
+function toggleEnv(key) {
+  env[key] = !env[key];
+  const id = 't' + key[0].toUpperCase() + key.slice(1);
+  document.getElementById(id).classList.toggle('on', env[key]);
+  if (key === 'trail' && !env.trail) trail = [];
+}
+
+function updateObjInfo() {
+  const d = OBJ_DEFS[selObj];
+  document.getElementById('iMass').textContent =
+    d.mass >= 0.1 ? d.mass.toFixed(3)+' kg' : (d.mass*1000).toFixed(0)+' g';
+  document.getElementById('iCd').textContent   = d.Cd.toFixed(2);
+  document.getElementById('iArea').textContent =
+    d.area >= 0.01 ? (d.area*10000).toFixed(0)+' cm²' : (d.area*10000).toFixed(1)+' cm²';
+}
+
+// ── Slider bindings ───────────────────────────────────────────────
+document.getElementById('sSpeed').addEventListener('input', function() {
+  wind.speed = parseFloat(this.value);
+  document.getElementById('vSpeed').textContent   = wind.speed.toFixed(1)+' m/s';
+  document.getElementById('beaufort').textContent = beaufort(wind.speed);
+  initParticles();
+});
+
+document.getElementById('sDir').addEventListener('input', function() {
+  wind.dir = parseFloat(this.value);
+  document.getElementById('vDir').textContent  = wind.dir+'°';
+  document.getElementById('dirLbl').textContent = dirLabel(wind.dir);
+  initParticles();
+});
+
+document.getElementById('sTurb').addEventListener('input', function() {
+  wind.turb = parseInt(this.value);
+  document.getElementById('vTurb').textContent = wind.turb+'%';
+});
+
+// ── Object buttons ────────────────────────────────────────────────
+const grid = document.getElementById('objGrid');
+Object.entries(OBJ_DEFS).forEach(([key, def]) => {
+  const btn = document.createElement('button');
+  btn.className = 'obj-btn' + (key === selObj ? ' sel' : '');
+  btn.innerHTML = `<span class="ic">${def.icon}</span>${def.label}`;
+  btn.addEventListener('click', () => {
+    selObj = key;
+    document.querySelectorAll('.obj-btn').forEach(b => b.classList.remove('sel'));
+    btn.classList.add('sel');
+    updateObjInfo();
+    resetObj();
+  });
+  grid.appendChild(btn);
+});
+
+// ── Keyboard shortcuts ────────────────────────────────────────────
+document.addEventListener('keydown', e => {
+  if (e.target.tagName === 'INPUT') return;
+  if (e.code === 'Space') { e.preventDefault(); togglePause(); }
+  if (e.code === 'KeyR')  resetObj();
+});
+
+// ── Main loop ─────────────────────────────────────────────────────
+let lastTS = 0;
+function loop(ts) {
+  const dt = Math.min((ts - lastTS) / 1000, 0.033);
+  lastTS = ts;
+
+  drawBackground();
+
+  if (!paused && dt > 0) {
+    simTime += dt;
+    computeFrameWind();
+    updateParticles(dt);
+    updateObject(dt);
+    recordTelemetry();
+  }
+
+  if (env.part) drawParticles();
+  drawTrail();
+  drawObject();
+  drawForceVectors();
+  updateHUD();
+
+  requestAnimationFrame(loop);
+}
+
+// ── Bootstrap ─────────────────────────────────────────────────────
+resize();
+resetObj();
+initParticles();
+updateObjInfo();
+document.getElementById('beaufort').textContent = beaufort(wind.speed);
+document.getElementById('dirLbl').textContent   = dirLabel(wind.dir);
+requestAnimationFrame(loop);
+</script>
+</body>
+</html>
