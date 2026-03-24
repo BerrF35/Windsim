@@ -2,8 +2,6 @@
 
 A real-time, physics-accurate wind simulation built entirely with vanilla HTML/CSS/JavaScript — no frameworks, no backend, no cost to host.
 
-**Live Demo:** `https://<your-username>.github.io/windsim`
-
 ---
 
 ## What It Does
@@ -57,29 +55,6 @@ time_s, object, x_m, height_m, velocity_x_ms, velocity_y_ms, speed_ms,
 drag_force_N, net_force_N, acceleration_ms2,
 wind_speed_ms, wind_dir_deg, turbulence_pct, eff_wind_ms
 ```
-
----
-
-## Deploying to GitHub Pages (free hosting)
-
-```bash
-# 1. Create a new repo on github.com named "windsim"
-
-# 2. Clone it locally
-git clone https://github.com/<your-username>/windsim.git
-cd windsim
-
-# 3. Copy index.html into the folder, then push
-git add index.html README.md
-git commit -m "feat: initial WindSim release"
-git push origin main
-
-# 4. Go to repo Settings → Pages → Source: Deploy from main branch /root
-# Your site will be live at https://<your-username>.github.io/windsim
-```
-
-That's it. No build step, no dependencies, no server.
-
 ---
 
 ## Tech Stack
