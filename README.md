@@ -1,72 +1,111 @@
-# 🌬️ WindSim — Aerodynamic Simulation Lab
+# WindSim
 
-A real-time, physics-accurate wind simulation built entirely with vanilla HTML/CSS/JavaScript — no frameworks, no backend, no cost to host.
+WindSim is a browser-based 3D aerodynamic sandbox for testing how different objects behave inside a controllable wind field. It combines a stylized real-time simulation space with adjustable airflow, altitude, turbulence, spin, bounce, and telemetry so you can watch motion, compare scenarios, and stress-test different launch conditions.
 
----
+Built as a single-file web project with plain HTML, CSS, and JavaScript, WindSim focuses on immediacy: change a parameter, relaunch an object, and read the result instantly.
 
-## What It Does
+## Overview
 
-WindSim lets you simulate how wind interacts with everyday objects using real aerodynamic physics. You can control wind speed, direction, and turbulence, then watch how different objects respond — and download the telemetry data as a CSV.
+WindSim simulates projectile and free-flight behavior across a wide range of objects, from sports balls to lightweight debris and heavy cargo. The project sits somewhere between a physics toy, a visualization lab, and an interaction-heavy prototype. It is designed to make aerodynamic behavior readable, not hidden.
 
-**Physics model:**
-- **Aerodynamic drag:** `F = ½ρCdAv²` — the real equation used in fluid mechanics
-- **Gravity:** `F = mg` (9.81 m/s²)
-- **Turbulence:** Stochastic wind variation modelled per-frame
-- **Bounce:** Coefficient of restitution on ground collision
-- **Air density:** 1.225 kg/m³ (sea level, 15°C)
+The current build includes a full 3D scene, a large continuous test space, object-specific visuals, configurable environmental response, and live instrumentation for forces, energy, and motion.
 
----
+## Highlights
 
-## Objects
+- Full 3D aerodynamic simulation with live object flight, bounce, drag, and spin behavior
+- Wind controls with full `0-359` degree heading, vertical elevation, turbulence, and gust intensity
+- Altitude-based air density using a standard-atmosphere style model
+- Object library covering sports equipment, lightweight materials, and heavy bodies
+- Procedural textures and non-uniform geometry for objects that should not all look like spheres
+- Large continuous ground plane and adjustable ceiling for longer and taller test runs
+- Visual overlays for velocity, drag, gravity, Magnus force, trails, particles, and spin axis
+- Free camera movement with orbit, pan, zoom, follow mode, and adjustable cinematic response
+- Preset scenarios for quick comparisons between calm tests, crosswinds, storms, high-altitude runs, spin-heavy launches, and cargo drops
+- CSV telemetry export for analysis outside the app
 
-| Object | Mass | Drag Coeff (Cd) | Frontal Area |
-|--------|------|-----------------|--------------|
-| Autumn Leaf | 3 g | 1.80 | 30 cm² |
-| Feather | 1 g | 2.00 | 20 cm² |
-| Tennis Ball | 58 g | 0.47 | 34.6 cm² |
-| Paper Ball | 5 g | 1.20 | 40 cm² |
-| Umbrella | 500 g | 1.80 | 2800 cm² |
-| Soccer Ball | 430 g | 0.25 | 380 cm² |
+## Simulation Systems
 
----
+- Aerodynamic drag based on relative wind speed
+- Reynolds-number-aware drag behavior for supported objects
+- Magnus force for spinning bodies
+- Rotational damping and visible angular motion
+- Gravity, bounce response, rolling resistance, and surface friction
+- Altitude-driven density changes that affect lift and drag response
+- Time scaling, telemetry recording, and real-time HUD feedback
 
-## Controls
+## Object Library
 
-| Control | What it does |
-|---------|-------------|
-| Wind Speed | 0–60 m/s with Beaufort scale label |
-| Direction | -75° (upward) to +75° (downward) |
-| Turbulence | Random wind fluctuation intensity |
-| Object Select | Switch physics body mid-simulation |
-| Gravity toggle | Enable/disable gravitational acceleration |
-| Force Vectors | Show drag, gravity, and velocity arrows |
-| Export CSV | Download full telemetry at 20 Hz |
+The current object set spans multiple categories:
 
-**Keyboard shortcuts:** `Space` = pause/resume · `R` = reset object
+- Sports balls: soccer, tennis, basketball, cricket, baseball, ping pong, golf, volleyball, rugby
+- Specialty flight objects: shuttlecock, frisbee
+- Lightweight / unstable bodies: autumn leaf, feather, paper ball, umbrella
+- Heavy objects: cannonball, wooden crate, brick
 
----
+Each object carries its own mass, effective area, radius, drag profile, restitution behavior, and visual treatment.
 
-## Telemetry CSV Format
+## Environment And Control Surface
 
-The exported CSV records at 20 Hz and includes:
+WindSim exposes nearly every major part of the simulation through the interface:
 
-```
-time_s, object, x_m, height_m, velocity_x_ms, velocity_y_ms, speed_ms,
-drag_force_N, net_force_N, acceleration_ms2,
-wind_speed_ms, wind_dir_deg, turbulence_pct, eff_wind_ms
-```
----
+- Wind speed, heading, elevation, turbulence, and gust strength
+- Launch height and initial velocity on all three axes
+- Independent spin values across all three rotational axes
+- Surface material selection: grass, concrete, hardwood, sand, ice, water
+- Altitude, ceiling height, particle density, particle size, trail length, and simulation rate
+- Toggleable systems including gravity, particles, trails, bounce, force vectors, Magnus effect, rotational dynamics, Reynolds-based drag, and spin-axis visualization
+- Camera controls for follow, distance, yaw, pitch, field of view, and follow lag
 
-## Tech Stack
+## Visualization Layer
 
-- **Vanilla JavaScript** — Canvas 2D API for rendering
-- **Physics:** Custom Euler integrator, real SI units throughout
-- **Fonts:** Rajdhani + JetBrains Mono (Google Fonts)
-- **Hosting:** GitHub Pages (free)
-- **Zero dependencies**
+The project is built to make the simulation legible while it is running. The current scene includes:
 
----
+- A live HUD for speed, drag, acceleration, height, Reynolds number, drag coefficient, spin, heading, air density, and sim time
+- An energy panel showing translational energy, rotational energy, gravitational potential, wind work, and losses
+- Force arrows for drag, gravity, velocity, Magnus force, and angular spin axis
+- Wind particles and trajectory trails for reading flow direction and path history
+- Procedurally generated textures for both surfaces and objects
 
-## License
+## Preset Scenarios
 
-MIT — use it however you want.
+The current build ships with six presets:
+
+- Baseline Field Test
+- Crosswind Sports Test
+- Storm Tunnel
+- High Altitude Thin Air
+- Spin Lab
+- Heavy Cargo Drop
+
+These presets are intended as quick scenario snapshots rather than fixed game levels, making it easy to compare how object type, atmosphere, spin, and wind direction interact.
+
+## Telemetry
+
+WindSim can export recorded simulation data as CSV, including:
+
+- Position and velocity
+- Acceleration and net force
+- Drag and Magnus force
+- Reynolds number and active drag coefficient
+- Spin rates
+- Wind state and air density
+- Translational, rotational, and potential energy values
+- Friction and collision loss estimates
+
+This makes the project useful not just as a visual sandbox, but also as a lightweight data-producing experiment tool.
+
+## Technical Profile
+
+- Frontend: HTML, CSS, JavaScript
+- Rendering: Three.js
+- Architecture: single-file browser app
+- Visual assets: procedural canvas-generated textures
+- Data output: in-browser CSV export
+
+## Project Character
+
+WindSim is not framed as a perfect engineering simulator. It is a high-control interactive sandbox built to explore motion, airflow, and readability in a fast, hands-on way. The emphasis is on experimentation, feedback, and making the physics feel inspectable.
+
+## Status
+
+The project is actively oriented around the 3D simulation build and its control-rich interface. Current strengths are breadth of controls, object variety, readable telemetry, and a stronger visual identity than the original prototype direction.
