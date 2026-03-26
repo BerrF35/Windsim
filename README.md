@@ -90,7 +90,7 @@ WindSim can export recorded simulation data as CSV, including:
 - Spin rates
 - Wind state and air density
 - Translational, rotational, and potential energy values
-- Friction and collision loss estimates
+- Friction and collision loss estimatez
 
 This makes the project useful not just as a visual sandbox, but also as a lightweight data-producing experiment tool.
 
