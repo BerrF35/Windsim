@@ -706,6 +706,38 @@ function getSurfaceTexture(type){
   tex.wrapS=THREE.RepeatWrapping; tex.wrapT=THREE.RepeatWrapping; tex.repeat.set(FLOOR_SIZE/FLOOR_TILE,FLOOR_SIZE/FLOOR_TILE);
   return tex;
 }
+
+function getGroundOverlayTexture(){
+  const tex=makeCanvasTexture(surfaceTexCache,'ground-overlay',(g,size)=>{
+    g.clearRect(0,0,size,size);
+    g.fillStyle='rgba(255,255,255,0)'; g.fillRect(0,0,size,size);
+    // subtle multipurpose overlay: grid, faint seams, and a few markings to avoid a flat dead plane
+    g.strokeStyle='rgba(255,255,255,0.05)'; g.lineWidth=2;
+    for(let i=0;i<size;i+=128){
+      drawWrappedLine(g,size,i,0,i,size,'rgba(255,255,255,0.045)',1.5,1);
+      drawWrappedLine(g,size,0,i,size,i,'rgba(255,255,255,0.035)',1.5,1);
+    }
+    // wear/noise so the plane doesn't look computer-flat
+    for(let i=0;i<220;i++){
+      const x=Math.random()*size, y=Math.random()*size, len=8+Math.random()*26, ang=Math.random()*TAU;
+      drawWrappedLine(g,size,x,y,x+Math.cos(ang)*len,y+Math.sin(ang)*len,'rgba(255,255,255,0.03)',1+Math.random()*1.3,1);
+    }
+    for(let i=0;i<80;i++){
+      const x=Math.random()*size, y=Math.random()*size, r=1+Math.random()*3;
+      drawWrappedDotField(g,size,1,'rgba(255,255,255,0.04)',0.5,0.5,r,r);
+    }
+    // center ring / subtle compass cue
+    const cx=size*0.5, cy=size*0.5;
+    g.strokeStyle='rgba(120,220,255,0.08)';
+    g.lineWidth=3;
+    g.beginPath(); g.arc(cx,cy,size*0.13,0,TAU); g.stroke();
+    g.beginPath(); g.moveTo(cx-size*0.16,cy); g.lineTo(cx+size*0.16,cy); g.stroke();
+    g.beginPath(); g.moveTo(cx,cy-size*0.16); g.lineTo(cx,cy+size*0.16); g.stroke();
+    g.fillStyle='rgba(255,255,255,0.02)'; g.fillRect(0,0,size,size);
+  });
+  tex.wrapS=THREE.RepeatWrapping; tex.wrapT=THREE.RepeatWrapping; tex.repeat.set(FLOOR_SIZE/FLOOR_TILE,FLOOR_SIZE/FLOOR_TILE);
+  return tex;
+}
 function getObjectTexture(name){
   return makeCanvasTexture(objectTexCache,'object-'+name,(g,size)=>{
     g.clearRect(0,0,size,size);
