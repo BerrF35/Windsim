@@ -7,37 +7,315 @@
 <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
 <style>
 *,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
-:root{--bg:#06090f;--surf:#0b1018;--surf2:#0f1520;--bdr:#1a2535;--bdr2:#243040;--cyan:#00d4ff;--green:#10d9a0;--amber:#f59e0b;--red:#ef4444;--violet:#a78bfa;--orange:#f97316;--txt:#c8d8e8;--txt2:#6888aa;--txt3:#3a5070}
+:root{
+  --bg:#05080e;--surf:#090e17;--surf2:#0c1220;--surf3:#101828;
+  --bdr:#16243a;--bdr2:#1e3048;--bdr3:#263c58;
+  --cyan:#00d4ff;--cyan-dim:rgba(0,212,255,.12);--cyan-glow:rgba(0,212,255,.35);
+  --green:#0fd99e;--green-dim:rgba(15,217,158,.12);
+  --amber:#f5a623;--red:#f04747;--violet:#b48aff;--orange:#ff7e2f;
+  --txt:#bdd4ea;--txt2:#567090;--txt3:#2d4560;--txt4:#1a2d42;
+  --panel-bg:rgba(7,12,22,.92);--panel-bdr:rgba(22,36,58,.9);
+}
 html,body{height:100%;overflow:hidden}
-body{font-family:'Rajdhani',sans-serif;background:radial-gradient(circle at top,#0d1827 0%,#06090f 55%,#04070c 100%);color:var(--txt);display:flex}
-::-webkit-scrollbar{width:4px}::-webkit-scrollbar-track{background:var(--bg)}::-webkit-scrollbar-thumb{background:var(--bdr2);border-radius:2px}
-#sidebar{width:286px;min-width:286px;background:linear-gradient(180deg,rgba(16,25,38,.96),rgba(8,12,19,.98));border-right:1px solid var(--bdr);box-shadow:16px 0 38px rgba(0,0,0,.28);display:flex;flex-direction:column;overflow-y:auto;overflow-x:hidden}
-.sb-logo{padding:13px 17px 11px;border-bottom:1px solid var(--bdr)}.logo-txt{font-size:20px;font-weight:700;letter-spacing:5px;line-height:1}.lw{color:var(--cyan)}.ls{color:var(--txt2)}.logo-ver{font-family:'JetBrains Mono',monospace;font-size:8px;color:var(--txt3);letter-spacing:2px;margin-top:3px}
-details{border-bottom:1px solid var(--bdr)}summary{list-style:none;-webkit-appearance:none;font-family:'JetBrains Mono',monospace;font-size:8px;letter-spacing:2.5px;color:var(--txt3);text-transform:uppercase;padding:9px 15px;cursor:pointer;display:flex;align-items:center;gap:6px;user-select:none}summary::before{content:'>';flex-shrink:0;transition:transform .15s;font-size:9px}details[open]>summary::before{transform:rotate(90deg)}summary::after{content:'';flex:1;height:1px;background:var(--bdr)}summary::-webkit-details-marker{display:none}.sec-body{padding:0 15px 11px}
-.ctl{margin-bottom:9px}.ctl:last-child{margin-bottom:0}.ctl-row{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:4px;gap:8px}.ctl-lbl{font-size:11px;color:var(--txt2);font-weight:600;letter-spacing:.4px}.ctl-val{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--cyan);font-weight:600;white-space:nowrap}.sub-lbl{font-family:'JetBrains Mono',monospace;font-size:8px;color:var(--txt3);margin-top:2px;line-height:1.5}
-input[type=range]{width:100%;height:3px;appearance:none;-webkit-appearance:none;background:linear-gradient(90deg,rgba(36,48,64,.95),rgba(8,160,210,.35));border-radius:2px;outline:none;cursor:pointer}input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:12px;height:12px;border-radius:50%;background:var(--cyan);cursor:pointer;box-shadow:0 0 8px rgba(0,212,255,.7)}
-select{width:100%;background:var(--surf2);border:1px solid var(--bdr);color:var(--txt);border-radius:5px;padding:6px 28px 6px 9px;font-family:'Rajdhani',sans-serif;font-size:12px;font-weight:600;cursor:pointer;outline:none;appearance:none;-webkit-appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%233a5070'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 9px center}select:focus{border-color:var(--cyan)}select option{background:var(--surf)}
-.obj-info-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:3px 0;background:var(--surf2);border:1px solid var(--bdr);border-radius:5px;padding:7px 9px;margin-top:7px;font-family:'JetBrains Mono',monospace;font-size:8.5px}.oi-l{color:var(--txt3)}.oi-v{color:var(--txt2);font-weight:600}
-.tgl-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;font-size:11px;color:var(--txt2);font-weight:500}.tgl-row:last-child{margin-bottom:0}.tgl{width:33px;height:15px;background:var(--bdr2);border-radius:8px;position:relative;cursor:pointer;transition:background .18s;flex-shrink:0}.tgl::after{content:'';position:absolute;width:11px;height:11px;border-radius:50%;background:var(--txt3);top:2px;left:2px;transition:left .18s,background .18s}.tgl.on{background:rgba(0,212,255,.2)}.tgl.on::after{left:20px;background:var(--cyan);box-shadow:0 0 5px var(--cyan)}
-.btn{display:block;width:100%;padding:7px 11px;border-radius:5px;border:none;font-family:'Rajdhani',sans-serif;font-size:12px;font-weight:700;letter-spacing:1px;cursor:pointer;transition:all .14s;margin-bottom:5px;text-transform:uppercase}.btn:last-child{margin-bottom:0}.btn-c{background:rgba(0,212,255,.09);color:var(--cyan);border:1px solid rgba(0,212,255,.22)}.btn-c:hover{background:rgba(0,212,255,.16)}.btn-r{background:rgba(239,68,68,.09);color:var(--red);border:1px solid rgba(239,68,68,.22)}.btn-r:hover{background:rgba(239,68,68,.16)}.btn-g{background:rgba(16,217,160,.09);color:var(--green);border:1px solid rgba(16,217,160,.22)}.btn-g:hover{background:rgba(16,217,160,.16)}.btn-d{background:var(--surf2);color:var(--txt2);border:1px solid var(--bdr)}.btn-d:hover{border-color:var(--bdr2)}
-.phys-box{background:var(--surf2);border:1px solid var(--bdr);border-radius:5px;padding:7px 9px;font-family:'JetBrains Mono',monospace;font-size:8.5px;line-height:1.75}.pp-row{display:flex;justify-content:space-between;gap:8px}.pp-l{color:var(--txt3)}.pp-v{color:var(--txt2);font-weight:600}#tcount{font-family:'JetBrains Mono',monospace;font-size:8px;color:var(--txt3);text-align:center;margin-top:4px}.kbd{font-family:'JetBrains Mono',monospace;font-size:8px;color:var(--txt3);text-align:center;margin-top:5px;line-height:1.6}
-#main{flex:1;position:relative;overflow:hidden}#main canvas{display:block;position:absolute;inset:0;touch-action:none}
-#status-pill{position:absolute;top:11px;right:11px;z-index:20;background:rgba(11,16,24,.9);border:1px solid var(--bdr);border-radius:20px;padding:4px 12px;font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:2px;backdrop-filter:blur(6px);box-shadow:0 10px 25px rgba(0,0,0,.22);pointer-events:none}.sr{color:var(--green)}.sp{color:var(--amber)}
-.orbit-hint{position:absolute;top:11px;left:11px;z-index:20;background:rgba(11,16,24,.8);border:1px solid var(--bdr);border-radius:4px;padding:4px 8px;font-family:'JetBrains Mono',monospace;font-size:7.5px;color:var(--txt3);letter-spacing:1px;box-shadow:0 8px 20px rgba(0,0,0,.18);pointer-events:none;line-height:1.7}
-#energy-panel{position:absolute;top:42px;left:11px;z-index:20;background:rgba(11,16,24,.88);border:1px solid var(--bdr);border-radius:5px;padding:7px 10px;font-family:'JetBrains Mono',monospace;font-size:8.5px;backdrop-filter:blur(6px);box-shadow:0 12px 26px rgba(0,0,0,.2);pointer-events:none;min-width:170px}.ep-row{display:flex;justify-content:space-between;gap:12px;margin-bottom:2px}.ep-row:last-child{margin-bottom:0}.ep-l{color:var(--txt3)}.ep-v{color:var(--green);font-weight:600}
-#legend-panel{position:absolute;top:144px;left:11px;z-index:20;background:rgba(11,16,24,.86);border:1px solid var(--bdr);border-radius:5px;padding:7px 10px;min-width:170px;font-family:'JetBrains Mono',monospace;font-size:8px;letter-spacing:.6px;backdrop-filter:blur(6px);box-shadow:0 12px 26px rgba(0,0,0,.2);pointer-events:none}
-.legend-title{color:var(--txt3);margin-bottom:6px}
-.legend-row{display:flex;align-items:center;gap:7px;color:var(--txt2);margin-bottom:4px}
+body{font-family:'Rajdhani',sans-serif;background:#05080e;color:var(--txt);display:flex}
+::-webkit-scrollbar{width:3px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--bdr2);border-radius:3px}
+::-webkit-scrollbar-thumb:hover{background:var(--bdr3)}
+
+/* ─── SIDEBAR ─── */
+#sidebar{
+  width:290px;min-width:290px;
+  background:linear-gradient(180deg,#0a1120 0%,#06090f 100%);
+  border-right:1px solid var(--bdr);
+  box-shadow:1px 0 0 var(--bdr4,#0c1828),18px 0 44px rgba(0,0,0,.45);
+  display:flex;flex-direction:column;overflow-y:auto;overflow-x:hidden;
+  position:relative;
+}
+/* subtle scanline texture */
+#sidebar::before{
+  content:'';position:absolute;inset:0;pointer-events:none;z-index:0;
+  background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,.04) 2px,rgba(0,0,0,.04) 4px);
+}
+#sidebar>*{position:relative;z-index:1}
+
+/* ─── LOGO ─── */
+.sb-logo{
+  padding:14px 18px 13px;
+  border-bottom:1px solid var(--bdr);
+  background:linear-gradient(135deg,rgba(0,212,255,.04) 0%,transparent 60%);
+  display:flex;align-items:center;justify-content:space-between;
+}
+.logo-left{}
+.logo-txt{font-size:22px;font-weight:700;letter-spacing:6px;line-height:1;font-family:'Rajdhani',sans-serif}
+.lw{color:var(--cyan);text-shadow:0 0 18px rgba(0,212,255,.6)}
+.ls{color:var(--txt3)}
+.logo-ver{font-family:'JetBrains Mono',monospace;font-size:7.5px;color:var(--txt3);letter-spacing:2.5px;margin-top:4px;opacity:.7}
+.logo-badge{
+  font-family:'JetBrains Mono',monospace;font-size:7px;letter-spacing:1.5px;
+  color:var(--cyan);border:1px solid rgba(0,212,255,.25);border-radius:3px;
+  padding:2px 5px;background:rgba(0,212,255,.06);
+}
+
+/* ─── DETAILS/SUMMARY ─── */
+details{border-bottom:1px solid var(--bdr)}
+summary{
+  list-style:none;-webkit-appearance:none;
+  font-family:'JetBrains Mono',monospace;font-size:7.5px;letter-spacing:2.5px;
+  color:var(--txt3);text-transform:uppercase;
+  padding:8px 15px 8px 12px;cursor:pointer;
+  display:flex;align-items:center;gap:7px;user-select:none;
+  transition:color .15s, background .15s;
+}
+summary:hover{color:var(--txt2);background:rgba(255,255,255,.02)}
+summary::before{
+  content:'›';flex-shrink:0;transition:transform .18s;
+  font-size:12px;line-height:1;color:var(--bdr3);
+}
+details[open]>summary::before{transform:rotate(90deg);color:var(--cyan)}
+details[open]>summary{color:var(--txt2)}
+summary::after{content:'';flex:1;height:1px;background:var(--bdr);margin-left:4px}
+summary::-webkit-details-marker{display:none}
+.sec-body{padding:4px 15px 13px}
+
+/* ─── CONTROLS ─── */
+.ctl{margin-bottom:10px}
+.ctl:last-child{margin-bottom:0}
+.ctl-row{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:5px;gap:8px}
+.ctl-lbl{font-size:11px;color:var(--txt2);font-weight:600;letter-spacing:.3px}
+.ctl-val{
+  font-family:'JetBrains Mono',monospace;font-size:10.5px;color:var(--cyan);font-weight:600;
+  white-space:nowrap;background:rgba(0,212,255,.07);border-radius:3px;
+  padding:1px 5px;border:1px solid rgba(0,212,255,.12);
+}
+.sub-lbl{font-family:'JetBrains Mono',monospace;font-size:7.5px;color:var(--txt3);margin-top:3px;line-height:1.5}
+
+/* ─── RANGE SLIDER ─── */
+input[type=range]{
+  width:100%;height:2px;
+  appearance:none;-webkit-appearance:none;
+  background:var(--bdr2);
+  border-radius:2px;outline:none;cursor:pointer;
+  position:relative;
+}
+input[type=range]::-webkit-slider-thumb{
+  -webkit-appearance:none;width:13px;height:13px;border-radius:50%;
+  background:var(--cyan);cursor:pointer;
+  box-shadow:0 0 0 2px rgba(0,212,255,.15), 0 0 12px rgba(0,212,255,.55);
+  transition:box-shadow .15s;
+}
+input[type=range]:hover::-webkit-slider-thumb{box-shadow:0 0 0 3px rgba(0,212,255,.25), 0 0 16px rgba(0,212,255,.75)}
+input[type=range]::-webkit-slider-runnable-track{height:2px;background:linear-gradient(90deg,rgba(0,212,255,.5),rgba(0,212,255,.2))}
+
+/* ─── SELECT ─── */
+select{
+  width:100%;background:var(--surf2);border:1px solid var(--bdr2);
+  color:var(--txt);border-radius:5px;padding:7px 28px 7px 10px;
+  font-family:'Rajdhani',sans-serif;font-size:12px;font-weight:600;
+  cursor:pointer;outline:none;appearance:none;-webkit-appearance:none;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%232d4560'/%3E%3C/svg%3E");
+  background-repeat:no-repeat;background-position:right 10px center;
+  transition:border-color .15s;
+}
+select:focus{border-color:rgba(0,212,255,.4);box-shadow:0 0 0 2px rgba(0,212,255,.08)}
+select option{background:var(--surf)}
+
+/* ─── OBJECT INFO GRID ─── */
+.obj-info-grid{
+  display:grid;grid-template-columns:1fr 1fr 1fr;gap:0;
+  background:var(--surf2);border:1px solid var(--bdr);border-radius:6px;
+  padding:8px 10px;margin-top:8px;font-family:'JetBrains Mono',monospace;font-size:8px;
+  row-gap:5px;
+}
+.oi-l{color:var(--txt3);text-transform:uppercase;letter-spacing:1px}
+.oi-v{color:var(--txt);font-weight:600;font-size:9px}
+
+/* ─── TOGGLES ─── */
+.tgl-grid{display:grid;grid-template-columns:1fr 1fr;gap:5px 10px;margin-top:4px}
+.tgl-row{
+  display:flex;justify-content:space-between;align-items:center;
+  margin-bottom:0;font-size:10.5px;color:var(--txt2);font-weight:500;
+  padding:4px 6px;border-radius:4px;transition:background .12s;cursor:pointer;
+}
+.tgl-row:hover{background:rgba(255,255,255,.03)}
+.tgl-row-full{grid-column:1/-1}
+.tgl{
+  width:34px;height:17px;background:var(--surf3);border-radius:9px;
+  position:relative;cursor:pointer;transition:background .2s;flex-shrink:0;
+  border:1px solid var(--bdr2);
+}
+.tgl::after{
+  content:'';position:absolute;width:11px;height:11px;border-radius:50%;
+  background:var(--txt3);top:2px;left:2px;
+  transition:left .2s cubic-bezier(.4,0,.2,1), background .2s, box-shadow .2s;
+}
+.tgl.on{background:rgba(0,212,255,.18);border-color:rgba(0,212,255,.3)}
+.tgl.on::after{left:19px;background:var(--cyan);box-shadow:0 0 7px rgba(0,212,255,.8)}
+
+/* ─── BUTTONS ─── */
+.btn{
+  display:block;width:100%;padding:8px 12px;border-radius:6px;border:none;
+  font-family:'Rajdhani',sans-serif;font-size:12px;font-weight:700;
+  letter-spacing:1.5px;cursor:pointer;transition:all .15s;
+  margin-bottom:5px;text-transform:uppercase;position:relative;overflow:hidden;
+}
+.btn:last-child{margin-bottom:0}
+.btn::after{
+  content:'';position:absolute;inset:0;opacity:0;
+  background:linear-gradient(135deg,rgba(255,255,255,.08),transparent);
+  transition:opacity .15s;
+}
+.btn:hover::after{opacity:1}
+.btn-c{background:rgba(0,212,255,.09);color:var(--cyan);border:1px solid rgba(0,212,255,.25)}
+.btn-c:hover{background:rgba(0,212,255,.16);box-shadow:0 0 14px rgba(0,212,255,.18);transform:translateY(-1px)}
+.btn-r{background:rgba(240,71,71,.09);color:var(--red);border:1px solid rgba(240,71,71,.25)}
+.btn-r:hover{background:rgba(240,71,71,.16);box-shadow:0 0 14px rgba(240,71,71,.18);transform:translateY(-1px)}
+.btn-g{background:rgba(15,217,158,.09);color:var(--green);border:1px solid rgba(15,217,158,.25)}
+.btn-g:hover{background:rgba(15,217,158,.16);box-shadow:0 0 14px rgba(15,217,158,.18);transform:translateY(-1px)}
+.btn-d{background:var(--surf2);color:var(--txt2);border:1px solid var(--bdr2)}
+.btn-d:hover{border-color:var(--bdr3);color:var(--txt);transform:translateY(-1px)}
+
+/* ─── PHYSICS PANEL ─── */
+.phys-box{
+  background:var(--surf2);border:1px solid var(--bdr);border-radius:6px;
+  padding:8px 10px;font-family:'JetBrains Mono',monospace;font-size:8px;line-height:1.9;
+}
+.pp-row{display:flex;justify-content:space-between;gap:8px;border-bottom:1px solid var(--bdr);padding:2px 0}
+.pp-row:last-child{border-bottom:none}
+.pp-l{color:var(--txt3)}
+.pp-v{color:var(--txt2);font-weight:600}
+#tcount{
+  font-family:'JetBrains Mono',monospace;font-size:8px;color:var(--txt3);
+  text-align:center;margin-top:6px;
+  background:var(--surf2);border:1px solid var(--bdr);border-radius:4px;padding:3px 6px;
+}
+.kbd{
+  font-family:'JetBrains Mono',monospace;font-size:7.5px;color:var(--txt3);
+  text-align:center;margin-top:6px;line-height:1.75;
+  background:var(--surf2);border:1px solid var(--bdr);border-radius:4px;padding:4px 8px;
+}
+
+/* ─── MAIN VIEWPORT ─── */
+#main{flex:1;position:relative;overflow:hidden}
+#main canvas{display:block;position:absolute;inset:0;touch-action:none}
+
+/* ─── STATUS PILL ─── */
+#status-pill{
+  position:absolute;top:12px;right:12px;z-index:20;
+  background:var(--panel-bg);border:1px solid var(--panel-bdr);
+  border-radius:20px;padding:5px 14px;
+  font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:2.5px;
+  backdrop-filter:blur(10px);box-shadow:0 8px 24px rgba(0,0,0,.35);
+  pointer-events:none;display:flex;align-items:center;gap:7px;
+}
+.status-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0}
+.sr{color:var(--green)}
+.sr-dot{background:var(--green);box-shadow:0 0 7px var(--green);animation:pulse-green 1.8s ease-in-out infinite}
+.sp{color:var(--amber)}
+.sp-dot{background:var(--amber);animation:none}
+@keyframes pulse-green{0%,100%{opacity:1;box-shadow:0 0 5px var(--green)}50%{opacity:.55;box-shadow:0 0 12px var(--green)}}
+
+/* ─── ORBIT HINT ─── */
+.orbit-hint{
+  position:absolute;top:12px;left:12px;z-index:20;
+  background:var(--panel-bg);border:1px solid var(--panel-bdr);
+  border-radius:5px;padding:5px 10px;
+  font-family:'JetBrains Mono',monospace;font-size:7.5px;
+  color:var(--txt3);letter-spacing:1.2px;
+  box-shadow:0 8px 20px rgba(0,0,0,.3);pointer-events:none;line-height:1.85;
+  backdrop-filter:blur(8px);
+}
+
+/* ─── ENERGY PANEL ─── */
+#energy-panel{
+  position:absolute;top:44px;left:12px;z-index:20;
+  background:var(--panel-bg);border:1px solid var(--panel-bdr);
+  border-radius:6px;padding:8px 11px;
+  font-family:'JetBrains Mono',monospace;font-size:8px;
+  backdrop-filter:blur(10px);box-shadow:0 10px 28px rgba(0,0,0,.3);
+  pointer-events:none;min-width:178px;
+}
+.ep-title{color:var(--txt3);font-size:7px;letter-spacing:2px;text-transform:uppercase;margin-bottom:6px;padding-bottom:4px;border-bottom:1px solid var(--bdr)}
+.ep-row{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:3px}
+.ep-row:last-child{margin-bottom:0}
+.ep-l{color:var(--txt3)}
+.ep-v{color:var(--green);font-weight:600}
+
+/* ─── LEGEND PANEL ─── */
+#legend-panel{
+  position:absolute;top:0;left:12px;z-index:20;
+  background:var(--panel-bg);border:1px solid var(--panel-bdr);
+  border-radius:6px;padding:8px 11px;min-width:148px;
+  font-family:'JetBrains Mono',monospace;font-size:8px;letter-spacing:.6px;
+  backdrop-filter:blur(10px);box-shadow:0 10px 28px rgba(0,0,0,.3);pointer-events:none;
+}
+.legend-title{color:var(--txt3);font-size:7px;letter-spacing:2px;margin-bottom:6px;text-transform:uppercase;padding-bottom:4px;border-bottom:1px solid var(--bdr)}
+.legend-row{display:flex;align-items:center;gap:8px;color:var(--txt2);margin-bottom:4px;font-size:7.5px}
 .legend-row:last-child{margin-bottom:0}
-.legend-chip{width:11px;height:3px;border-radius:2px;flex-shrink:0}
-#scale-pill{position:absolute;right:11px;bottom:48px;z-index:20;background:rgba(11,16,24,.88);border:1px solid var(--bdr);border-radius:999px;padding:5px 10px;font-family:'JetBrains Mono',monospace;font-size:8px;letter-spacing:1.1px;color:var(--txt2);backdrop-filter:blur(6px);box-shadow:0 10px 22px rgba(0,0,0,.18);pointer-events:none}
-#hud{position:absolute;bottom:0;left:0;right:0;z-index:20;background:rgba(6,9,15,.92);border-top:1px solid var(--bdr);display:flex;backdrop-filter:blur(4px);overflow-x:auto}.hi{flex:1;padding:5px 7px;border-right:1px solid var(--bdr);min-width:0}.hi:last-child{border-right:none}.hl{font-family:'JetBrains Mono',monospace;font-size:7px;letter-spacing:1px;color:var(--txt3);text-transform:uppercase;margin-bottom:2px;white-space:nowrap}.hv{font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:600;color:var(--cyan);white-space:nowrap}
-@media (max-width: 980px){body{flex-direction:column}#sidebar{width:100%;min-width:0;max-height:48vh;border-right:none;border-bottom:1px solid var(--bdr)}#main{min-height:52vh}.orbit-hint,#energy-panel,#legend-panel{left:8px}#status-pill,#scale-pill{right:8px}}
+.legend-chip{width:20px;height:3px;border-radius:2px;flex-shrink:0;box-shadow:0 0 6px currentColor}
+
+/* ─── SCALE PILL ─── */
+#scale-pill{
+  position:absolute;right:12px;bottom:48px;z-index:20;
+  background:var(--panel-bg);border:1px solid var(--panel-bdr);
+  border-radius:999px;padding:4px 12px;
+  font-family:'JetBrains Mono',monospace;font-size:7.5px;letter-spacing:1.5px;
+  color:var(--txt3);backdrop-filter:blur(8px);
+  box-shadow:0 8px 20px rgba(0,0,0,.25);pointer-events:none;
+}
+
+/* ─── HUD BAR ─── */
+#hud{
+  position:absolute;bottom:0;left:0;right:0;z-index:20;
+  background:rgba(5,8,14,.95);border-top:1px solid var(--bdr);
+  display:flex;backdrop-filter:blur(8px);overflow-x:auto;
+}
+.hi{
+  flex:1;padding:5px 8px;border-right:1px solid var(--bdr);
+  min-width:0;position:relative;transition:background .15s;
+}
+.hi:last-child{border-right:none}
+.hi::before{
+  content:'';position:absolute;top:0;left:0;right:0;height:1px;
+  opacity:0;transition:opacity .15s;
+}
+.hl{
+  font-family:'JetBrains Mono',monospace;font-size:6.5px;letter-spacing:1.2px;
+  color:var(--txt3);text-transform:uppercase;margin-bottom:2px;white-space:nowrap;
+}
+.hv{
+  font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:600;
+  color:var(--cyan);white-space:nowrap;
+}
+/* Color-code different HUD groups */
+.hi:nth-child(1) .hv,.hi:nth-child(2) .hv,.hi:nth-child(3) .hv{color:var(--cyan)}
+.hi:nth-child(4) .hv{color:var(--amber)}
+.hi:nth-child(5) .hv,.hi:nth-child(6) .hv,.hi:nth-child(7) .hv{color:var(--green)}
+.hi:nth-child(8) .hv,.hi:nth-child(9) .hv{color:var(--violet)}
+.hi:nth-child(10) .hv{color:var(--orange)}
+.hi:nth-child(11) .hv{color:var(--txt2)}
+.hi:nth-child(12) .hv{color:var(--txt2)}
+.hi:nth-child(13) .hv{color:var(--amber)}
+
+/* ─── RESPONSIVE ─── */
+@media (max-width:980px){
+  body{flex-direction:column}
+  #sidebar{width:100%;min-width:0;max-height:48vh;border-right:none;border-bottom:1px solid var(--bdr)}
+  #main{min-height:52vh}
+  .orbit-hint,#energy-panel,#legend-panel{left:8px}
+  #status-pill,#scale-pill{right:8px}
+}
+
+/* ─── SECTION DIVIDER ─── */
+.sec-divider{height:1px;background:linear-gradient(90deg,transparent,var(--bdr),transparent);margin:8px 0}
+
+/* ─── SHIMMER on values ─── */
+@keyframes val-flash{0%{opacity:1}50%{opacity:.6}100%{opacity:1}}
 </style>
 </head>
 <body>
 <div id="sidebar">
-  <div class="sb-logo"><div class="logo-txt"><span class="lw">WIND</span><span class="ls">SIM</span></div><div class="logo-ver">3D AERODYNAMIC LAB . v2.6</div></div>
+  <div class="sb-logo"><div class="logo-left"><div class="logo-txt"><span class="lw">WIND</span><span class="ls">SIM</span></div><div class="logo-ver">3D AERODYNAMIC LAB · v2.6</div></div><div class="logo-badge">3D</div></div>
   <details open><summary>Wind</summary><div class="sec-body">
     <div class="ctl"><div class="ctl-row"><span class="ctl-lbl">Speed</span><span class="ctl-val" id="vSpeed">20.0 m/s</span></div><input type="range" id="sSpeed" min="0" max="60" value="20" step="0.5"><div class="sub-lbl" id="beaufort">Gale</div></div>
     <div class="ctl"><div class="ctl-row"><span class="ctl-lbl">Heading (0 = N)</span><span class="ctl-val" id="vAzim">90 deg</span></div><input type="range" id="sAzim" min="0" max="359" value="90"><div class="sub-lbl" id="azimLbl">90 deg E</div></div>
@@ -63,14 +341,14 @@ select{width:100%;background:var(--surf2);border:1px solid var(--bdr);color:var(
     <div class="ctl"><div class="ctl-row"><span class="ctl-lbl">Particle Density</span><span class="ctl-val" id="vPCount">320</span></div><input type="range" id="sPCount" min="60" max="900" value="320" step="10"></div>
     <div class="ctl"><div class="ctl-row"><span class="ctl-lbl">Particle Size</span><span class="ctl-val" id="vPSize">0.13</span></div><input type="range" id="sPSize" min="0.05" max="0.40" value="0.13" step="0.01"></div>
     <div class="ctl"><div class="ctl-row"><span class="ctl-lbl">Trail Length</span><span class="ctl-val" id="vTrailLen">700</span></div><input type="range" id="sTrailLen" min="100" max="1600" value="700" step="50"></div>
-    <div style="margin-top:8px"><div class="tgl-row">Gravity<div class="tgl on" id="tGrav" onclick="toggleEnv('grav')"></div></div><div class="tgl-row">Wind Particles<div class="tgl on" id="tPart" onclick="toggleEnv('part')"></div></div><div class="tgl-row">Object Trail<div class="tgl on" id="tTrail" onclick="toggleEnv('trail')"></div></div><div class="tgl-row">Floor Bounce<div class="tgl on" id="tBounce" onclick="toggleEnv('bounce')"></div></div><div class="tgl-row">Force Vectors<div class="tgl on" id="tForce" onclick="toggleEnv('force')"></div></div><div class="tgl-row">Magnus Effect<div class="tgl on" id="tMagnus" onclick="toggleEnv('magnus')"></div></div><div class="tgl-row">Rotational Dynamics<div class="tgl on" id="tRotation" onclick="toggleEnv('rotation')"></div></div><div class="tgl-row">Reynolds Cd<div class="tgl on" id="tReCd" onclick="toggleEnv('reCd')"></div></div><div class="tgl-row">Spin Axis Marker<div class="tgl on" id="tSpinViz" onclick="toggleEnv('spinViz')"></div></div></div>
+    <div style="margin-top:8px"><div class="tgl-grid"><div class="tgl-row">Gravity<div class="tgl on" id="tGrav" onclick="toggleEnv('grav')"></div></div><div class="tgl-row">Wind Particles<div class="tgl on" id="tPart" onclick="toggleEnv('part')"></div></div><div class="tgl-row">Object Trail<div class="tgl on" id="tTrail" onclick="toggleEnv('trail')"></div></div><div class="tgl-row">Floor Bounce<div class="tgl on" id="tBounce" onclick="toggleEnv('bounce')"></div></div><div class="tgl-row">Force Vectors<div class="tgl on" id="tForce" onclick="toggleEnv('force')"></div></div><div class="tgl-row">Magnus Effect<div class="tgl on" id="tMagnus" onclick="toggleEnv('magnus')"></div></div><div class="tgl-row">Rotat. Dynamics<div class="tgl on" id="tRotation" onclick="toggleEnv('rotation')"></div></div><div class="tgl-row">Reynolds Cd<div class="tgl on" id="tReCd" onclick="toggleEnv('reCd')"></div></div><div class="tgl-row tgl-row-full">Spin Axis Marker<div class="tgl on" id="tSpinViz" onclick="toggleEnv('spinViz')"></div></div></div></div>
   </div></details>
   <details><summary>Physics Params</summary><div class="sec-body"><div class="phys-box"><div class="pp-row"><span class="pp-l">Air density rho</span><span class="pp-v" id="ppRho">1.2250 kg/m^3</span></div><div class="pp-row"><span class="pp-l">Viscosity mu</span><span class="pp-v">1.81e-5 Pa.s</span></div><div class="pp-row"><span class="pp-l">Reynolds Re</span><span class="pp-v" id="ppRe">--</span></div><div class="pp-row"><span class="pp-l">Drag coeff Cd</span><span class="pp-v" id="ppCd">--</span></div><div class="pp-row"><span class="pp-l">mu static</span><span class="pp-v" id="ppMs">0.35</span></div><div class="pp-row"><span class="pp-l">mu kinetic</span><span class="pp-v" id="ppMk">0.28</span></div><div class="pp-row"><span class="pp-l">mu rolling</span><span class="pp-v" id="ppMr">0.025</span></div><div class="pp-row"><span class="pp-l">Restitution e</span><span class="pp-v" id="ppCr">--</span></div><div class="pp-row"><span class="pp-l">Integration</span><span class="pp-v">Euler x8 per frame</span></div><div class="pp-row"><span class="pp-l">F drag</span><span class="pp-v">0.5 rho Cd A v^2</span></div><div class="pp-row"><span class="pp-l">F magnus</span><span class="pp-v">rho pi r^3 (w x vrel)</span></div></div></div></details>
   <details open><summary>Simulation</summary><div class="sec-body"><div class="ctl"><div class="ctl-row"><span class="ctl-lbl">Sim Rate</span><span class="ctl-val" id="vSimRate">1.00x</span></div><input type="range" id="sSimRate" min="0.10" max="2.50" value="1.00" step="0.05"></div><button class="btn btn-c" id="pauseBtn" onclick="togglePause()">Pause</button><button class="btn btn-r" onclick="resetObj()">Reset Object</button><div class="kbd" id="simKbd">Space = pause, R = reset</div></div></details>
   <details open><summary>Camera</summary><div class="sec-body"><div class="tgl-row">Auto Follow<div class="tgl on" id="tCamFollow" onclick="toggleCamFollow()"></div></div><div class="ctl" style="margin-top:8px"><div class="ctl-row"><span class="ctl-lbl">Distance</span><span class="ctl-val" id="vCamDist">28.0 m</span></div><input type="range" id="sCamDist" min="4" max="120" value="28" step="0.5"></div><div class="ctl"><div class="ctl-row"><span class="ctl-lbl">Yaw</span><span class="ctl-val" id="vCamYaw">-23 deg</span></div><input type="range" id="sCamYaw" min="-180" max="180" value="-23" step="1"></div><div class="ctl"><div class="ctl-row"><span class="ctl-lbl">Pitch</span><span class="ctl-val" id="vCamPitch">49 deg</span></div><input type="range" id="sCamPitch" min="8" max="88" value="49" step="1"></div><div class="ctl"><div class="ctl-row"><span class="ctl-lbl">Field of View</span><span class="ctl-val" id="vFov">52 deg</span></div><input type="range" id="sFov" min="30" max="95" value="52" step="1"></div><div class="ctl"><div class="ctl-row"><span class="ctl-lbl">Follow Lag</span><span class="ctl-val" id="vCamLag">0.08</span></div><input type="range" id="sCamLag" min="0.02" max="0.25" value="0.08" step="0.01"></div><button class="btn btn-d" onclick="resetCamera(true)">Center Camera</button><div class="kbd" id="camKbd">Drag = orbit, Shift+drag = pan, Follow off = WASDQE move</div></div></details>
   <details open><summary>Telemetry</summary><div class="sec-body"><button class="btn btn-g" onclick="downloadCSV()">Export CSV</button><button class="btn btn-d" onclick="clearTelemetry()">Clear Data</button><div id="tcount">0 data points recorded</div></div></details>
 </div>
-<div id="main"><div class="orbit-hint" id="orbitHint">DRAG: orbit . SHIFT+DRAG: pan . SCROLL: zoom<br>AXES: X = East, Y = Up, Z = North</div><div id="status-pill"><span id="sTxt" class="sr">RUNNING</span></div><div id="energy-panel"><div class="ep-row"><span class="ep-l">KE trans</span><span class="ep-v" id="eKet">0.000 J</span></div><div class="ep-row"><span class="ep-l">KE rot</span><span class="ep-v" id="eKer">0.000 J</span></div><div class="ep-row"><span class="ep-l">PE grav</span><span class="ep-v" id="ePe">0.000 J</span></div><div class="ep-row"><span class="ep-l">Wind dE</span><span class="ep-v" id="eWw">0.000 J</span></div><div class="ep-row"><span class="ep-l">Loss dE</span><span class="ep-v" id="eFl">0.000 J</span></div></div><div id="legend-panel"><div class="legend-title">FORCE LEGEND</div><div class="legend-row"><span class="legend-chip" style="background:#00d4ff"></span>Drag</div><div class="legend-row"><span class="legend-chip" style="background:#ef4444"></span>Gravity</div><div class="legend-row"><span class="legend-chip" style="background:#10d9a0"></span>Velocity</div><div class="legend-row"><span class="legend-chip" style="background:#a78bfa"></span>Magnus</div><div class="legend-row"><span class="legend-chip" style="background:#f97316"></span>Spin Axis</div></div><div id="scale-pill">GRID: 1 LARGE CELL = 5 M</div><div id="hud"><div class="hi"><div class="hl">Speed</div><div class="hv" id="hSpd">0.00 m/s</div></div><div class="hi"><div class="hl">Drag F</div><div class="hv" id="hDrag">0.000 N</div></div><div class="hi"><div class="hl">Net F</div><div class="hv" id="hNet">0.000 N</div></div><div class="hi"><div class="hl">Accel</div><div class="hv" id="hAcc">0.00 m/s^2</div></div><div class="hi"><div class="hl">Height Y</div><div class="hv" id="hH">0.00 m</div></div><div class="hi"><div class="hl">X pos</div><div class="hv" id="hX">0.00 m</div></div><div class="hi"><div class="hl">Z pos</div><div class="hv" id="hZ">0.00 m</div></div><div class="hi"><div class="hl">Reynolds</div><div class="hv" id="hRe">--</div></div><div class="hi"><div class="hl">Curr Cd</div><div class="hv" id="hCd">--</div></div><div class="hi"><div class="hl">Spin</div><div class="hv" id="hSpin">0.00 r/s</div></div><div class="hi"><div class="hl">Heading</div><div class="hv" id="hHead">90 deg E</div></div><div class="hi"><div class="hl">Air rho</div><div class="hv" id="hRho">1.225 kg/m^3</div></div><div class="hi"><div class="hl">Sim Time</div><div class="hv" id="hT">0.00 s</div></div></div></div>
+<div id="main"><div class="orbit-hint" id="orbitHint">DRAG: orbit . SHIFT+DRAG: pan . SCROLL: zoom<br>AXES: X = East, Y = Up, Z = North</div><div id="status-pill"><div class="status-dot sr-dot" id="sStatusDot"></div><span id="sTxt" class="sr">RUNNING</span></div><div id="energy-panel"><div class="ep-title">Energy Budget</div><div class="ep-row"><span class="ep-l">KE trans</span><span class="ep-v" id="eKet">0.000 J</span></div><div class="ep-row"><span class="ep-l">KE rot</span><span class="ep-v" id="eKer">0.000 J</span></div><div class="ep-row"><span class="ep-l">PE grav</span><span class="ep-v" id="ePe">0.000 J</span></div><div class="ep-row"><span class="ep-l">Wind dE</span><span class="ep-v" id="eWw">0.000 J</span></div><div class="ep-row"><span class="ep-l">Loss dE</span><span class="ep-v" id="eFl">0.000 J</span></div></div><div id="legend-panel" style="top:178px"><div class="legend-title">Force Legend</div><div class="legend-row"><span class="legend-chip" style="background:#00d4ff;box-shadow:0 0 6px #00d4ff"></span>Drag</div><div class="legend-row"><span class="legend-chip" style="background:#f04747;box-shadow:0 0 6px #f04747"></span>Gravity</div><div class="legend-row"><span class="legend-chip" style="background:#0fd99e;box-shadow:0 0 6px #0fd99e"></span>Velocity</div><div class="legend-row"><span class="legend-chip" style="background:#b48aff;box-shadow:0 0 6px #b48aff"></span>Magnus</div><div class="legend-row"><span class="legend-chip" style="background:#ff7e2f;box-shadow:0 0 6px #ff7e2f"></span>Spin Axis</div></div><div id="scale-pill">GRID: 1 LARGE CELL = 5 M</div><div id="hud"><div class="hi"><div class="hl">Speed</div><div class="hv" id="hSpd">0.00 m/s</div></div><div class="hi"><div class="hl">Drag F</div><div class="hv" id="hDrag">0.000 N</div></div><div class="hi"><div class="hl">Net F</div><div class="hv" id="hNet">0.000 N</div></div><div class="hi"><div class="hl">Accel</div><div class="hv" id="hAcc">0.00 m/s^2</div></div><div class="hi"><div class="hl">Height Y</div><div class="hv" id="hH">0.00 m</div></div><div class="hi"><div class="hl">X pos</div><div class="hv" id="hX">0.00 m</div></div><div class="hi"><div class="hl">Z pos</div><div class="hv" id="hZ">0.00 m</div></div><div class="hi"><div class="hl">Reynolds</div><div class="hv" id="hRe">--</div></div><div class="hi"><div class="hl">Curr Cd</div><div class="hv" id="hCd">--</div></div><div class="hi"><div class="hl">Spin</div><div class="hv" id="hSpin">0.00 r/s</div></div><div class="hi"><div class="hl">Heading</div><div class="hv" id="hHead">90 deg E</div></div><div class="hi"><div class="hl">Air rho</div><div class="hv" id="hRho">1.225 kg/m^3</div></div><div class="hi"><div class="hl">Sim Time</div><div class="hv" id="hT">0.00 s</div></div></div></div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script>
 'use strict';
@@ -208,7 +486,7 @@ function updatePhysPanel(){ const surf=SURFACES[surfType]; $('ppMs').textContent
 function recordTelemetry(){ if(simTime-lastTelem<1/TRATE) return; lastTelem=simTime; const def=OBJ_DEFS[selObj], spd=Math.sqrt(obj.vx*obj.vx+obj.vy*obj.vy+obj.vz*obj.vz), acc=Math.sqrt(obj.ax*obj.ax+obj.ay*obj.ay+obj.az*obj.az), magnusLen=Math.sqrt(obj.Fmx*obj.Fmx+obj.Fmy*obj.Fmy+obj.Fmz*obj.Fmz); telemetry.push({time_s:+simTime.toFixed(3),object:def.label,surface:surfType,altitude_m:altitude,x_m:+obj.x.toFixed(4),y_m:+obj.y.toFixed(4),z_m:+obj.z.toFixed(4),vx_ms:+obj.vx.toFixed(4),vy_ms:+obj.vy.toFixed(4),vz_ms:+obj.vz.toFixed(4),speed_ms:+spd.toFixed(4),ax_ms2:+obj.ax.toFixed(4),ay_ms2:+obj.ay.toFixed(4),az_ms2:+obj.az.toFixed(4),accel_ms2:+acc.toFixed(4),drag_N:+obj.Fd.toFixed(6),magnus_N:+magnusLen.toFixed(6),net_force_N:+obj.netF.toFixed(6),reynolds:+obj.Re.toFixed(0),cd_current:+obj.Cd.toFixed(5),spin_x_rps:+(obj.omx/TAU).toFixed(4),spin_y_rps:+(obj.omy/TAU).toFixed(4),spin_z_rps:+(obj.omz/TAU).toFixed(4),ke_trans_J:+energy.keTrans.toFixed(5),ke_rot_J:+energy.keRot.toFixed(5),pe_J:+energy.pe.toFixed(5),wind_work_J:+energy.windWork.toFixed(5),fric_loss_J:+(energy.fricLoss+energy.bounceLoss).toFixed(5),wind_speed_ms:wind.speed,wind_heading_deg:wind.azim,wind_elev_deg:wind.elev,turb_pct:wind.turb,fw_x_ms:+fw.x.toFixed(3),fw_y_ms:+fw.y.toFixed(3),fw_z_ms:+fw.z.toFixed(3),rho_kgm3:+currentRho.toFixed(5)}); if(telemetry.length>20000) telemetry.shift(); $('tcount').textContent=telemetry.length.toLocaleString()+' data points recorded'; }
 function downloadCSV(){ if(!telemetry.length){ alert('Run the simulation first to record data.'); return; } const hdr=Object.keys(telemetry[0]).join(','), rows=telemetry.map(r=>Object.values(r).join(',')); const csv='# WindSim 3D Telemetry Export\n# '+new Date().toISOString()+'\n# Units: SI\n'+hdr+'\n'+rows.join('\n'); const blob=new Blob([csv],{type:'text/csv'}); const url=URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download=`windsim3d_${selObj}_${Date.now()}.csv`; a.click(); URL.revokeObjectURL(url); }
 function clearTelemetry(){ telemetry=[]; lastTelem=-1; $('tcount').textContent='0 data points recorded'; }
-function togglePause(){ paused=!paused; $('pauseBtn').textContent=paused?'Resume':'Pause'; $('sTxt').textContent=paused?'PAUSED':'RUNNING'; $('sTxt').className=paused?'sp':'sr'; }
+function togglePause(){ paused=!paused; $('pauseBtn').textContent=paused?'Resume':'Pause'; $('sTxt').textContent=paused?'PAUSED':'RUNNING'; $('sTxt').className=paused?'sp':'sr'; const dot=$('sStatusDot'); if(dot){ dot.className='status-dot '+(paused?'sp-dot':'sr-dot'); } }
 function toggleEnv(key){ env[key]=!env[key]; const idMap={grav:'tGrav',part:'tPart',trail:'tTrail',bounce:'tBounce',force:'tForce',magnus:'tMagnus',rotation:'tRotation',reCd:'tReCd',spinViz:'tSpinViz'}; const el=$(idMap[key]); if(el) el.classList.toggle('on',env[key]); if(key==='trail' && !env.trail){ trailPts=[]; trailGeo.setDrawRange(0,0); trailLine.visible=false; } }
 function updateObjInfo(){ const d=OBJ_DEFS[selObj], fmtMass=d.mass>=0.1?d.mass.toFixed(3)+' kg':(d.mass*1000).toFixed(2)+' g', refArea=projectedAreaFor(d,basisX,restQuaternionFor(d,tempQuat)); $('iMass').textContent=fmtMass; $('iCd').textContent=d.Cd0.toFixed(2); $('iR').textContent=(d.r*100).toFixed(1)+' cm'; $('iArea').textContent=refArea>=0.01?(refArea*1e4).toFixed(0)+' cm^2':(refArea*1e4).toFixed(1)+' cm^2'; $('iI').textContent=d.I!=null?d.I.toFixed(3):'N/A'; $('iCdMode').textContent=d.useCurve?(d.useCurve==='golf'?'Golf':'Sphere'):(isFlatShape(d)?'Shape':'Fixed'); }
 function densityLabel(){ const pct=currentRho/RHO0*100; $('vAlt').textContent=altitude.toFixed(0)+' m'; $('rhoLbl').textContent='rho = '+currentRho.toFixed(4)+' kg/m^3 ('+pct.toFixed(0)+'% sea level)'; }
