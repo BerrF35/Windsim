@@ -374,7 +374,7 @@ select option{background:var(--surf)}
         </svg>
       </div>
     </div>
-    <div class="ctl"><div class="ctl-row"><span class="ctl-lbl">Elevation</span><span class="ctl-val" id="vElev">0 deg</span></div><input type="range" id="sElev" min="-45" max="45" value="0"><div class="sub-lbl" id="elevLbl">Horizontal</div></div>
+    <div class="ctl"><div class="ctl-row"><span class="ctl-lbl">Elevation</span><span class="ctl-val" id="vElev">0 deg</span></div><input type="range" id="sElev" min="-85" max="85" value="0"><div class="sub-lbl" id="elevLbl">Horizontal</div></div>
     <div class="ctl"><div class="ctl-row"><span class="ctl-lbl">Turbulence</span><span class="ctl-val" id="vTurb">20%</span></div><input type="range" id="sTurb" min="0" max="100" value="20"><div class="sub-lbl">Random wind field noise</div></div>
     <div class="ctl"><div class="ctl-row"><span class="ctl-lbl">Gust Intensity</span><span class="ctl-val" id="vGust">30%</span></div><input type="range" id="sGust" min="0" max="100" value="30"><div class="sub-lbl">Short periodic bursts in wind speed</div></div>
   </div></details>
@@ -403,12 +403,17 @@ select option{background:var(--surf)}
 
   <details><summary>Launch Conditions</summary><div class="sec-body">
     <div class="ctl"><div class="ctl-row"><span class="ctl-lbl">Start Height Y₀</span><span class="ctl-val" id="vH0">3.0 m</span></div><input type="range" id="sH0" min="0.2" max="20" value="3" step="0.2"></div>
-    <div class="ctl"><div class="ctl-row"><span class="ctl-lbl">Init vX (East)</span><span class="ctl-val" id="vVX">0 m/s</span></div><input type="range" id="sVX" min="-30" max="30" value="0"></div>
-    <div class="ctl"><div class="ctl-row"><span class="ctl-lbl">Init vY (Up)</span><span class="ctl-val" id="vVY">0 m/s</span></div><input type="range" id="sVY" min="-40" max="40" value="0"></div>
-    <div class="ctl"><div class="ctl-row"><span class="ctl-lbl">Init vZ (North)</span><span class="ctl-val" id="vVZ">0 m/s</span></div><input type="range" id="sVZ" min="-30" max="30" value="0"></div>
+    <div class="ctl"><div class="ctl-row"><span class="ctl-lbl">Init vX (East)</span><span class="ctl-val" id="vVX">0 m/s</span></div><input type="range" id="sVX" min="-80" max="80" value="0"></div>
+    <div class="ctl"><div class="ctl-row"><span class="ctl-lbl">Init vY (Up)</span><span class="ctl-val" id="vVY">0 m/s</span></div><input type="range" id="sVY" min="-80" max="80" value="0"></div>
+    <div class="ctl"><div class="ctl-row"><span class="ctl-lbl">Init vZ (North)</span><span class="ctl-val" id="vVZ">0 m/s</span></div><input type="range" id="sVZ" min="-80" max="80" value="0"></div>
     <div class="ctl"><div class="ctl-row"><span class="ctl-lbl">Topspin ωx</span><span class="ctl-val" id="vOX">0 r/s</span></div><input type="range" id="sOX" min="-60" max="60" value="0"><div class="sub-lbl">Negative = backspin, positive = topspin</div></div>
     <div class="ctl"><div class="ctl-row"><span class="ctl-lbl">Sidespin ωy</span><span class="ctl-val" id="vOY">0 r/s</span></div><input type="range" id="sOY" min="-60" max="60" value="0"><div class="sub-lbl">Negative = left curve, positive = right curve</div></div>
     <div class="ctl"><div class="ctl-row"><span class="ctl-lbl">Roll Spin ωz</span><span class="ctl-val" id="vOZ">0 r/s</span></div><input type="range" id="sOZ" min="-60" max="60" value="0"><div class="sub-lbl">Useful for discs, balls, and visible spin tests</div></div>
+    <div class="sec-divider"></div>
+    <div class="ctl"><div class="ctl-row"><span class="ctl-lbl">Launch Speed</span><span class="ctl-val" id="vLSpd">18.0 m/s</span></div><input type="range" id="sLSpd" min="0" max="90" value="18" step="0.5"></div>
+    <div class="ctl"><div class="ctl-row"><span class="ctl-lbl">Launch Azimuth</span><span class="ctl-val" id="vLAzim">90 deg</span></div><input type="range" id="sLAzim" min="0" max="360" value="90" step="1"></div>
+    <div class="ctl"><div class="ctl-row"><span class="ctl-lbl">Launch Elevation</span><span class="ctl-val" id="vLElev">10 deg</span></div><input type="range" id="sLElev" min="-89" max="89" value="10" step="1"><div class="sub-lbl">Vector used when you press apply</div></div>
+    <button class="btn btn-d" id="applyLaunchBtn">Apply Launch Vector</button>
   </div></details>
 
   <details open><summary>Environment</summary><div class="sec-body">
@@ -458,11 +463,11 @@ select option{background:var(--surf)}
 
   <details open><summary>Camera</summary><div class="sec-body">
     <div class="tgl-row">Auto Follow<div class="tgl on" id="tCamFollow" onclick="toggleCamFollow()"></div></div>
-    <div class="ctl" style="margin-top:8px"><div class="ctl-row"><span class="ctl-lbl">Distance</span><span class="ctl-val" id="vCamDist">28.0 m</span></div><input type="range" id="sCamDist" min="4" max="120" value="28" step="0.5"></div>
-    <div class="ctl"><div class="ctl-row"><span class="ctl-lbl">Yaw</span><span class="ctl-val" id="vCamYaw">-23 deg</span></div><input type="range" id="sCamYaw" min="-180" max="180" value="-23" step="1"></div>
-    <div class="ctl"><div class="ctl-row"><span class="ctl-lbl">Pitch</span><span class="ctl-val" id="vCamPitch">49 deg</span></div><input type="range" id="sCamPitch" min="8" max="88" value="49" step="1"></div>
-    <div class="ctl"><div class="ctl-row"><span class="ctl-lbl">Field of View</span><span class="ctl-val" id="vFov">52 deg</span></div><input type="range" id="sFov" min="30" max="95" value="52" step="1"></div>
-    <div class="ctl"><div class="ctl-row"><span class="ctl-lbl">Follow Lag</span><span class="ctl-val" id="vCamLag">0.08</span></div><input type="range" id="sCamLag" min="0.02" max="0.25" value="0.08" step="0.01"></div>
+    <div class="ctl" style="margin-top:8px"><div class="ctl-row"><span class="ctl-lbl">Distance</span><span class="ctl-val" id="vCamDist">28.0 m</span></div><input type="range" id="sCamDist" min="2" max="220" value="28" step="0.5"></div>
+    <div class="ctl"><div class="ctl-row"><span class="ctl-lbl">Yaw</span><span class="ctl-val" id="vCamYaw">-23 deg</span></div><input type="range" id="sCamYaw" min="-360" max="360" value="-23" step="1"></div>
+    <div class="ctl"><div class="ctl-row"><span class="ctl-lbl">Pitch</span><span class="ctl-val" id="vCamPitch">49 deg</span></div><input type="range" id="sCamPitch" min="-89" max="89" value="49" step="1"></div>
+    <div class="ctl"><div class="ctl-row"><span class="ctl-lbl">Field of View</span><span class="ctl-val" id="vFov">52 deg</span></div><input type="range" id="sFov" min="20" max="110" value="52" step="1"></div>
+    <div class="ctl"><div class="ctl-row"><span class="ctl-lbl">Follow Lag</span><span class="ctl-val" id="vCamLag">0.08</span></div><input type="range" id="sCamLag" min="0.01" max="0.35" value="0.08" step="0.01"></div>
     <button class="btn btn-d" onclick="resetCamera(true)">Center Camera</button>
     <div class="kbd" id="camKbd">Drag = orbit · Shift+drag = pan<br>Follow off: WASDQE keys</div>
   </div></details>
@@ -594,9 +599,278 @@ const objectPivot=new THREE.Group(); scene.add(objectPivot); let activeModel=nul
 function cssHex(hex){return '#' + hex.toString(16).padStart(6,'0');}
 function makeCanvasTexture(cache,key,painter){ if(cache.has(key)) return cache.get(key); const size=1024; const canvas=document.createElement('canvas'); canvas.width=size; canvas.height=size; const g=canvas.getContext('2d'); g.imageSmoothingEnabled=true; g.imageSmoothingQuality='high'; painter(g,size); const lightGrad=g.createLinearGradient(0,0,size,size); lightGrad.addColorStop(0,'rgba(255,255,255,0.08)'); lightGrad.addColorStop(0.5,'rgba(255,255,255,0.02)'); lightGrad.addColorStop(1,'rgba(0,0,0,0.10)'); g.fillStyle=lightGrad; g.fillRect(0,0,size,size); const tex=new THREE.CanvasTexture(canvas); tex.encoding=THREE.sRGBEncoding; tex.anisotropy=Math.min(12, renderer.capabilities.getMaxAnisotropy()); tex.generateMipmaps=true; tex.minFilter=THREE.LinearMipmapLinearFilter; tex.magFilter=THREE.LinearFilter; cache.set(key,tex); return tex; }
 function drawNoiseDots(g,size,count,color,alphaMin,alphaMax,radius){ for(let i=0;i<count;i++){ g.fillStyle=color; g.globalAlpha=alphaMin + Math.random()*(alphaMax-alphaMin); g.beginPath(); g.arc(Math.random()*size,Math.random()*size,radius*(0.4+Math.random()),0,TAU); g.fill(); } g.globalAlpha=1; }
-function getSurfaceTexture(type){ const surf=SURFACES[type]; const tex=makeCanvasTexture(surfaceTexCache,'surface-'+type,(g,size)=>{ g.fillStyle=cssHex(surf.tint); g.fillRect(0,0,size,size); switch(type){ case 'grass': drawNoiseDots(g,size,700,cssHex(surf.accent),0.08,0.22,3.2); g.strokeStyle='rgba(127,255,169,0.10)'; for(let i=0;i<160;i++){ const x=Math.random()*size,y=Math.random()*size; g.beginPath(); g.moveTo(x,y); g.lineTo(x+(Math.random()-0.5)*8,y-6-Math.random()*8); g.stroke(); } break; case 'concrete': drawNoiseDots(g,size,1200,'#d1d5db',0.03,0.12,1.8); g.strokeStyle='rgba(255,255,255,0.10)'; g.lineWidth=3; g.beginPath(); g.moveTo(0,size*0.33); g.lineTo(size,size*0.37); g.moveTo(size*0.18,0); g.lineTo(size*0.14,size); g.stroke(); break; case 'hardwood': g.fillStyle='#73472e'; for(let i=0;i<8;i++) g.fillRect(i*size/8,0,size/8-2,size); g.strokeStyle='rgba(255,255,255,0.07)'; for(let y=26;y<size;y+=64){ g.beginPath(); g.moveTo(0,y); g.bezierCurveTo(size*0.25,y-8,size*0.75,y+8,size,y-4); g.stroke(); } break; case 'sand': drawNoiseDots(g,size,1800,'#f2d2a2',0.06,0.28,2.2); drawNoiseDots(g,size,1200,'#a67c52',0.03,0.12,1.4); break; case 'ice': { const iceGrad=g.createLinearGradient(0,0,size,size); iceGrad.addColorStop(0,'#0f4d6e'); iceGrad.addColorStop(1,'#9fdcff'); g.fillStyle=iceGrad; g.globalAlpha=0.25; g.fillRect(0,0,size,size); g.globalAlpha=1; g.strokeStyle='rgba(255,255,255,0.16)'; for(let i=0;i<18;i++){ const x=Math.random()*size,y=Math.random()*size; g.beginPath(); g.moveTo(x,y); g.lineTo(x+30+Math.random()*120,y+(Math.random()-0.5)*50); g.stroke(); } break; } case 'water': { const waterGrad=g.createRadialGradient(size*0.5,size*0.5,size*0.06,size*0.5,size*0.5,size*0.7); waterGrad.addColorStop(0,'#4ab3ff'); waterGrad.addColorStop(1,cssHex(surf.tint)); g.fillStyle=waterGrad; g.globalAlpha=0.35; g.fillRect(0,0,size,size); g.globalAlpha=1; g.strokeStyle='rgba(255,255,255,0.11)'; g.lineWidth=2; for(let y=22;y<size;y+=38){ g.beginPath(); for(let x=0;x<=size;x+=24){ const py=y+Math.sin((x+y)*0.03)*6; if(x===0) g.moveTo(x,py); else g.lineTo(x,py); } g.stroke(); } break; } } }); tex.wrapS=THREE.RepeatWrapping; tex.wrapT=THREE.RepeatWrapping; tex.repeat.set(FLOOR_SIZE/FLOOR_TILE,FLOOR_SIZE/FLOOR_TILE); return tex; }
-function getGroundOverlayTexture(){ const tex=makeCanvasTexture(surfaceTexCache,'surface-overlay',(g,size)=>{ g.clearRect(0,0,size,size); g.strokeStyle='rgba(0,212,255,0.18)'; g.lineWidth=2; for(let i=0;i<=8;i++){ const p=i*size/8; g.beginPath(); g.moveTo(p,0); g.lineTo(p,size); g.moveTo(0,p); g.lineTo(size,p); g.stroke(); } }); tex.wrapS=THREE.RepeatWrapping; tex.wrapT=THREE.RepeatWrapping; tex.repeat.set(FLOOR_SIZE/FLOOR_TILE,FLOOR_SIZE/FLOOR_TILE); return tex; }
-function getObjectTexture(name){ return makeCanvasTexture(objectTexCache,'object-'+name,(g,size)=>{ g.clearRect(0,0,size,size); switch(name){ case 'soccer': g.fillStyle='#f7fafc'; g.fillRect(0,0,size,size); g.fillStyle='#101418'; [[128,116],[260,72],[388,124],[106,286],[260,246],[408,304],[210,408],[334,426]].forEach(([x,y])=>{ g.beginPath(); for(let i=0;i<5;i++){ const ang=-Math.PI/2+i*TAU/5; const px=x+Math.cos(ang)*34; const py=y+Math.sin(ang)*34; if(i===0) g.moveTo(px,py); else g.lineTo(px,py); } g.closePath(); g.fill(); }); break; case 'tennis': g.fillStyle='#b8f45d'; g.fillRect(0,0,size,size); g.strokeStyle='#f8fafc'; g.lineWidth=18; g.beginPath(); g.arc(size*0.22,size*0.45,size*0.42,-0.5,1.55); g.stroke(); g.beginPath(); g.arc(size*0.78,size*0.55,size*0.42,2.64,4.7); g.stroke(); drawNoiseDots(g,size,1400,'#f0fdf4',0.02,0.06,1.1); break; case 'basketball': g.fillStyle='#e56f10'; g.fillRect(0,0,size,size); g.strokeStyle='#2a1409'; g.lineWidth=12; g.beginPath(); g.moveTo(size*0.5,0); g.lineTo(size*0.5,size); g.moveTo(0,size*0.5); g.lineTo(size,size*0.5); g.stroke(); g.beginPath(); g.arc(size*0.1,size*0.5,size*0.48,-0.9,0.9); g.stroke(); g.beginPath(); g.arc(size*0.9,size*0.5,size*0.48,2.24,4.05); g.stroke(); break; case 'cricket': g.fillStyle='#b91c1c'; g.fillRect(0,0,size,size); g.strokeStyle='#f8fafc'; g.lineWidth=10; g.beginPath(); g.moveTo(size*0.18,size*0.42); g.bezierCurveTo(size*0.35,size*0.30,size*0.65,size*0.30,size*0.82,size*0.42); g.stroke(); g.beginPath(); g.moveTo(size*0.18,size*0.58); g.bezierCurveTo(size*0.35,size*0.70,size*0.65,size*0.70,size*0.82,size*0.58); g.stroke(); break; case 'baseball': g.fillStyle='#fef7df'; g.fillRect(0,0,size,size); g.strokeStyle='#dc2626'; g.lineWidth=7; for(let i=0;i<18;i++){ const y=80+i*18; g.beginPath(); g.arc(size*0.22,y,10,Math.PI*0.2,Math.PI*1.2); g.stroke(); g.beginPath(); g.arc(size*0.78,y,10,-Math.PI*0.2,Math.PI*0.8); g.stroke(); } break; case 'pingpong': g.fillStyle='#fcfdff'; g.fillRect(0,0,size,size); g.fillStyle='rgba(249,115,22,0.28)'; g.font='bold 72px sans-serif'; g.fillText('40',size*0.36,size*0.56); break; case 'golf': g.fillStyle='#f8fafc'; g.fillRect(0,0,size,size); for(let y=18;y<size;y+=24){ for(let x=18+((y/24)%2)*12;x<size;x+=24){ g.fillStyle='rgba(148,163,184,0.18)'; g.beginPath(); g.arc(x,y,6,0,TAU); g.fill(); } } break; case 'volleyball': g.fillStyle='#fff3c4'; g.fillRect(0,0,size,size); g.strokeStyle='#2563eb'; g.lineWidth=30; g.beginPath(); g.arc(size*0.2,size*0.5,size*0.55,-0.9,0.9); g.stroke(); g.strokeStyle='#f59e0b'; g.beginPath(); g.arc(size*0.78,size*0.45,size*0.45,2.1,4.05); g.stroke(); break; case 'rugby': g.fillStyle='#6f4625'; g.fillRect(0,0,size,size); g.fillStyle='#f8fafc'; g.fillRect(size*0.44,size*0.42,size*0.12,size*0.16); g.strokeStyle='#f8fafc'; g.lineWidth=5; for(let i=0;i<8;i++){ const x=size*0.46+i*10; g.beginPath(); g.moveTo(x,size*0.41); g.lineTo(x,size*0.59); g.stroke(); } break; case 'cannonball': const steel=g.createRadialGradient(size*0.34,size*0.32,size*0.04,size*0.5,size*0.5,size*0.72); steel.addColorStop(0,'#9aa3b2'); steel.addColorStop(1,'#29303a'); g.fillStyle=steel; g.fillRect(0,0,size,size); drawNoiseDots(g,size,900,'#e5e7eb',0.02,0.08,1.8); break; case 'paper': g.fillStyle='#f8fafc'; g.fillRect(0,0,size,size); g.strokeStyle='rgba(59,130,246,0.16)'; g.lineWidth=3; for(let i=0;i<18;i++){ g.beginPath(); g.moveTo(Math.random()*size,Math.random()*size); g.lineTo(Math.random()*size,Math.random()*size); g.stroke(); } break; case 'leaf': g.fillStyle='rgba(0,0,0,0)'; g.fillRect(0,0,size,size); g.fillStyle='#fb923c'; g.beginPath(); g.moveTo(size*0.5,size*0.06); g.bezierCurveTo(size*0.18,size*0.22,size*0.08,size*0.54,size*0.48,size*0.92); g.bezierCurveTo(size*0.92,size*0.56,size*0.82,size*0.22,size*0.5,size*0.06); g.closePath(); g.fill(); g.strokeStyle='#7c2d12'; g.lineWidth=8; g.beginPath(); g.moveTo(size*0.5,size*0.1); g.lineTo(size*0.48,size*0.88); g.stroke(); break; case 'feather': g.fillStyle='rgba(0,0,0,0)'; g.fillRect(0,0,size,size); g.strokeStyle='#94a3b8'; g.lineWidth=10; g.beginPath(); g.moveTo(size*0.5,size*0.06); g.lineTo(size*0.5,size*0.92); g.stroke(); g.strokeStyle='#e2e8f0'; g.lineWidth=4; for(let i=0;i<22;i++){ const y=size*(0.12+i*0.033); const len=size*(0.10+(1-Math.abs(i-11)/11)*0.22); g.beginPath(); g.moveTo(size*0.5,y); g.lineTo(size*0.5-len,y+10); g.stroke(); g.beginPath(); g.moveTo(size*0.5,y); g.lineTo(size*0.5+len*0.55,y+8); g.stroke(); } break; case 'umbrella': const umb=g.createRadialGradient(size*0.5,size*0.5,size*0.08,size*0.5,size*0.5,size*0.5); umb.addColorStop(0,'#f5d0fe'); umb.addColorStop(1,'#7c3aed'); g.fillStyle=umb; g.fillRect(0,0,size,size); g.strokeStyle='rgba(255,255,255,0.35)'; g.lineWidth=6; for(let i=0;i<8;i++){ const ang=i*TAU/8; g.beginPath(); g.moveTo(size*0.5,size*0.5); g.lineTo(size*0.5+Math.cos(ang)*size*0.46,size*0.5+Math.sin(ang)*size*0.46); g.stroke(); } break; case 'shuttlecock': g.fillStyle='#fefce8'; g.fillRect(0,0,size,size); g.strokeStyle='rgba(148,163,184,0.22)'; g.lineWidth=5; for(let i=0;i<12;i++){ const x=34+i*38; g.beginPath(); g.moveTo(x,18); g.lineTo(size*0.5,size-22); g.stroke(); } g.fillStyle='#ef4444'; g.fillRect(0,size*0.05,size,size*0.08); break; case 'frisbee': g.fillStyle='#38bdf8'; g.fillRect(0,0,size,size); g.strokeStyle='#0f172a'; g.lineWidth=12; g.beginPath(); g.arc(size*0.5,size*0.5,size*0.34,0,TAU); g.stroke(); g.lineWidth=5; g.beginPath(); g.arc(size*0.5,size*0.5,size*0.17,0,TAU); g.stroke(); g.fillStyle='rgba(255,255,255,0.78)'; g.fillRect(size*0.16,size*0.44,size*0.68,size*0.08); break; case 'crate': g.fillStyle='#8b5a2b'; g.fillRect(0,0,size,size); g.fillStyle='rgba(255,255,255,0.08)'; for(let i=0;i<5;i++) g.fillRect(0,i*size/5+12,size,8); g.strokeStyle='#5b3717'; g.lineWidth=16; g.strokeRect(22,22,size-44,size-44); g.beginPath(); g.moveTo(40,40); g.lineTo(size-40,size-40); g.moveTo(size-40,40); g.lineTo(40,size-40); g.stroke(); break; case 'brick': g.fillStyle='#b45309'; g.fillRect(0,0,size,size); g.strokeStyle='#f5d7b2'; g.lineWidth=8; for(let y=0;y<=size;y+=96){ g.beginPath(); g.moveTo(0,y); g.lineTo(size,y); g.stroke(); } for(let y=0;y<size;y+=96){ const off=(y/96)%2?0:64; for(let x=off;x<=size;x+=128){ g.beginPath(); g.moveTo(x,y); g.lineTo(x,Math.min(size,y+96)); g.stroke(); } } break; } }); }
+
+function wrapCoord(v,size){ v%=size; return v<0?v+size:v; }
+function drawWrappedCircle(g,size,cx,cy,r,fill,stroke=null,lineWidth=0,alpha=1){
+  g.save(); g.globalAlpha=alpha; if(fill){ g.fillStyle=fill; }
+  for(const ox of [-size,0,size]) for(const oy of [-size,0,size]){
+    g.beginPath(); g.arc(cx+ox,cy+oy,r,0,TAU);
+    if(fill) g.fill();
+    if(stroke){ g.lineWidth=lineWidth; g.strokeStyle=stroke; g.stroke(); }
+  }
+  g.restore();
+}
+function drawWrappedLine(g,size,x1,y1,x2,y2,stroke,lineWidth=1,alpha=1){
+  g.save(); g.strokeStyle=stroke; g.lineWidth=lineWidth; g.globalAlpha=alpha; g.lineCap='round';
+  for(const ox of [-size,0,size]) for(const oy of [-size,0,size]){
+    g.beginPath(); g.moveTo(x1+ox,y1+oy); g.lineTo(x2+ox,y2+oy); g.stroke();
+  }
+  g.restore();
+}
+function drawWrappedDotField(g,size,count,color,alphaMin,alphaMax,rMin,rMax){
+  for(let i=0;i<count;i++){
+    const x=Math.random()*size, y=Math.random()*size, r=rMin+Math.random()*(rMax-rMin), a=alphaMin+Math.random()*(alphaMax-alphaMin);
+    g.fillStyle=color; g.globalAlpha=a;
+    for(const ox of [-size,0,size]) for(const oy of [-size,0,size]){
+      g.beginPath(); g.arc(x+ox,y+oy,r,0,TAU); g.fill();
+    }
+  }
+  g.globalAlpha=1;
+}
+function addSeamGlint(g,size,x1,y1,x2,y2,color,width,alpha){
+  drawWrappedLine(g,size,x1,y1,x2,y2,color,width,alpha);
+}
+function getSurfaceTexture(type){
+  const surf=SURFACES[type];
+  const tex=makeCanvasTexture(surfaceTexCache,'surface-'+type,(g,size)=>{
+    g.clearRect(0,0,size,size);
+    g.fillStyle=cssHex(surf.tint); g.fillRect(0,0,size,size);
+    switch(type){
+      case 'grass': {
+        const base=g.createLinearGradient(0,0,size,size);
+        base.addColorStop(0,'#16361e'); base.addColorStop(1,'#0f2315');
+        g.fillStyle=base; g.fillRect(0,0,size,size);
+        drawWrappedDotField(g,size,1800,cssHex(surf.accent),0.03,0.10,0.8,2.5);
+        for(let i=0;i<260;i++){
+          const x=Math.random()*size, y=Math.random()*size, len=7+Math.random()*18, ang=(-0.6+Math.random()*1.2);
+          drawWrappedLine(g,size,x,y,x+Math.cos(ang)*len,y-Math.sin(ang)*len,'rgba(190,255,206,0.12)',1.2,1);
+        }
+        break;
+      }
+      case 'concrete': {
+        const base=g.createLinearGradient(0,0,size,size);
+        base.addColorStop(0,'#2d333c'); base.addColorStop(1,'#1d2228');
+        g.fillStyle=base; g.fillRect(0,0,size,size);
+        drawWrappedDotField(g,size,1400,'#d4d8df',0.02,0.08,0.7,1.8);
+        drawWrappedDotField(g,size,500,'#69707a',0.03,0.06,1.5,2.8);
+        addSeamGlint(g,size,0,size*0.33,size,size*0.36,'rgba(255,255,255,0.10)',3,1);
+        addSeamGlint(g,size,size*0.18,0,size*0.12,size,'rgba(0,0,0,0.16)',2.2,1);
+        addSeamGlint(g,size,size*0.63,0,size*0.68,size,'rgba(255,255,255,0.06)',1.4,1);
+        break;
+      }
+      case 'hardwood': {
+        const plankW=size/8;
+        for(let i=0;i<8;i++){
+          g.fillStyle=i%2?'#74492d':'#6a4228';
+          g.fillRect(i*plankW,0,plankW+1,size);
+          for(let j=0;j<10;j++){
+            const y=(j+0.5)*size/10;
+            drawWrappedLine(g,size,i*plankW+6,y,i*plankW+plankW-6,y+(Math.random()-0.5)*2,'rgba(255,255,255,0.06)',1,1);
+          }
+        }
+        drawWrappedDotField(g,size,700,'#c98a58',0.03,0.06,0.9,2.2);
+        break;
+      }
+      case 'sand': {
+        const base=g.createLinearGradient(0,0,size,size);
+        base.addColorStop(0,'#6a5228'); base.addColorStop(1,'#caa56c');
+        g.fillStyle=base; g.fillRect(0,0,size,size);
+        drawWrappedDotField(g,size,2400,'#f5dcb0',0.05,0.18,0.5,1.9);
+        drawWrappedDotField(g,size,1200,'#9e7a4d',0.03,0.08,0.6,1.3);
+        break;
+      }
+      case 'ice': {
+        const base=g.createLinearGradient(0,0,size,size);
+        base.addColorStop(0,'#0f4964'); base.addColorStop(0.55,'#6cbfe9'); base.addColorStop(1,'#d8f2ff');
+        g.fillStyle=base; g.fillRect(0,0,size,size);
+        drawWrappedDotField(g,size,400,'#ffffff',0.03,0.08,0.5,1.5);
+        for(let i=0;i<24;i++){
+          const x=Math.random()*size, y=Math.random()*size, len=20+Math.random()*90, ang=Math.random()*TAU;
+          addSeamGlint(g,size,x,y,x+Math.cos(ang)*len,y+Math.sin(ang)*len,'rgba(255,255,255,0.13)',1.8,1);
+        }
+        break;
+      }
+      case 'water': {
+        const base=g.createLinearGradient(0,0,size,size);
+        base.addColorStop(0,'#0a1f33'); base.addColorStop(0.5,'#103d61'); base.addColorStop(1,'#1c6ca6');
+        g.fillStyle=base; g.fillRect(0,0,size,size);
+        drawWrappedDotField(g,size,800,'#8ed1ff',0.02,0.05,0.5,1.2);
+        for(let y=18;y<size;y+=34){
+          addSeamGlint(g,size,0,y,size,y+Math.sin(y*0.05)*4,'rgba(255,255,255,0.10)',2,1);
+        }
+        break;
+      }
+    }
+    g.fillStyle='rgba(255,255,255,0.05)'; g.fillRect(0,0,size,size);
+  });
+  tex.wrapS=THREE.RepeatWrapping; tex.wrapT=THREE.RepeatWrapping; tex.repeat.set(FLOOR_SIZE/FLOOR_TILE,FLOOR_SIZE/FLOOR_TILE);
+  return tex;
+}
+function getObjectTexture(name){
+  return makeCanvasTexture(objectTexCache,'object-'+name,(g,size)=>{
+    g.clearRect(0,0,size,size);
+    const grain = ()=> drawWrappedDotField(g,size,260,'rgba(255,255,255,0.10)',0.01,0.04,0.7,1.6);
+    switch(name){
+      case 'soccer': {
+        const base=g.createRadialGradient(size*0.5,size*0.35,size*0.06,size*0.5,size*0.5,size*0.72);
+        base.addColorStop(0,'#ffffff'); base.addColorStop(1,'#e5ebf2');
+        g.fillStyle=base; g.fillRect(0,0,size,size); grain();
+        g.fillStyle='#111827';
+        const pent=[ [0.5,0.18],[0.32,0.32],[0.39,0.54],[0.61,0.54],[0.68,0.32] ];
+        const centers=[ [0.5,0.28],[0.32,0.47],[0.68,0.47],[0.5,0.69],[0.24,0.70],[0.76,0.70] ];
+        centers.forEach(([cx,cy])=>{ g.beginPath(); pent.forEach(([px,py],i)=>{ const x=cx*size + (px-0.5)*size*0.24; const y=cy*size + (py-0.5)*size*0.24; if(i===0) g.moveTo(x,y); else g.lineTo(x,y); }); g.closePath(); g.fill(); });
+        g.strokeStyle='rgba(17,24,39,0.85)'; g.lineWidth=10; g.beginPath(); g.moveTo(size*0.22,size*0.22); g.lineTo(size*0.42,size*0.46); g.lineTo(size*0.58,size*0.46); g.lineTo(size*0.78,size*0.22); g.stroke();
+        break;
+      }
+      case 'tennis': {
+        const base=g.createRadialGradient(size*0.45,size*0.38,size*0.05,size*0.5,size*0.5,size*0.75);
+        base.addColorStop(0,'#d7ff79'); base.addColorStop(1,'#98c93f');
+        g.fillStyle=base; g.fillRect(0,0,size,size); grain();
+        g.strokeStyle='#f8fafc'; g.lineWidth=18; g.lineCap='round';
+        g.beginPath(); g.arc(size*0.33,size*0.47,size*0.32,-0.45,1.58); g.stroke();
+        g.beginPath(); g.arc(size*0.67,size*0.53,size*0.32,2.64,4.73); g.stroke();
+        break;
+      }
+      case 'basketball': {
+        const base=g.createRadialGradient(size*0.38,size*0.34,size*0.04,size*0.5,size*0.5,size*0.74);
+        base.addColorStop(0,'#ff9952'); base.addColorStop(1,'#d95a00');
+        g.fillStyle=base; g.fillRect(0,0,size,size); grain();
+        g.strokeStyle='#24130c'; g.lineWidth=14; g.lineCap='round';
+        g.beginPath(); g.moveTo(size*0.5,0); g.lineTo(size*0.5,size); g.stroke();
+        g.beginPath(); g.moveTo(0,size*0.5); g.lineTo(size,size*0.5); g.stroke();
+        g.beginPath(); g.arc(size*0.18,size*0.5,size*0.52,-0.88,0.88); g.stroke();
+        g.beginPath(); g.arc(size*0.82,size*0.5,size*0.52,2.26,4.02); g.stroke();
+        break;
+      }
+      case 'cricket': {
+        const base=g.createRadialGradient(size*0.4,size*0.35,size*0.04,size*0.5,size*0.5,size*0.72);
+        base.addColorStop(0,'#cf2b2b'); base.addColorStop(1,'#9f1414');
+        g.fillStyle=base; g.fillRect(0,0,size,size); grain();
+        g.strokeStyle='#f7f7f2'; g.lineWidth=8; g.lineCap='round';
+        g.beginPath(); g.moveTo(size*0.2,size*0.36); g.bezierCurveTo(size*0.36,size*0.24,size*0.64,size*0.24,size*0.8,size*0.36); g.stroke();
+        g.beginPath(); g.moveTo(size*0.2,size*0.64); g.bezierCurveTo(size*0.36,size*0.76,size*0.64,size*0.76,size*0.8,size*0.64); g.stroke();
+        break;
+      }
+      case 'baseball': {
+        const base=g.createRadialGradient(size*0.44,size*0.34,size*0.04,size*0.5,size*0.5,size*0.72);
+        base.addColorStop(0,'#fffdf5'); base.addColorStop(1,'#efe3cb');
+        g.fillStyle=base; g.fillRect(0,0,size,size); grain();
+        g.strokeStyle='#d52424'; g.lineWidth=8; g.lineCap='round';
+        for(let i=0;i<14;i++){
+          const y=size*(0.16+i*0.055);
+          g.beginPath(); g.arc(size*0.31,y,12,Math.PI*0.2,Math.PI*1.15); g.stroke();
+          g.beginPath(); g.arc(size*0.69,y,12,-Math.PI*0.15,Math.PI*0.8); g.stroke();
+        }
+        break;
+      }
+      case 'pingpong': {
+        const base=g.createRadialGradient(size*0.43,size*0.32,size*0.04,size*0.5,size*0.5,size*0.72);
+        base.addColorStop(0,'#ffffff'); base.addColorStop(1,'#e7ecf2');
+        g.fillStyle=base; g.fillRect(0,0,size,size); grain();
+        g.fillStyle='rgba(249,115,22,0.22)'; g.font='bold 72px sans-serif'; g.fillText('40',size*0.35,size*0.56);
+        break;
+      }
+      case 'golf': {
+        const base=g.createRadialGradient(size*0.45,size*0.38,size*0.04,size*0.5,size*0.5,size*0.72);
+        base.addColorStop(0,'#ffffff'); base.addColorStop(1,'#edf1f5');
+        g.fillStyle=base; g.fillRect(0,0,size,size);
+        g.strokeStyle='rgba(135,146,162,0.34)'; g.lineWidth=1.6;
+        for(let y=20;y<size-20;y+=22){ for(let x=20+((y/22)%2)*11;x<size-20;x+=22){ drawWrappedCircle(g,size,x,y,5.5,'rgba(150,158,170,0.28)'); } }
+        break;
+      }
+      case 'volleyball': {
+        const base=g.createRadialGradient(size*0.42,size*0.3,size*0.04,size*0.5,size*0.5,size*0.76);
+        base.addColorStop(0,'#fff6c8'); base.addColorStop(1,'#edca59');
+        g.fillStyle=base; g.fillRect(0,0,size,size); grain();
+        g.strokeStyle='#2954c8'; g.lineWidth=28; g.lineCap='round';
+        g.beginPath(); g.arc(size*0.28,size*0.5,size*0.53,-0.9,0.92); g.stroke();
+        g.strokeStyle='#f59e0b';
+        g.beginPath(); g.arc(size*0.73,size*0.47,size*0.44,2.1,4.08); g.stroke();
+        break;
+      }
+      case 'rugby': {
+        const base=g.createRadialGradient(size*0.46,size*0.34,size*0.04,size*0.5,size*0.5,size*0.74);
+        base.addColorStop(0,'#9b6535'); base.addColorStop(1,'#5f371a');
+        g.fillStyle=base; g.fillRect(0,0,size,size); grain();
+        g.strokeStyle='#f8fafc'; g.lineWidth=6; g.lineCap='round';
+        g.beginPath(); g.moveTo(size*0.5,size*0.27); g.lineTo(size*0.5,size*0.73); g.stroke();
+        for(let i=0;i<7;i++){ const yy=size*(0.35+i*0.05); g.beginPath(); g.moveTo(size*0.46,yy); g.lineTo(size*0.54,yy); g.stroke(); }
+        break;
+      }
+      case 'cannonball': {
+        const steel=g.createRadialGradient(size*0.34,size*0.3,size*0.02,size*0.5,size*0.5,size*0.76);
+        steel.addColorStop(0,'#b8c0cd'); steel.addColorStop(0.42,'#535b67'); steel.addColorStop(1,'#222933');
+        g.fillStyle=steel; g.fillRect(0,0,size,size); drawWrappedDotField(g,size,1000,'#e5e7eb',0.02,0.06,0.8,1.6);
+        break;
+      }
+      case 'paper': {
+        const base=g.createLinearGradient(0,0,size,size);
+        base.addColorStop(0,'#ffffff'); base.addColorStop(1,'#e8eef7');
+        g.fillStyle=base; g.fillRect(0,0,size,size); drawWrappedDotField(g,size,500,'rgba(96,165,250,0.12)',0.01,0.03,0.6,1.2);
+        for(let i=0;i<14;i++){ const x=Math.random()*size, y=Math.random()*size, ang=Math.random()*TAU; drawWrappedLine(g,size,x,y,x+Math.cos(ang)*60,y+Math.sin(ang)*60,'rgba(59,130,246,0.14)',2.4,1); }
+        break;
+      }
+      case 'leaf': {
+        g.clearRect(0,0,size,size); g.fillStyle='rgba(0,0,0,0)'; g.fillRect(0,0,size,size);
+        const leafGrad=g.createRadialGradient(size*0.5,size*0.32,size*0.06,size*0.5,size*0.5,size*0.72);
+        leafGrad.addColorStop(0,'#ffb15b'); leafGrad.addColorStop(1,'#d86c1f');
+        g.fillStyle=leafGrad; g.beginPath(); g.moveTo(size*0.5,size*0.06); g.bezierCurveTo(size*0.2,size*0.22,size*0.07,size*0.54,size*0.48,size*0.93); g.bezierCurveTo(size*0.93,size*0.56,size*0.8,size*0.2,size*0.5,size*0.06); g.closePath(); g.fill();
+        g.strokeStyle='#7c2d12'; g.lineWidth=8; g.beginPath(); g.moveTo(size*0.5,size*0.1); g.lineTo(size*0.48,size*0.88); g.stroke();
+        break;
+      }
+      case 'feather': {
+        g.clearRect(0,0,size,size);
+        g.strokeStyle='#b9c3d1'; g.lineWidth=10; g.lineCap='round'; g.beginPath(); g.moveTo(size*0.5,size*0.06); g.lineTo(size*0.5,size*0.92); g.stroke();
+        g.strokeStyle='#f5f7fb'; g.lineWidth=4; for(let i=0;i<24;i++){ const y=size*(0.11+i*0.033); const len=size*(0.12+(1-Math.abs(i-12)/12)*0.22); g.beginPath(); g.moveTo(size*0.5,y); g.lineTo(size*0.5-len,y+10); g.stroke(); g.beginPath(); g.moveTo(size*0.5,y); g.lineTo(size*0.5+len*0.55,y+8); g.stroke(); }
+        break;
+      }
+      case 'umbrella': {
+        const base=g.createRadialGradient(size*0.5,size*0.42,size*0.06,size*0.5,size*0.5,size*0.78);
+        base.addColorStop(0,'#f7d6ff'); base.addColorStop(1,'#7c3aed');
+        g.fillStyle=base; g.fillRect(0,0,size,size); grain();
+        g.strokeStyle='rgba(255,255,255,0.34)'; g.lineWidth=6;
+        for(let i=0;i<8;i++){ const ang=i*TAU/8; g.beginPath(); g.moveTo(size*0.5,size*0.5); g.lineTo(size*0.5+Math.cos(ang)*size*0.45,size*0.5+Math.sin(ang)*size*0.45); g.stroke(); }
+        break;
+      }
+      case 'shuttlecock': {
+        const base=g.createRadialGradient(size*0.44,size*0.34,size*0.04,size*0.5,size*0.5,size*0.72);
+        base.addColorStop(0,'#fffef1'); base.addColorStop(1,'#f3ebc6');
+        g.fillStyle=base; g.fillRect(0,0,size,size); grain();
+        g.strokeStyle='rgba(148,163,184,0.22)'; g.lineWidth=5;
+        for(let i=0;i<13;i++){ const x=28+i*36; g.beginPath(); g.moveTo(x,18); g.lineTo(size*0.5,size-20); g.stroke(); }
+        g.fillStyle='#ef4444'; g.fillRect(0,size*0.05,size,size*0.08);
+        break;
+      }
+      case 'frisbee': {
+        const base=g.createRadialGradient(size*0.4,size*0.34,size*0.04,size*0.5,size*0.5,size*0.76);
+        base.addColorStop(0,'#51c5ff'); base.addColorStop(1,'#1990d1');
+        g.fillStyle=base; g.fillRect(0,0,size,size); grain();
+        g.strokeStyle='#10233d'; g.lineWidth=12; g.beginPath(); g.arc(size*0.5,size*0.5,size*0.34,0,TAU); g.stroke();
+        g.lineWidth=5; g.beginPath(); g.arc(size*0.5,size*0.5,size*0.17,0,TAU); g.stroke();
+        g.fillStyle='rgba(255,255,255,0.78)'; g.fillRect(size*0.16,size*0.44,size*0.68,size*0.08);
+        break;
+      }
+      case 'crate': {
+        const base=g.createLinearGradient(0,0,size,size);
+        base.addColorStop(0,'#9a6432'); base.addColorStop(1,'#6f4420');
+        g.fillStyle=base; g.fillRect(0,0,size,size);
+        g.fillStyle='rgba(255,255,255,0.08)'; for(let i=0;i<5;i++) g.fillRect(0,i*size/5+12,size,7);
+        g.strokeStyle='#4d2e16'; g.lineWidth=16; g.strokeRect(22,22,size-44,size-44);
+        g.beginPath(); g.moveTo(40,40); g.lineTo(size-40,size-40); g.moveTo(size-40,40); g.lineTo(40,size-40); g.stroke();
+        break;
+      }
+      case 'brick': {
+        const base=g.createLinearGradient(0,0,size,size);
+        base.addColorStop(0,'#c25f17'); base.addColorStop(1,'#8e3f04');
+        g.fillStyle=base; g.fillRect(0,0,size,size); drawWrappedDotField(g,size,700,'rgba(255,235,210,0.10)',0.01,0.04,0.7,1.2);
+        g.strokeStyle='rgba(255,240,225,0.78)'; g.lineWidth=8;
+        for(let y=0;y<=size;y+=96){ g.beginPath(); g.moveTo(0,y); g.lineTo(size,y); g.stroke(); }
+        for(let y=0;y<size;y+=96){ const off=(y/96)%2?0:64; for(let x=off;x<size;x+=128){ g.beginPath(); g.moveTo(x,y); g.lineTo(x,Math.min(size,y+96)); g.stroke(); } }
+        break;
+      }
+    }
+  });
+}
 function makeObjectMaterial(textureName,extra={}){ return new THREE.MeshStandardMaterial({color:0xffffff,map:getObjectTexture(textureName),roughness:extra.roughness ?? 0.65,metalness:extra.metalness ?? 0.05,transparent:!!extra.transparent,alphaTest:extra.alphaTest ?? 0,side:extra.side ?? THREE.FrontSide}); }
 function bendPlane(geo,bendAmount){ const pos=geo.attributes.position; for(let i=0;i<pos.count;i++){ const x=pos.getX(i), y=pos.getY(i); pos.setZ(i, Math.sin(x*Math.PI*0.9)*bendAmount + Math.cos(y*Math.PI*0.5)*bendAmount*0.25); } pos.needsUpdate=true; geo.computeVertexNormals(); return geo; }
 function buildObjectVisual(def){ const root=new THREE.Group(); let mesh=null; switch(def.shape){ case 'sphere': mesh=new THREE.Mesh(new THREE.SphereGeometry(1,48,48), makeObjectMaterial(def.texture)); break; case 'ellipsoid': mesh=new THREE.Mesh(new THREE.SphereGeometry(1,48,48), makeObjectMaterial(def.texture)); mesh.scale.set(0.86,0.86,1.48); break; case 'paperball': mesh=new THREE.Mesh(new THREE.IcosahedronGeometry(1,2), makeObjectMaterial(def.texture,{roughness:0.9})); break; case 'disc': mesh=new THREE.Mesh(new THREE.CylinderGeometry(1,1,0.18,48,1), makeObjectMaterial(def.texture,{roughness:0.4})); break; case 'box': mesh=new THREE.Mesh(new THREE.BoxGeometry(1,1,1), makeObjectMaterial(def.texture,{roughness:0.82})); break; case 'brick': mesh=new THREE.Mesh(new THREE.BoxGeometry(1.55,0.62,0.82), makeObjectMaterial(def.texture,{roughness:0.9})); break; case 'leaf': mesh=new THREE.Mesh(bendPlane(new THREE.PlaneGeometry(1.1,1.8,10,16),0.12), makeObjectMaterial(def.texture,{transparent:true,alphaTest:0.18,side:THREE.DoubleSide,roughness:0.9})); break; case 'feather': mesh=new THREE.Mesh(bendPlane(new THREE.PlaneGeometry(0.75,2.15,8,18),0.08), makeObjectMaterial(def.texture,{transparent:true,alphaTest:0.1,side:THREE.DoubleSide,roughness:0.92})); break; case 'umbrella': { const canopy=new THREE.Mesh(new THREE.SphereGeometry(1,36,18,0,TAU,0,Math.PI*0.58), makeObjectMaterial(def.texture,{side:THREE.DoubleSide,roughness:0.74})); canopy.position.y=0.18; const shaft=new THREE.Mesh(new THREE.CylinderGeometry(0.05,0.05,1.8,12), new THREE.MeshStandardMaterial({color:0x6b4a24,roughness:0.8})); shaft.position.y=-0.66; const hook=new THREE.Mesh(new THREE.TorusGeometry(0.18,0.035,10,24,Math.PI), new THREE.MeshStandardMaterial({color:0x6b4a24,roughness:0.82})); hook.rotation.z=Math.PI/2; hook.position.set(0,-1.45,0.16); root.add(canopy,shaft,hook); break; } case 'shuttlecock': { const cork=new THREE.Mesh(new THREE.SphereGeometry(0.34,24,24), new THREE.MeshStandardMaterial({color:0xd97706,roughness:0.74})); cork.scale.y=0.8; cork.position.y=-0.72; const skirt=new THREE.Mesh(new THREE.CylinderGeometry(0.32,1.12,1.9,18,1,true), makeObjectMaterial(def.texture,{side:THREE.DoubleSide,roughness:0.88})); skirt.position.y=0.2; root.add(skirt,cork); break; } } if(mesh){ mesh.castShadow=true; mesh.receiveShadow=true; root.add(mesh); } root.traverse(child=>{ if(child.isMesh){ child.castShadow=true; child.receiveShadow=true; } }); if(def.shape==='box' && def.stretch) root.scale.set(def.r*def.stretch[0], def.r*def.stretch[1], def.r*def.stretch[2]); else if(def.shape==='brick') root.scale.setScalar(def.r); else if(def.stretch && def.shape!=='ellipsoid') root.scale.set(def.r*def.stretch[0], def.r*def.stretch[1], def.r*def.stretch[2]); else root.scale.setScalar(def.r); return root; }
@@ -632,17 +906,213 @@ function settleRateFor(def){ switch(def.shape){ case 'box': case 'brick': return
 function getParticleAnchor(){ camera.getWorldDirection(camViewDir); particleAnchor.lerpVectors(camera.position,camFocus,cam.follow?0.38:0.18).addScaledVector(camViewDir,Math.max(18,cam.distance*0.9)); particleAnchor.y=THREE.MathUtils.clamp(particleAnchor.y,4,Math.max(8,world.ceiling*0.68)); return particleAnchor; }
 function updateLighting(){ const windBlend=THREE.MathUtils.clamp(wind.speed/60,0,1), speedBlend=THREE.MathUtils.clamp(Math.sqrt(obj.vx*obj.vx+obj.vy*obj.vy+obj.vz*obj.vz)/26,0,1); dirL.intensity=1.15+windBlend*0.55; hemiL.intensity=0.88+windBlend*0.18; rimL.intensity=0.95+speedBlend*0.45+gustStr*0.25; ptL.intensity=0.9+speedBlend*0.75+windBlend*0.35; ptL.distance=34+windBlend*18; ptL.position.lerp(tempVec.set(obj.x+fw.x*0.15,obj.y+4.5,obj.z+fw.z*0.15),0.18); fillL.position.lerp(tempVec2.set(camera.position.x*0.55+camFocus.x*0.45,camFocus.y+10,camera.position.z*0.55+camFocus.z*0.45),0.14); rimL.position.set(camera.position.x*0.35+camFocus.x*0.65,camFocus.y+18,camera.position.z*0.35+camFocus.z*0.65); }
 function syncCameraInputs(){ $('sCamDist').value=cam.distance.toFixed(1); $('sCamYaw').value=THREE.MathUtils.radToDeg(cam.yaw).toFixed(0); $('sCamPitch').value=THREE.MathUtils.radToDeg(cam.pitch).toFixed(0); $('sFov').value=cam.fov.toFixed(0); $('sCamLag').value=cam.lag.toFixed(2); $('vCamDist').textContent=cam.distance.toFixed(1)+' m'; $('vCamYaw').textContent=THREE.MathUtils.radToDeg(cam.yaw).toFixed(0)+' deg'; $('vCamPitch').textContent=THREE.MathUtils.radToDeg(cam.pitch).toFixed(0)+' deg'; $('vFov').textContent=cam.fov.toFixed(0)+' deg'; $('vCamLag').textContent=cam.lag.toFixed(2); $('tCamFollow').classList.toggle('on',cam.follow); ['sCamDist','sCamYaw','sCamPitch','sFov','sCamLag'].forEach(id=>updateSliderFill($(id))); }
-function resetCamera(fullReset){ if(fullReset){ cam.follow=true; cam.yaw=THREE.MathUtils.degToRad(-23); cam.pitch=THREE.MathUtils.degToRad(49); cam.distance=28; cam.fov=52; cam.lag=0.08; cam.pan.set(0,2,0); } camera.fov=cam.fov; camera.updateProjectionMatrix(); camFocus.set(obj.x,Math.max(1.2,obj.y*0.55+cam.pan.y),obj.z); syncCameraInputs(); }
+
+function resetCamera(fullReset){
+  if(fullReset){ cam.follow=true; cam.yaw=THREE.MathUtils.degToRad(-23); cam.pitch=THREE.MathUtils.degToRad(49); cam.distance=28; cam.fov=52; cam.lag=0.08; cam.pan.set(0,2,0); }
+  camera.fov=cam.fov; camera.updateProjectionMatrix();
+  camFocus.set(obj.x,Math.max(1.2,obj.y*0.55+cam.pan.y),obj.z);
+  syncCameraInputs();
+}
 function toggleCamFollow(){ cam.follow=!cam.follow; syncCameraInputs(); }
 function panCamera(dx,dy){ const scale=cam.distance*0.015; camForward.set(-Math.cos(cam.yaw),0,-Math.sin(cam.yaw)).normalize(); camRight.set(-camForward.z,0,camForward.x).normalize(); cam.pan.addScaledVector(camRight,-dx*scale); cam.pan.y += dy*scale*0.45; }
 function updateCameraKeys(dt){ if(!keysDown.size) return; const move=Math.max(6,cam.distance*0.55)*dt; camForward.set(-Math.cos(cam.yaw),0,-Math.sin(cam.yaw)).normalize(); camRight.set(-camForward.z,0,camForward.x).normalize(); if(keysDown.has('KeyW')) cam.pan.addScaledVector(camForward,move); if(keysDown.has('KeyS')) cam.pan.addScaledVector(camForward,-move); if(keysDown.has('KeyA')) cam.pan.addScaledVector(camRight,-move); if(keysDown.has('KeyD')) cam.pan.addScaledVector(camRight,move); if(keysDown.has('KeyQ')) cam.pan.y += move; if(keysDown.has('KeyE')) cam.pan.y -= move; }
-const rd=renderer.domElement; rd.addEventListener('contextmenu',e=>e.preventDefault()); rd.addEventListener('mousedown',e=>{ dragMode=(e.shiftKey||e.button===2)?'pan':'orbit'; dragPos.x=e.clientX; dragPos.y=e.clientY; }); window.addEventListener('mousemove',e=>{ if(!dragMode) return; const dx=e.clientX-dragPos.x, dy=e.clientY-dragPos.y; dragPos.x=e.clientX; dragPos.y=e.clientY; if(dragMode==='orbit'){ cam.yaw -= dx*0.006; cam.pitch = THREE.MathUtils.clamp(cam.pitch-dy*0.006,THREE.MathUtils.degToRad(8),THREE.MathUtils.degToRad(88)); } else panCamera(dx,dy); syncCameraInputs(); }); window.addEventListener('mouseup',()=>{ dragMode=null; }); rd.addEventListener('mouseleave',()=>{ /* keep drag active even if cursor leaves canvas */ }); rd.addEventListener('wheel',e=>{ const delta=e.deltaMode===1?e.deltaY*20:e.deltaMode===2?e.deltaY*300:e.deltaY; cam.distance=THREE.MathUtils.clamp(cam.distance+delta*0.05,4,120); syncCameraInputs(); e.preventDefault(); },{passive:false}); let pinchDist0=null;
+const rd=renderer.domElement; rd.addEventListener('contextmenu',e=>e.preventDefault()); rd.addEventListener('mousedown',e=>{ dragMode=(e.shiftKey||e.button===2)?'pan':'orbit'; dragPos.x=e.clientX; dragPos.y=e.clientY; }); window.addEventListener('mousemove',e=>{ if(!dragMode) return; const dx=e.clientX-dragPos.x, dy=e.clientY-dragPos.y; dragPos.x=e.clientX; dragPos.y=e.clientY; if(dragMode==='orbit'){ cam.yaw -= dx*0.006; cam.pitch = THREE.MathUtils.clamp(cam.pitch-dy*0.006,THREE.MathUtils.degToRad(-89),THREE.MathUtils.degToRad(89)); } else panCamera(dx,dy); syncCameraInputs(); }); window.addEventListener('mouseup',()=>{ dragMode=null; }); rd.addEventListener('mouseleave',()=>{ /* keep drag active even if cursor leaves canvas */ }); rd.addEventListener('wheel',e=>{ const delta=e.deltaMode===1?e.deltaY*20:e.deltaMode===2?e.deltaY*300:e.deltaY; cam.distance=THREE.MathUtils.clamp(cam.distance+delta*0.04,2,220); syncCameraInputs(); e.preventDefault(); },{passive:false}); let pinchDist0=null;
 rd.addEventListener('touchstart',e=>{ if(e.touches.length===2){ pinchDist0=Math.hypot(e.touches[0].clientX-e.touches[1].clientX,e.touches[0].clientY-e.touches[1].clientY); dragMode=null; } else { pinchDist0=null; dragMode='orbit'; dragPos.x=e.touches[0].clientX; dragPos.y=e.touches[0].clientY; } e.preventDefault(); },{passive:false});
 rd.addEventListener('touchmove',e=>{ if(e.touches.length===2&&pinchDist0!=null){ const d=Math.hypot(e.touches[0].clientX-e.touches[1].clientX,e.touches[0].clientY-e.touches[1].clientY); cam.distance=THREE.MathUtils.clamp(cam.distance*(pinchDist0/d),4,120); pinchDist0=d; syncCameraInputs(); e.preventDefault(); return; } if(!dragMode||e.touches.length!==1) return; const dx=e.touches[0].clientX-dragPos.x, dy=e.touches[0].clientY-dragPos.y; dragPos.x=e.touches[0].clientX; dragPos.y=e.touches[0].clientY; cam.yaw -= dx*0.007; cam.pitch = THREE.MathUtils.clamp(cam.pitch-dy*0.007,THREE.MathUtils.degToRad(8),THREE.MathUtils.degToRad(88)); syncCameraInputs(); e.preventDefault(); },{passive:false});
 window.addEventListener('touchend',()=>{ pinchDist0=null; dragMode=null; }); window.addEventListener('resize',()=>{ renderer.setSize(mainEl.offsetWidth,mainEl.offsetHeight); camera.aspect=mainEl.offsetWidth/mainEl.offsetHeight; camera.updateProjectionMatrix(); });
-function resetObj(){ const def=OBJ_DEFS[selObj], startQ=restQuaternionFor(def,new THREE.Quaternion()); obj={x:0,y:Math.max(launch.h0,supportHeightFor(def,startQ)),z:0,vx:launch.vx,vy:launch.vy,vz:launch.vz,omx:launch.omx*TAU,omy:launch.omy*TAU,omz:launch.omz*TAU,ax:0,ay:0,az:0,Fd:0,netF:0,Cd:def.Cd0,Re:0,Fdx:0,Fdy:0,Fdz:0,Fmx:0,Fmy:0,Fmz:0,areaEff:def.area,contactH:0,q:startQ}; obj.contactH=supportHeightFor(def,obj.q); trailPts=[]; trailGeo.setDrawRange(0,0); energy={keTrans:0,keRot:0,pe:0,windWork:0,fricLoss:0,bounceLoss:0}; simTime=0; lastTelem=-1; telemetry=[]; setObjectVisual(); objectPivot.position.set(obj.x,obj.y,obj.z); objectPivot.quaternion.copy(obj.q); $('tcount').textContent='0 data points recorded'; updateSurfaceMaterial(); updateObjInfo(); updatePhysPanel(); }
-function updateWindField(dt){ if(wind.speed<0.05){ wNoise.x*=Math.max(0,1-dt*12); wNoise.y*=Math.max(0,1-dt*12); wNoise.z*=Math.max(0,1-dt*12); gustStr=0; fw.x=0; fw.y=0; fw.z=0; return; } const az=wind.azim*Math.PI/180, el=wind.elev*Math.PI/180; const refH=10; const height=Math.max(0.25,obj.y); const shearFactor=THREE.MathUtils.clamp(Math.pow(height/refH,Math.max(0.01,wind.shear)),0.35,2.85); const baseT=simTime*0.52; const turb=(wind.turb/100)*wind.speed; wNoise.x=wNoise.x*0.92 + ((Math.sin(baseT + obj.x*0.013 + obj.z*0.017)*0.58 + Math.sin(baseT*1.71 + 0.7)*0.24)*turb*0.10); wNoise.y=wNoise.y*0.95 + ((Math.sin(baseT*1.13 + obj.y*0.041)*0.52 + Math.sin(baseT*2.12 + 1.9)*0.18)*turb*0.03); wNoise.z=wNoise.z*0.92 + ((Math.sin(baseT + obj.z*0.014 - obj.x*0.01)*0.58 + Math.sin(baseT*1.43 + 2.4)*0.24)*turb*0.10); nextGust-=dt; if(nextGust<0){ nextGust=2.5+Math.random()*6; if(Math.random()<wind.gust/100) gustStr=0.35+Math.random()*0.65; } gustStr=Math.max(0,gustStr-dt*1.3); const boost=1+gustStr*0.55; const sp=wind.speed*boost*shearFactor; fw.x=sp*Math.cos(el)*Math.sin(az)+wNoise.x; fw.y=sp*Math.sin(el)+wNoise.y; fw.z=sp*Math.cos(el)*Math.cos(az)+wNoise.z; }
-function physicsStep(dt){ const def=OBJ_DEFS[selObj], surf=SURFACES[surfType]; const rvx=fw.x-obj.vx, rvy=fw.y-obj.vy, rvz=fw.z-obj.vz; const rv=Math.sqrt(rvx*rvx+rvy*rvy+rvz*rvz); let Fdx=0,Fdy=0,Fdz=0,Fd=0,Cd=def.Cd0,areaEff=def.area; if(rv>1e-9){ dragDir.set(rvx,rvy,rvz).multiplyScalar(1/rv); areaEff=projectedAreaFor(def,dragDir,obj.q); Cd=computeCd(def,rv,Math.sqrt(4*Math.max(areaEff,1e-5)/Math.PI))*cdFactorFor(def,dragDir,obj.q); Fd=0.5*currentRho*Cd*areaEff*rv*rv; Fdx=Fd*dragDir.x; Fdy=Fd*dragDir.y; Fdz=Fd*dragDir.z; } else obj.Re=0; obj.areaEff=areaEff; obj.Cd=Cd; obj.Fd=Fd; obj.Fdx=Fdx; obj.Fdy=Fdy; obj.Fdz=Fdz; const Fgy=env.grav?-def.mass*GRAV:0; let Fmx=0,Fmy=0,Fmz=0; if(env.magnus&&def.I!=null&&rv>0.05){ velVec.set(rvx,rvy,rvz); const vMag=velVec.length(); const spinMag=Math.sqrt(obj.omx*obj.omx+obj.omy*obj.omy+obj.omz*obj.omz); if(vMag>1e-9&&spinMag>1e-9){ torqueVec.set(obj.omx,obj.omy,obj.omz).cross(velVec); const crossMag=torqueVec.length(); if(crossMag>1e-9){ torqueVec.multiplyScalar(1/crossMag); const spinRatio=THREE.MathUtils.clamp((spinMag*def.r)/Math.max(vMag,0.5),0,2.5); let cl=0.18+0.92*(spinRatio/(1+spinRatio)); if(def.useCurve==='golf') cl*=1.15; if(def.shape==='disc') cl*=1.25; if(def.shape==='sphere') cl=Math.min(cl,0.85); const magnusMag=0.5*currentRho*areaEff*vMag*vMag*cl; Fmx=torqueVec.x*magnusMag; Fmy=torqueVec.y*magnusMag; Fmz=torqueVec.z*magnusMag; } } } obj.Fmx=Fmx; obj.Fmy=Fmy; obj.Fmz=Fmz; const Fx=Fdx+Fmx, Fy=Fdy+Fgy+Fmy, Fz=Fdz+Fmz; obj.netF=Math.sqrt(Fx*Fx+Fy*Fy+Fz*Fz); applyAirAlignment(def,rv,areaEff,dt); obj.ax=Fx/def.mass; obj.ay=Fy/def.mass; obj.az=Fz/def.mass; energy.windWork+=(Fdx*obj.vx+Fdy*obj.vy+Fdz*obj.vz)*dt; obj.vx+=obj.ax*dt; obj.vy+=obj.ay*dt; obj.vz+=obj.az*dt; obj.x+=obj.vx*dt; obj.y+=obj.vy*dt; obj.z+=obj.vz*dt; if(env.rotation){ const airDamp=Math.exp(-(isFlatShape(def)?0.8:0.25)*dt); obj.omx*=airDamp; obj.omy*=airDamp; obj.omz*=airDamp; const MAX_SPIN=200*TAU; obj.omx=THREE.MathUtils.clamp(obj.omx,-MAX_SPIN,MAX_SPIN); obj.omy=THREE.MathUtils.clamp(obj.omy,-MAX_SPIN,MAX_SPIN); obj.omz=THREE.MathUtils.clamp(obj.omz,-MAX_SPIN,MAX_SPIN); velVec.set(obj.omx,obj.omy,obj.omz); const angSpeed=velVec.length(); if(angSpeed>1e-4){ tempQuat.setFromAxisAngle(velVec.normalize(),angSpeed*dt); obj.q.premultiply(tempQuat).normalize(); } } obj.contactH=supportHeightFor(def,obj.q); if(obj.y<obj.contactH){ obj.y=obj.contactH; const vy0=obj.vy, N=def.mass*GRAV, vh=Math.sqrt(obj.vx*obj.vx+obj.vz*obj.vz), drive=Math.sqrt(Fx*Fx+Fz*Fz); if(isFlatShape(def)){ const cr=env.bounce?surf.cr*def.crO*0.45:0; if(vy0<0) energy.bounceLoss+=0.5*def.mass*vy0*vy0*(1-cr*cr); obj.vy=env.bounce&&vy0<-0.12?-vy0*cr:0; if(Math.abs(obj.vy)<0.05) obj.vy=0; const staticLimit=surf.mu_s*N*(def.shape==='disc'?0.9:1.15); if(vh<0.18&&drive<staticLimit){ obj.vx=0; obj.vz=0; } else if(vh>0.0001){ const mu=surf.mu_k*(def.shape==='disc'?1.0:1.2), dv=Math.min(mu*GRAV*dt,vh); obj.vx-=dv*obj.vx/vh; obj.vz-=dv*obj.vz/vh; energy.fricLoss+=mu*N*vh*dt; } const groundDamp=Math.exp(-groundAngularDampingFor(def)*dt); obj.omx*=groundDamp; obj.omy*=Math.exp(-Math.max(groundAngularDampingFor(def)-4,4)*dt); obj.omz*=groundDamp; if(vh<0.35&&Math.abs(obj.vy)<0.35) obj.q.slerp(restQuaternionFor(def,tempQuat2),Math.min(1,settleRateFor(def)*dt)); } else { const cr=env.bounce?surf.cr*def.crO:0; if(vy0<0) energy.bounceLoss+=0.5*def.mass*vy0*vy0*(1-cr*cr); obj.vy=env.bounce?-vy0*cr:0; if(Math.abs(obj.vy)<0.06) obj.vy=0; if(vh<0.08&&drive<surf.mu_s*N*0.35){ obj.vx=0; obj.vz=0; } const r=rollingRadiusFor(def), I=Math.max(0.08,(def.I??0.4))*def.mass*r*r; if(env.rotation){ const slipX=obj.vx+obj.omz*r, slipZ=obj.vz-obj.omx*r, slip=Math.sqrt(slipX*slipX+slipZ*slipZ); if(slip>0.008){ const Ff=surf.mu_k*N, Ffx=-Ff*slipX/slip, Ffz=-Ff*slipZ/slip; obj.vx+=Ffx*dt/def.mass; obj.vz+=Ffz*dt/def.mass; obj.omx+=(-r*Ffz)/I*dt; obj.omz+=(r*Ffx)/I*dt; energy.fricLoss+=Ff*slip*dt; } else { const alpha=Math.min(1,(def.shape==='ellipsoid'?9:18)*dt); obj.omz+=(-obj.vx/r-obj.omz)*alpha; obj.omx+=(obj.vz/r-obj.omx)*alpha; } } if(vh>0.0001){ const Fr=surf.mu_r*N*(def.shape==='ellipsoid'?1.7:1), dv=Math.min(Fr*dt/def.mass,vh); obj.vx-=dv*obj.vx/vh; obj.vz-=dv*obj.vz/vh; energy.fricLoss+=Fr*vh*dt; } if(def.shape==='ellipsoid'&&vh<0.35) obj.q.slerp(restQuaternionFor(def,tempQuat2),Math.min(1,settleRateFor(def)*dt)); } if(Math.abs(obj.vx)<0.003) obj.vx=0; if(Math.abs(obj.vz)<0.003) obj.vz=0; } if(obj.y>world.ceiling){ obj.y=world.ceiling-0.001; obj.vy=-Math.abs(obj.vy)*(isFlatShape(def)?0.18:0.3); } const v2=obj.vx*obj.vx+obj.vy*obj.vy+obj.vz*obj.vz, rEnergy=Math.max(def.r,rollingRadiusFor(def)); energy.keTrans=0.5*def.mass*v2; energy.pe=def.mass*GRAV*Math.max(0,obj.y-obj.contactH); if(env.rotation){ const I=(def.I!=null?def.I:(isFlatShape(def)?0.18:0.4))*def.mass*rEnergy*rEnergy; energy.keRot=0.5*I*(obj.omx*obj.omx+obj.omy*obj.omy+obj.omz*obj.omz); } else energy.keRot=0; }
+function resetObj(){ const def=OBJ_DEFS[selObj], startQ=restQuaternionFor(def,new THREE.Quaternion()); obj={x:0,y:Math.max(launch.h0,supportHeightFor(def,startQ)),z:0,vx:launch.vx,vy:launch.vy,vz:launch.vz,omx:launch.omx*TAU,omy:launch.omy*TAU,omz:launch.omz*TAU,ax:0,ay:0,az:0,Fd:0,netF:0,Cd:def.Cd0,Re:0,Fdx:0,Fdy:0,Fdz:0,Fmx:0,Fmy:0,Fmz:0,areaEff:def.area,contactH:0,q:startQ}; obj.contactH=supportHeightFor(def,obj.q); trailPts=[]; trailGeo.setDrawRange(0,0); energy={keTrans:0,keRot:0,pe:0,windWork:0,fricLoss:0,bounceLoss:0}; simTime=0; lastTelem=-1; telemetry=[]; setObjectVisual(); objectPivot.position.set(obj.x,obj.y,obj.z); objectPivot.quaternion.copy(obj.q); refreshLaunchPolar(); $('tcount').textContent='0 data points recorded'; updateSurfaceMaterial(); updateObjInfo(); updatePhysPanel(); }
+
+function updateWindField(dt){
+  if(wind.speed<0.02){
+    wNoise.x*=Math.max(0,1-dt*10); wNoise.y*=Math.max(0,1-dt*10); wNoise.z*=Math.max(0,1-dt*10);
+    gustStr=0; fw.x=0; fw.y=0; fw.z=0; return;
+  }
+  const az=wind.azim*Math.PI/180, el=wind.elev*Math.PI/180;
+  const h=Math.max(0.25,obj.y);
+  const refH=10;
+  const surfRough=(SURFACES[surfType].mu_r*90)+(SURFACES[surfType].mu_s*20);
+  const z0=THREE.MathUtils.clamp(0.03+surfRough*0.004,0.02,1.2);
+  const logProfile=Math.log((h+z0)/z0)/Math.log((refH+z0)/z0);
+  const heightProfile=THREE.MathUtils.clamp(0.35+0.85*logProfile,0.28,2.9);
+  const shearBoost=THREE.MathUtils.clamp(1+wind.shear*2.15*logProfile,0.35,3.25);
+  const speedBase=wind.speed*heightProfile*shearBoost;
+  const turb=(wind.turb/100)*wind.speed;
+  const t=simTime*0.42;
+  const windBias=Math.sin(t+obj.x*0.0045-obj.z*0.0032);
+  const windBias2=Math.sin(t*1.37+obj.y*0.027+0.8);
+  const windBias3=Math.sin(t*2.11+obj.x*0.009+obj.z*0.013+1.9);
+  const cellX=Math.sin((obj.x*0.015)+(obj.z*0.006)+t*0.7);
+  const cellZ=Math.sin((obj.z*0.016)-(obj.x*0.004)+t*0.63+1.4);
+  const cellY=Math.sin((obj.y*0.03)+t*0.9-0.7);
+  wNoise.x=wNoise.x*0.93 + (windBias*0.42 + windBias2*0.18 + cellX*0.40)*turb*0.10;
+  wNoise.y=wNoise.y*0.95 + (windBias2*0.36 + cellY*0.24)*turb*0.03;
+  wNoise.z=wNoise.z*0.93 + (windBias*0.42 + windBias3*0.18 + cellZ*0.40)*turb*0.10;
+  nextGust-=dt;
+  if(nextGust<0){
+    nextGust=3.5+Math.random()*6.5;
+    gustStr=THREE.MathUtils.clamp(gustStr + (wind.gust/100)*(0.35+Math.random()*0.55),0,1.25);
+  }
+  gustStr=Math.max(0,gustStr-dt*(0.55+wind.speed*0.015));
+  const gustAmp=1+gustStr*0.75;
+  const veer=THREE.MathUtils.clamp((wind.turb/100)*0.12,0,0.22);
+  const dirAz=az + windBias2*veer;
+  const dirEl=el + windBias3*veer*0.6;
+  const base= speedBase * gustAmp;
+  fw.x = base*Math.cos(dirEl)*Math.sin(dirAz) + wNoise.x;
+  fw.y = base*Math.sin(dirEl) + wNoise.y;
+  fw.z = base*Math.cos(dirEl)*Math.cos(dirAz) + wNoise.z;
+}
+function isRoundBody(def){ return def.shape==='sphere' || def.shape==='paperball' || def.shape==='ellipsoid'; }
+function applyRoundContact(def,surf,dt){
+  const radius=rollingRadiusFor(def);
+  const I=Math.max(0.08,(def.I??0.4))*def.mass*radius*radius;
+  const e=env.bounce ? THREE.MathUtils.clamp(surf.cr*def.crO,0,0.92) : 0;
+  const vy=obj.vy;
+  if(vy<0){
+    const jn=-(1+e)*vy*def.mass;
+    obj.vy += jn/def.mass;
+    energy.bounceLoss += 0.5*def.mass*vy*vy*(1-e*e);
+    const vcx = obj.vx - obj.omz*radius;
+    const vcz = obj.vz + obj.omx*radius;
+    const vt = Math.hypot(vcx,vcz);
+    if(vt>1e-7){
+      const invEff=(1/def.mass) + (radius*radius/I);
+      const jNeedX = -vcx / invEff;
+      const jNeedZ = -vcz / invEff;
+      const jNeed = Math.hypot(jNeedX,jNeedZ);
+      const jMax = surf.mu_k * Math.abs(jn);
+      const scale = jNeed>jMax && jNeed>1e-9 ? (jMax/jNeed) : 1;
+      const jx = jNeedX * scale;
+      const jz = jNeedZ * scale;
+      obj.vx += jx/def.mass;
+      obj.vz += jz/def.mass;
+      obj.omx += (-radius*jz)/I;
+      obj.omz += (radius*jx)/I;
+      energy.fricLoss += Math.hypot(jx,jz) * vt;
+    }
+    if(Math.abs(obj.vy)<0.06) obj.vy=0;
+  }
+  const hVel=Math.hypot(obj.vx,obj.vz);
+  if(hVel>1e-6){
+    const rollDecel=surf.mu_r*GRAV*dt;
+    const drop=Math.min(rollDecel,hVel);
+    obj.vx -= drop*obj.vx/hVel;
+    obj.vz -= drop*obj.vz/hVel;
+    energy.fricLoss += surf.mu_r*def.mass*GRAV*hVel*dt;
+  }
+  if(env.rotation){
+    const targetOmx = obj.vz/Math.max(radius,0.01);
+    const targetOmz = -obj.vx/Math.max(radius,0.01);
+    const k=Math.min(1,settleRateFor(def)*dt*0.12);
+    obj.omx += (targetOmx-obj.omx)*k;
+    obj.omz += (targetOmz-obj.omz)*k;
+    obj.omy *= Math.exp(-Math.max(0.25,groundAngularDampingFor(def))*dt*0.18);
+  }
+}
+function physicsStep(dt){
+  const def=OBJ_DEFS[selObj], surf=SURFACES[surfType];
+  const rvx=fw.x-obj.vx, rvy=fw.y-obj.vy, rvz=fw.z-obj.vz;
+  const rv=Math.sqrt(rvx*rvx+rvy*rvy+rvz*rvz);
+  let Fdx=0,Fdy=0,Fdz=0,Fd=0,Cd=def.Cd0,areaEff=def.area;
+  if(rv>1e-9){
+    dragDir.set(rvx,rvy,rvz).multiplyScalar(1/rv);
+    areaEff=projectedAreaFor(def,dragDir,obj.q);
+    Cd=computeCd(def,rv,Math.sqrt(4*Math.max(areaEff,1e-5)/Math.PI))*cdFactorFor(def,dragDir,obj.q);
+    Fd=0.5*currentRho*Cd*areaEff*rv*rv;
+    Fdx=Fd*dragDir.x; Fdy=Fd*dragDir.y; Fdz=Fd*dragDir.z;
+  } else obj.Re=0;
+  obj.areaEff=areaEff; obj.Cd=Cd; obj.Fd=Fd; obj.Fdx=Fdx; obj.Fdy=Fdy; obj.Fdz=Fdz;
+  const Fgy=env.grav ? -def.mass*GRAV : 0;
+  let Fmx=0,Fmy=0,Fmz=0;
+  if(env.magnus && def.I!=null && rv>0.05){
+    velVec.set(rvx,rvy,rvz);
+    const vMag=velVec.length();
+    const spinMag=Math.sqrt(obj.omx*obj.omx+obj.omy*obj.omy+obj.omz*obj.omz);
+    if(vMag>1e-9 && spinMag>1e-9){
+      torqueVec.set(obj.omx,obj.omy,obj.omz).cross(velVec);
+      const crossMag=torqueVec.length();
+      if(crossMag>1e-9){
+        torqueVec.multiplyScalar(1/crossMag);
+        const spinRatio=THREE.MathUtils.clamp((spinMag*def.r)/Math.max(vMag,0.5),0,3.0);
+        let cl=0.14+1.05*(spinRatio/(1+spinRatio));
+        if(def.useCurve==='golf') cl*=1.18;
+        if(def.shape==='disc') cl*=1.25;
+        if(def.shape==='sphere') cl=Math.min(cl,0.82);
+        const magnusMag=0.5*currentRho*areaEff*vMag*vMag*cl;
+        Fmx=torqueVec.x*magnusMag; Fmy=torqueVec.y*magnusMag; Fmz=torqueVec.z*magnusMag;
+      }
+    }
+  }
+  obj.Fmx=Fmx; obj.Fmy=Fmy; obj.Fmz=Fmz;
+  const Fx=Fdx+Fmx, Fy=Fdy+Fgy+Fmy, Fz=Fdz+Fmz;
+  obj.netF=Math.sqrt(Fx*Fx+Fy*Fy+Fz*Fz);
+  applyAirAlignment(def,rv,areaEff,dt);
+  obj.ax=Fx/def.mass; obj.ay=Fy/def.mass; obj.az=Fz/def.mass;
+  energy.windWork += (Fdx*obj.vx + Fdy*obj.vy + Fdz*obj.vz)*dt;
+  obj.vx += obj.ax*dt; obj.vy += obj.ay*dt; obj.vz += obj.az*dt;
+  obj.x += obj.vx*dt; obj.y += obj.vy*dt; obj.z += obj.vz*dt;
+  if(env.rotation){
+    const airDamp=Math.exp(-(isFlatShape(def)?0.72:0.22)*dt);
+    obj.omx*=airDamp; obj.omy*=airDamp; obj.omz*=airDamp;
+    const MAX_SPIN=220*TAU;
+    obj.omx=THREE.MathUtils.clamp(obj.omx,-MAX_SPIN,MAX_SPIN);
+    obj.omy=THREE.MathUtils.clamp(obj.omy,-MAX_SPIN,MAX_SPIN);
+    obj.omz=THREE.MathUtils.clamp(obj.omz,-MAX_SPIN,MAX_SPIN);
+    velVec.set(obj.omx,obj.omy,obj.omz);
+    const angSpeed=velVec.length();
+    if(angSpeed>1e-4){ tempQuat.setFromAxisAngle(velVec.normalize(),angSpeed*dt); obj.q.premultiply(tempQuat).normalize(); }
+  }
+  obj.contactH=supportHeightFor(def,obj.q);
+  if(obj.y<obj.contactH){
+    obj.y=obj.contactH;
+    if(isRoundBody(def)){
+      applyRoundContact(def,surf,dt);
+      if(Math.hypot(obj.vx,obj.vz)<0.002 && Math.abs(obj.vy)<0.03){ obj.vx=0; obj.vz=0; obj.vy=0; }
+    } else {
+      const vy0=obj.vy, N=def.mass*GRAV, vh=Math.sqrt(obj.vx*obj.vx+obj.vz*obj.vz), drive=Math.sqrt(Fx*Fx+Fz*Fz);
+      if(isFlatShape(def)){
+        const cr=env.bounce?surf.cr*def.crO*0.45:0;
+        if(vy0<0) energy.bounceLoss+=0.5*def.mass*vy0*vy0*(1-cr*cr);
+        obj.vy=env.bounce&&vy0<-0.12?-vy0*cr:0;
+        if(Math.abs(obj.vy)<0.05) obj.vy=0;
+        const staticLimit=surf.mu_s*N*(def.shape==='disc'?0.9:1.15);
+        if(vh<0.18&&drive<staticLimit){ obj.vx=0; obj.vz=0; }
+        else if(vh>0.0001){ const mu=surf.mu_k*(def.shape==='disc'?1.0:1.2), dv=Math.min(mu*GRAV*dt,vh); obj.vx-=dv*obj.vx/vh; obj.vz-=dv*obj.vz/vh; energy.fricLoss+=mu*N*vh*dt; }
+        const groundDamp=Math.exp(-groundAngularDampingFor(def)*dt);
+        obj.omx*=groundDamp; obj.omy*=Math.exp(-Math.max(groundAngularDampingFor(def)-4,4)*dt); obj.omz*=groundDamp;
+        if(vh<0.35&&Math.abs(obj.vy)<0.35) obj.q.slerp(restQuaternionFor(def,tempQuat2),Math.min(1,settleRateFor(def)*dt));
+      } else {
+        const cr=env.bounce?surf.cr*def.crO:0;
+        if(vy0<0) energy.bounceLoss+=0.5*def.mass*vy0*vy0*(1-cr*cr);
+        obj.vy=env.bounce?-vy0*cr:0;
+        if(Math.abs(obj.vy)<0.06) obj.vy=0;
+        if(vh<0.08&&drive<surf.mu_s*N*0.35){ obj.vx=0; obj.vz=0; }
+        const r=rollingRadiusFor(def), I=Math.max(0.08,(def.I??0.4))*def.mass*r*r;
+        if(env.rotation){
+          const slipX=obj.vx+obj.omz*r, slipZ=obj.vz-obj.omx*r, slip=Math.sqrt(slipX*slipX+slipZ*slipZ);
+          if(slip>0.008){
+            const Ff=surf.mu_k*N, Ffx=-Ff*slipX/slip, Ffz=-Ff*slipZ/slip;
+            obj.vx+=Ffx*dt/def.mass; obj.vz+=Ffz*dt/def.mass;
+            obj.omx+=(-r*Ffz)/I*dt; obj.omz+=(r*Ffx)/I*dt;
+            energy.fricLoss+=Ff*slip*dt;
+          } else {
+            const alpha=Math.min(1,(def.shape==='ellipsoid'?9:18)*dt);
+            obj.omz+=(-obj.vx/r-obj.omz)*alpha;
+            obj.omx+=(obj.vz/r-obj.omx)*alpha;
+          }
+        }
+        if(vh>0.0001){ const Fr=surf.mu_r*N*(def.shape==='ellipsoid'?1.7:1), dv=Math.min(Fr*dt/def.mass,vh); obj.vx-=dv*obj.vx/vh; obj.vz-=dv*obj.vz/vh; energy.fricLoss+=Fr*vh*dt; }
+        if(def.shape==='ellipsoid'&&vh<0.35) obj.q.slerp(restQuaternionFor(def,tempQuat2),Math.min(1,settleRateFor(def)*dt));
+      }
+      if(Math.abs(obj.vx)<0.003) obj.vx=0; if(Math.abs(obj.vz)<0.003) obj.vz=0;
+    }
+  }
+  if(obj.y>world.ceiling){ obj.y=world.ceiling-0.001; obj.vy=-Math.abs(obj.vy)*(isFlatShape(def)?0.18:0.3); }
+  const v2=obj.vx*obj.vx+obj.vy*obj.vy+obj.vz*obj.vz, rEnergy=Math.max(def.r,rollingRadiusFor(def));
+  energy.keTrans=0.5*def.mass*v2; energy.pe=def.mass*GRAV*Math.max(0,obj.y-obj.contactH);
+  if(env.rotation){ const I=(def.I!=null?def.I:(isFlatShape(def)?0.18:0.4))*def.mass*rEnergy*rEnergy; energy.keRot=0.5*I*(obj.omx*obj.omx+obj.omy*obj.omy+obj.omz*obj.omz); }
+  else energy.keRot=0;
+}
 function mkPart(){ const anchor=getParticleAnchor(), spanX=Math.max(110,cam.distance*6.5), spanZ=Math.max(110,cam.distance*6.5), spanY=Math.min(world.ceiling*0.72,Math.max(26,cam.distance*2.5)); return {x:anchor.x+(Math.random()-0.5)*spanX,y:THREE.MathUtils.clamp(anchor.y-spanY*0.35+Math.random()*spanY,0.3,world.ceiling*0.78),z:anchor.z+(Math.random()-0.5)*spanZ,life:Math.random(),maxLife:2.2+Math.random()*2.8}; }
 function initParts(){ parts3D=[]; for(let i=0;i<visuals.particleCount;i++) parts3D.push(mkPart()); pGeo.setDrawRange(0,visuals.particleCount); }
 function updateParts(dt){ const count=visuals.particleCount, anchor=getParticleAnchor(), spanX=Math.max(110,cam.distance*6.5), spanZ=Math.max(110,cam.distance*6.5), spanY=Math.min(world.ceiling*0.72,Math.max(26,cam.distance*2.5)), tA=(wind.turb/100)*wind.speed*0.7; pMat.size=visuals.particleSize; for(let i=0;i<count;i++){ let p=parts3D[i]; if(!p) p=parts3D[i]=mkPart(); p.x+=(fw.x+(Math.random()-0.5)*tA)*dt; p.y+=(fw.y+(Math.random()-0.5)*tA*0.16)*dt; p.z+=(fw.z+(Math.random()-0.5)*tA)*dt; p.life+=dt/p.maxLife; if(p.life>=1||Math.abs(p.x-anchor.x)>spanX*0.62||Math.abs(p.z-anchor.z)>spanZ*0.62||p.y<0.05||p.y>world.ceiling*0.82||Math.abs(p.y-anchor.y)>spanY*0.7) p=parts3D[i]=mkPart(); pPosBuf[i*3]=p.x; pPosBuf[i*3+1]=p.y; pPosBuf[i*3+2]=p.z; } pGeo.setDrawRange(0,count); pGeo.attributes.position.needsUpdate=true; pPoints.visible=env.part; }
@@ -684,12 +1154,38 @@ bindRange('sElev',v=>{ wind.elev=v; $('vElev').textContent=v.toFixed(0)+' deg'; 
 bindRange('sTurb',v=>{ wind.turb=v; $('vTurb').textContent=v.toFixed(0)+'%'; });
 bindRange('sGust',v=>{ wind.gust=v; $('vGust').textContent=v.toFixed(0)+'%'; });
 bindRange('sH0',v=>{ launch.h0=v; $('vH0').textContent=v.toFixed(1)+' m'; });
-bindRange('sVX',v=>{ launch.vx=v; $('vVX').textContent=v.toFixed(0)+' m/s'; });
-bindRange('sVY',v=>{ launch.vy=v; $('vVY').textContent=v.toFixed(0)+' m/s'; });
-bindRange('sVZ',v=>{ launch.vz=v; $('vVZ').textContent=v.toFixed(0)+' m/s'; });
+bindRange('sVX',v=>{ launch.vx=v; $('vVX').textContent=v.toFixed(0)+' m/s'; refreshLaunchPolar(); });
+bindRange('sVY',v=>{ launch.vy=v; $('vVY').textContent=v.toFixed(0)+' m/s'; refreshLaunchPolar(); });
+bindRange('sVZ',v=>{ launch.vz=v; $('vVZ').textContent=v.toFixed(0)+' m/s'; refreshLaunchPolar(); });
+
+const launchPolar={speed:18,azim:90,elev:10};
+function refreshLaunchPolar(){
+  const sp=Math.hypot(launch.vx,launch.vy,launch.vz);
+  const az=wrap360(THREE.MathUtils.radToDeg(Math.atan2(launch.vx,launch.vz)));
+  const el=THREE.MathUtils.radToDeg(Math.atan2(launch.vy,Math.hypot(launch.vx,launch.vz)));
+  launchPolar.speed=sp; launchPolar.azim=az; launchPolar.elev=el;
+  if($('vLSpd')) $('vLSpd').textContent=sp.toFixed(1)+' m/s';
+  if($('vLAzim')) $('vLAzim').textContent=Math.round(az)+' deg';
+  if($('vLElev')) $('vLElev').textContent=el.toFixed(0)+' deg';
+  if($('sLSpd')) $('sLSpd').value=sp.toFixed(2);
+  if($('sLAzim')) $('sLAzim').value=az.toFixed(0);
+  if($('sLElev')) $('sLElev').value=el.toFixed(0);
+}
+function applyLaunchVector(){
+  const sp=parseFloat($('sLSpd').value)||0;
+  const az=THREE.MathUtils.degToRad(parseFloat($('sLAzim').value)||0);
+  const el=THREE.MathUtils.degToRad(parseFloat($('sLElev').value)||0);
+  launchPolar.speed=sp; launchPolar.azim=wrap360(THREE.MathUtils.radToDeg(az)); launchPolar.elev=THREE.MathUtils.radToDeg(el);
+  const vx=sp*Math.cos(el)*Math.sin(az), vy=sp*Math.sin(el), vz=sp*Math.cos(el)*Math.cos(az);
+  setRangeValue('sVX',vx); setRangeValue('sVY',vy); setRangeValue('sVZ',vz);
+  refreshLaunchPolar();
+}
 bindRange('sOX',v=>{ launch.omx=v; $('vOX').textContent=v.toFixed(0)+' r/s'; });
 bindRange('sOY',v=>{ launch.omy=v; $('vOY').textContent=v.toFixed(0)+' r/s'; });
 bindRange('sOZ',v=>{ launch.omz=v; $('vOZ').textContent=v.toFixed(0)+' r/s'; });
+bindRange('sLSpd',v=>{ launchPolar.speed=v; if($('vLSpd')) $('vLSpd').textContent=v.toFixed(1)+' m/s'; });
+bindRange('sLAzim',v=>{ launchPolar.azim=wrap360(v); if($('vLAzim')) $('vLAzim').textContent=wrap360(v).toFixed(0)+' deg'; });
+bindRange('sLElev',v=>{ launchPolar.elev=v; if($('vLElev')) $('vLElev').textContent=v.toFixed(0)+' deg'; });
 bindRange('sAlt',v=>{ altitude=v; currentRho=computeRho(); densityLabel(); updatePhysPanel(); });
 bindRange('sTemp',v=>{ atmosphere.tempC=v; currentRho=computeRho(); densityLabel(); updatePhysPanel(); });
 bindRange('sHum',v=>{ atmosphere.humidity=v; currentRho=computeRho(); densityLabel(); updatePhysPanel(); });
@@ -705,7 +1201,7 @@ bindRange('sCamPitch',v=>{ cam.pitch=THREE.MathUtils.degToRad(v); syncCameraInpu
 bindRange('sFov',v=>{ cam.fov=v; camera.fov=v; camera.updateProjectionMatrix(); syncCameraInputs(); });
 bindRange('sCamLag',v=>{ cam.lag=v; syncCameraInputs(); });
 function applyPreset(name){ const p=PRESETS[name]; if(!p) return; objSel.value=p.obj; selObj=p.obj; $('surfSelect').value=p.surf; surfType=p.surf; setRangeValue('sSpeed',p.speed); setRangeValue('sAzim',p.azim); setRangeValue('sElev',p.elev); setRangeValue('sTurb',p.turb); setRangeValue('sGust',p.gust); setRangeValue('sH0',p.h0); setRangeValue('sVX',p.vx); setRangeValue('sVY',p.vy); setRangeValue('sVZ',p.vz); setRangeValue('sOX',p.omx); setRangeValue('sOY',p.omy); setRangeValue('sOZ',p.omz); setRangeValue('sAlt',p.altitude); setRangeValue('sTemp',p.tempC); setRangeValue('sHum',p.humidity); setRangeValue('sShear',p.shear); setRangeValue('sCeil',p.ceiling); setRangeValue('sPCount',p.pCount); setRangeValue('sPSize',p.pSize); setRangeValue('sTrailLen',p.trailLen); setRangeValue('sSimRate',p.simRate); cam.follow=p.cam.follow; cam.distance=p.cam.distance; cam.yaw=THREE.MathUtils.degToRad(p.cam.yaw); cam.pitch=THREE.MathUtils.degToRad(p.cam.pitch); cam.fov=p.cam.fov; cam.lag=p.cam.lag; camera.fov=cam.fov; camera.updateProjectionMatrix(); cam.pan.set(0,2,0); syncCameraInputs(); updateSurfaceMaterial(); updatePhysPanel(); resetObj(); initParts(); updateWindCompass(p.azim); }
-$('applyPresetBtn').addEventListener('click',()=>applyPreset($('presetSelect').value));
+$('applyPresetBtn').addEventListener('click',()=>applyPreset($('presetSelect').value)); $('applyLaunchBtn').addEventListener('click',applyLaunchVector);
 document.addEventListener('keydown',e=>{ if(e.target.tagName==='INPUT'||e.target.tagName==='SELECT') return; if(e.code==='Space'){ e.preventDefault(); togglePause(); return; } if(e.code==='KeyR'){ resetObj(); return; } keysDown.add(e.code); });
 document.addEventListener('keyup',e=>{ keysDown.delete(e.code); });
 function positionCam(){ const targetX=(cam.follow?obj.x:0)+cam.pan.x, targetY=Math.max(1.2,(cam.follow?obj.y*0.55:0)+cam.pan.y), targetZ=(cam.follow?obj.z:0)+cam.pan.z; camTarget.set(targetX,targetY,targetZ); const lerpAmt=cam.follow?1-Math.exp(-cam.lag*60*lastFrameDt):0.22; camFocus.lerp(camTarget,Math.min(1,lerpAmt)); const sinPitch=Math.sin(cam.pitch); camera.position.set(camFocus.x+cam.distance*sinPitch*Math.cos(cam.yaw), camFocus.y+cam.distance*Math.cos(cam.pitch), camFocus.z+cam.distance*sinPitch*Math.sin(cam.yaw)); camera.lookAt(camFocus); }
@@ -717,7 +1213,7 @@ updateLighting();
 $('orbitHint').innerHTML='DRAG: orbit &nbsp;·&nbsp; SHIFT+DRAG: pan &nbsp;·&nbsp; SCROLL: zoom<br>AXES: &nbsp;X = East &nbsp; Y = Up &nbsp; Z = North';
 $('simKbd').textContent='Space = pause \u00B7 R = reset';
 $('camKbd').innerHTML='Drag = orbit &nbsp;\u00B7&nbsp; Shift+drag = pan<br>Follow off: WASDQE keys';
-updateWindCompass(wind.azim);
+refreshLaunchPolar(); updateWindCompass(wind.azim);
 requestAnimationFrame(loop);
 </script>
 </body>
