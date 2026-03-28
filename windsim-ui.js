@@ -207,7 +207,7 @@
       '.panel-resize-handle::before{content:"";position:absolute;inset:5px;background:linear-gradient(135deg,transparent 0,transparent 22%,rgba(236,114,90,.92) 22%,rgba(236,114,90,.92) 32%,transparent 32%,transparent 46%,rgba(236,114,90,.92) 46%,rgba(236,114,90,.92) 56%,transparent 56%,transparent 70%,rgba(236,114,90,.92) 70%,rgba(236,114,90,.92) 80%,transparent 80%)}',
       '.panel-resize-handle.anchor-right{left:10px;right:auto;cursor:nesw-resize}',
       '.force-label{position:absolute;z-index:24;padding:3px 7px;border-radius:999px;background:rgba(38,45,51,.94);border:1px solid rgba(236,114,90,.14);font-family:"JetBrains Mono",monospace;font-size:8px;letter-spacing:1px;color:var(--txt2);pointer-events:none;transform:translate(-50%,-50%);white-space:nowrap}',
-      '.measure-label{position:absolute;z-index:24;padding:4px 8px;border-radius:999px;background:rgba(38,45,51,.94);border:1px solid rgba(236,114,90,.14);font-family:"JetBrains Mono",monospace;font-size:8px;letter-spacing:1px;color:var(--cyan);pointer-events:none;transform:translate(-50%,-50%);white-space:nowrap}',
+      '.measure-label{position:absolute;z-index:24;padding:4px 8px;border-radius:999px;background:rgba(38,45,51,.94);border:1px solid rgba(90,209,255,.26);font-family:"JetBrains Mono",monospace;font-size:8px;letter-spacing:1px;color:#74D3FF;pointer-events:none;transform:translate(-50%,-50%);white-space:nowrap}',
       '.validation-pill{position:absolute;left:50%;top:14px;transform:translateX(-50%);z-index:24;background:rgba(38,45,51,.94);border:1px solid rgba(236,114,90,.14);border-radius:999px;padding:6px 13px;font-family:"JetBrains Mono",monospace;font-size:8px;letter-spacing:1.2px;color:var(--cyan);pointer-events:none;display:none}',
       '.scenario-row{display:grid;grid-template-columns:1fr 1fr;gap:5px;margin-top:6px}',
       '.measure-kbd{font-family:"JetBrains Mono",monospace;font-size:8px;color:var(--txt3);margin-top:4px;text-align:center}',
@@ -596,10 +596,10 @@
     const plotHeight = Math.max(24, height - padY * 2);
 
     ctx.clearRect(0, 0, width, height);
-    ctx.fillStyle = '#262D33';
+    ctx.fillStyle = '#111820';
     ctx.fillRect(0, 0, width, height);
 
-    ctx.strokeStyle = 'rgba(236,114,90,0.18)';
+    ctx.strokeStyle = 'rgba(148,163,184,0.18)';
     ctx.lineWidth = 1;
     for (let i = 0; i <= 4; i += 1) {
       const y = padY + i * plotHeight / 4;
@@ -616,7 +616,7 @@
       ctx.stroke();
     }
 
-    ctx.fillStyle = 'rgba(236,114,90,0.72)';
+    ctx.fillStyle = 'rgba(226,232,240,0.72)';
     ctx.font = '10px "JetBrains Mono"';
     ctx.textAlign = 'right';
     ctx.fillText('0', padX - 6, height - padY + 3);
@@ -654,16 +654,16 @@
       ctx.stroke();
     }
 
-    plot('drag', 'rgba(236,114,90,0.95)');
-    plot('lift', 'rgba(236,114,90,0.72)');
-    plot('net', 'rgba(236,114,90,0.45)');
+    plot('drag', '#5AD1FF');
+    plot('lift', '#C78BFF');
+    plot('net', '#FFD166');
 
     ctx.font = '10px "JetBrains Mono"';
-    ctx.fillStyle = 'rgba(236,114,90,0.95)';
+    ctx.fillStyle = '#5AD1FF';
     ctx.fillText('drag', padX, 11);
-    ctx.fillStyle = 'rgba(236,114,90,0.72)';
+    ctx.fillStyle = '#C78BFF';
     ctx.fillText('lift', padX + 44, 11);
-    ctx.fillStyle = 'rgba(236,114,90,0.45)';
+    ctx.fillStyle = '#FFD166';
     ctx.fillText('net', padX + 82, 11);
   }
 

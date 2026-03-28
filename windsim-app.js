@@ -54,12 +54,28 @@
     return 'rgba(' + rgb.r + ',' + rgb.g + ',' + rgb.b + ',' + alpha + ')';
   }
 
-  const PALETTE_CHARCOAL = 0x262D33;
-  const PALETTE_CORAL = 0xEC725A;
-  const CHARCOAL_HEX = '#262D33';
-  const CORAL_HEX = '#EC725A';
-  const CHARCOAL_RGB = rgbFromHex(PALETTE_CHARCOAL);
-  const CORAL_RGB = rgbFromHex(PALETTE_CORAL);
+  const SIM_COLORS = {
+    drag: 0x5ad1ff,
+    grav: 0xff8a4c,
+    vel: 0xa8ff78,
+    magnus: 0xc78bff,
+    spin: 0xffd166,
+    compare: 0xc8d3de,
+    particles: 0x8faabd,
+    ruler: 0x74d3ff,
+    height: 0x8af5d1,
+    impactFloor: 0xf59e0b,
+    impactWall: 0x00d4ff,
+    impactCeiling: 0xa78bfa
+  };
+  const SIM_COLOR_HEX = {
+    drag: '#5AD1FF',
+    grav: '#FF8A4C',
+    vel: '#A8FF78',
+    magnus: '#C78BFF',
+    spin: '#FFD166',
+    ruler: '#74D3FF'
+  };
 
   function seedFromText(text) {
     let hash = 2166136261 >>> 0;
@@ -275,11 +291,10 @@
   function getSurfaceTexture(type) {
     const surf = D.SURFACES[type];
     const texture = makeCanvasTexture(app.render.surfaceTexCache, 'surface-' + type, function (ctx, size) {
-      const base = rgbFromHex(surf.tint || PALETTE_CHARCOAL);
-      const accent = rgbFromHex(surf.accent || PALETTE_CORAL);
-      const low = mixRgb(base, accent, 0.04);
-      const mid = mixRgb(base, accent, 0.10);
-      const high = mixRgb(base, accent, 0.18);
+      const base = rgbFromHex(surf.tint);
+      const accent = rgbFromHex(surf.accent);
+      const light = mixRgb(base, { r: 238, g: 243, b: 248 }, 0.16);
+      const dark = mixRgb(base, { r: 10, g: 12, b: 16 }, 0.28);
       const seed = seedFromText('surface:' + type);
       const image = ctx.createImageData(size, size);
       const data = image.data;
@@ -295,32 +310,32 @@
 
           switch (type) {
             case 'grass':
-              rgb = mixRgb(base, accent, clamp(0.02 + coarse * 0.05 + ridge * 0.02, 0, 0.10));
+              rgb = mixRgb(dark, accent, clamp(0.08 + coarse * 0.18 + ridge * 0.05, 0, 1));
               break;
             case 'concrete':
-              rgb = mixRgb(base, high, clamp(0.02 + coarse * 0.06 + fine * 0.03, 0, 0.12));
+              rgb = mixRgb(mixRgb(base, light, 0.12), { r: 222, g: 228, b: 236 }, clamp(0.04 + coarse * 0.14 + fine * 0.08, 0, 0.22));
               break;
             case 'hardwood': {
               const board = Math.floor(u * 8) % 2;
-              const boardTone = board ? 0.10 : 0.04;
-              rgb = mixRgb(base, high, clamp(boardTone + coarse * 0.05 + ridge * 0.03, 0, 0.16));
+              const boardTone = board ? 0.18 : 0.06;
+              rgb = mixRgb(dark, light, clamp(boardTone + coarse * 0.30 + ridge * 0.10, 0, 1));
               break;
             }
             case 'sand':
-              rgb = mixRgb(base, accent, clamp(0.04 + coarse * 0.08 + ridge * 0.04, 0, 0.16));
+              rgb = mixRgb(dark, light, clamp(0.20 + coarse * 0.42 + ridge * 0.20, 0, 1));
               break;
             case 'ice': {
-              const frost = clamp(0.05 + coarse * 0.08 + fine * 0.04, 0, 0.18);
-              rgb = mixRgb(base, accent, frost);
+              const frost = clamp(0.28 + coarse * 0.28 + fine * 0.18, 0, 1);
+              rgb = mixRgb(base, { r: 201, g: 231, b: 246 }, frost);
               break;
             }
             case 'water': {
               const ripple = 0.5 + 0.5 * Math.sin(D.TAU * (u * 7 + v * 2) + fine * 3.4);
-              rgb = mixRgb(base, accent, clamp(0.03 + coarse * 0.09 + ripple * 0.06, 0, 0.18));
+              rgb = mixRgb(dark, accent, clamp(0.16 + coarse * 0.30 + ripple * 0.24, 0, 1));
               break;
             }
             default:
-              rgb = mixRgb(base, accent, coarse * 0.12);
+              rgb = mixRgb(base, accent, coarse * 0.35);
               break;
           }
 
@@ -336,7 +351,7 @@
       ctx.lineCap = 'round';
       ctx.lineJoin = 'round';
       if (type === 'grass') {
-        ctx.strokeStyle = rgba(mid, 0.03);
+        ctx.strokeStyle = rgba(mixRgb(accent, light, 0.10), 0.02);
         ctx.lineWidth = 1.0;
         for (let i = 0; i < 22; i += 1) {
           const x0 = i * size / 22;
@@ -349,7 +364,7 @@
           ctx.stroke();
         }
       } else if (type === 'concrete') {
-        ctx.strokeStyle = rgba(high, 0.07);
+        ctx.strokeStyle = 'rgba(230,236,242,0.08)';
         ctx.lineWidth = 2.4;
         [0.28, 0.67].forEach(function (baseLine, index) {
           ctx.beginPath();
@@ -361,7 +376,7 @@
           ctx.stroke();
         });
       } else if (type === 'hardwood') {
-        ctx.strokeStyle = rgba(accent, 0.10);
+        ctx.strokeStyle = 'rgba(248,235,214,0.14)';
         ctx.lineWidth = 3;
         for (let x = 0; x <= size; x += size / 8) {
           ctx.beginPath();
@@ -369,7 +384,7 @@
           ctx.lineTo(x, size);
           ctx.stroke();
         }
-        ctx.strokeStyle = rgba(low, 0.10);
+        ctx.strokeStyle = 'rgba(72,42,18,0.16)';
         ctx.lineWidth = 1.6;
         for (let row = 0; row < 7; row += 1) {
           const y0 = (row + 0.5) * size / 8;
@@ -382,7 +397,7 @@
           ctx.stroke();
         }
       } else if (type === 'sand') {
-        ctx.strokeStyle = rgba(accent, 0.07);
+        ctx.strokeStyle = 'rgba(255,235,200,0.09)';
         ctx.lineWidth = 1.8;
         for (let row = 0; row < 18; row += 1) {
           const y0 = row * size / 18;
@@ -395,7 +410,7 @@
           ctx.stroke();
         }
       } else if (type === 'ice') {
-        ctx.strokeStyle = rgba(high, 0.09);
+        ctx.strokeStyle = 'rgba(248,252,255,0.14)';
         ctx.lineWidth = 2;
         for (let crack = 0; crack < 5; crack += 1) {
           const x0 = crack * size / 5;
@@ -408,7 +423,7 @@
           ctx.stroke();
         }
       } else if (type === 'water') {
-        ctx.strokeStyle = rgba(high, 0.08);
+        ctx.strokeStyle = 'rgba(240,248,255,0.13)';
         ctx.lineWidth = 1.8;
         for (let row = 0; row < 14; row += 1) {
           const y0 = row * size / 14;
@@ -434,7 +449,7 @@
       for (let i = 0; i <= 8; i += 1) {
         const p = i * size / 8;
         const major = i % 4 === 0;
-        ctx.strokeStyle = major ? 'rgba(236,114,90,0.12)' : 'rgba(236,114,90,0.06)';
+        ctx.strokeStyle = major ? 'rgba(172,187,203,0.12)' : 'rgba(123,138,153,0.07)';
         ctx.lineWidth = major ? 2.0 : 1.0;
         ctx.beginPath();
         ctx.moveTo(p, 0);
@@ -453,18 +468,11 @@
   function getObjectTexture(name, baseColor) {
     return makeCanvasTexture(app.render.objectTexCache, 'object-' + name, function (ctx, size) {
       const rng = makeRng(seedFromText('object:' + name));
-      const coralSoft = 'rgba(236,114,90,0.18)';
-      const coralMid = 'rgba(236,114,90,0.34)';
-      const coralStrong = 'rgba(236,114,90,0.72)';
-      const charcoalSoft = 'rgba(38,45,51,0.18)';
-      const charcoalMid = 'rgba(38,45,51,0.40)';
-      const clearCharcoal = 'rgba(38,45,51,0)';
-      ctx.clearRect(0, 0, size, size);
       switch (name) {
         case 'soccer':
-          ctx.fillStyle = CORAL_HEX;
+          ctx.fillStyle = '#f7fafc';
           ctx.fillRect(0, 0, size, size);
-          ctx.fillStyle = CHARCOAL_HEX;
+          ctx.fillStyle = '#14181d';
           [[128, 116], [260, 72], [388, 124], [106, 286], [260, 246], [408, 304], [210, 408], [334, 426]].forEach(function (pt) {
             ctx.beginPath();
             for (let i = 0; i < 5; i += 1) {
@@ -479,9 +487,9 @@
           });
           break;
         case 'tennis':
-          ctx.fillStyle = CORAL_HEX;
+          ctx.fillStyle = '#b8f45d';
           ctx.fillRect(0, 0, size, size);
-          ctx.strokeStyle = CHARCOAL_HEX;
+          ctx.strokeStyle = '#f8fafc';
           ctx.lineWidth = 18;
           ctx.beginPath();
           ctx.arc(size * 0.22, size * 0.45, size * 0.42, -0.5, 1.55);
@@ -489,12 +497,12 @@
           ctx.beginPath();
           ctx.arc(size * 0.78, size * 0.55, size * 0.42, 2.64, 4.7);
           ctx.stroke();
-          drawNoiseDots(ctx, size, rng, 1400, CHARCOAL_HEX, 0.02, 0.05, 1.1);
+          drawNoiseDots(ctx, size, rng, 1400, '#f0fdf4', 0.02, 0.06, 1.1);
           break;
         case 'basketball':
-          ctx.fillStyle = CORAL_HEX;
+          ctx.fillStyle = '#e56f10';
           ctx.fillRect(0, 0, size, size);
-          ctx.strokeStyle = CHARCOAL_HEX;
+          ctx.strokeStyle = '#2a1409';
           ctx.lineWidth = 12;
           ctx.beginPath();
           ctx.moveTo(size * 0.5, 0);
@@ -510,9 +518,9 @@
           ctx.stroke();
           break;
         case 'cricket':
-          ctx.fillStyle = CHARCOAL_HEX;
+          ctx.fillStyle = '#b91c1c';
           ctx.fillRect(0, 0, size, size);
-          ctx.strokeStyle = CORAL_HEX;
+          ctx.strokeStyle = '#f8fafc';
           ctx.lineWidth = 10;
           ctx.beginPath();
           ctx.moveTo(size * 0.18, size * 0.42);
@@ -524,9 +532,9 @@
           ctx.stroke();
           break;
         case 'baseball':
-          ctx.fillStyle = CHARCOAL_HEX;
+          ctx.fillStyle = '#fef7df';
           ctx.fillRect(0, 0, size, size);
-          ctx.strokeStyle = CORAL_HEX;
+          ctx.strokeStyle = '#dc2626';
           ctx.lineWidth = 7;
           for (let i = 0; i < 18; i += 1) {
             const y = 80 + i * 18;
@@ -539,18 +547,18 @@
           }
           break;
         case 'pingpong':
-          ctx.fillStyle = CHARCOAL_HEX;
+          ctx.fillStyle = '#fcfdff';
           ctx.fillRect(0, 0, size, size);
-          ctx.fillStyle = coralStrong;
+          ctx.fillStyle = 'rgba(202,138,4,0.28)';
           ctx.font = 'bold 72px Barlow, sans-serif';
           ctx.fillText('40', size * 0.36, size * 0.56);
           break;
         case 'golf':
-          ctx.fillStyle = CHARCOAL_HEX;
+          ctx.fillStyle = '#f8fafc';
           ctx.fillRect(0, 0, size, size);
           for (let y = 18; y < size; y += 24) {
             for (let x = 18 + ((y / 24) % 2) * 12; x < size; x += 24) {
-              ctx.fillStyle = coralSoft;
+              ctx.fillStyle = 'rgba(148,163,184,0.18)';
               ctx.beginPath();
               ctx.arc(x, y, 6, 0, D.TAU);
               ctx.fill();
@@ -558,24 +566,24 @@
           }
           break;
         case 'volleyball':
-          ctx.fillStyle = CHARCOAL_HEX;
+          ctx.fillStyle = '#fff3c4';
           ctx.fillRect(0, 0, size, size);
-          ctx.strokeStyle = CORAL_HEX;
+          ctx.strokeStyle = '#1d4ed8';
           ctx.lineWidth = 30;
           ctx.beginPath();
           ctx.arc(size * 0.2, size * 0.5, size * 0.55, -0.9, 0.9);
           ctx.stroke();
-          ctx.strokeStyle = coralStrong;
+          ctx.strokeStyle = '#d97706';
           ctx.beginPath();
           ctx.arc(size * 0.78, size * 0.45, size * 0.45, 2.1, 4.05);
           ctx.stroke();
           break;
         case 'rugby':
-          ctx.fillStyle = CHARCOAL_HEX;
+          ctx.fillStyle = '#6f4625';
           ctx.fillRect(0, 0, size, size);
-          ctx.fillStyle = CORAL_HEX;
+          ctx.fillStyle = '#f8fafc';
           ctx.fillRect(size * 0.44, size * 0.42, size * 0.12, size * 0.16);
-          ctx.strokeStyle = CORAL_HEX;
+          ctx.strokeStyle = '#f8fafc';
           ctx.lineWidth = 5;
           for (let i = 0; i < 8; i += 1) {
             const x = size * 0.46 + i * 10;
@@ -587,17 +595,17 @@
           break;
         case 'cannonball': {
           const steel = ctx.createRadialGradient(size * 0.34, size * 0.32, size * 0.04, size * 0.5, size * 0.5, size * 0.72);
-          steel.addColorStop(0, CORAL_HEX);
-          steel.addColorStop(1, CHARCOAL_HEX);
+          steel.addColorStop(0, '#9aa3b2');
+          steel.addColorStop(1, '#29303a');
           ctx.fillStyle = steel;
           ctx.fillRect(0, 0, size, size);
-          drawNoiseDots(ctx, size, rng, 900, CORAL_HEX, 0.02, 0.08, 1.8);
+          drawNoiseDots(ctx, size, rng, 900, '#e5e7eb', 0.02, 0.08, 1.8);
           break;
         }
         case 'paper':
-          ctx.fillStyle = CHARCOAL_HEX;
+          ctx.fillStyle = '#f8fafc';
           ctx.fillRect(0, 0, size, size);
-          ctx.strokeStyle = coralMid;
+          ctx.strokeStyle = 'rgba(59,130,246,0.16)';
           ctx.lineWidth = 3;
           for (let i = 0; i < 18; i += 1) {
             ctx.beginPath();
@@ -607,16 +615,15 @@
           }
           break;
         case 'leaf':
-          ctx.fillStyle = clearCharcoal;
-          ctx.fillRect(0, 0, size, size);
-          ctx.fillStyle = CORAL_HEX;
+          ctx.clearRect(0, 0, size, size);
+          ctx.fillStyle = '#fb923c';
           ctx.beginPath();
           ctx.moveTo(size * 0.5, size * 0.06);
           ctx.bezierCurveTo(size * 0.18, size * 0.22, size * 0.08, size * 0.54, size * 0.48, size * 0.92);
           ctx.bezierCurveTo(size * 0.92, size * 0.56, size * 0.82, size * 0.22, size * 0.5, size * 0.06);
           ctx.closePath();
           ctx.fill();
-          ctx.strokeStyle = CHARCOAL_HEX;
+          ctx.strokeStyle = '#7c2d12';
           ctx.lineWidth = 8;
           ctx.beginPath();
           ctx.moveTo(size * 0.5, size * 0.1);
@@ -624,15 +631,14 @@
           ctx.stroke();
           break;
         case 'feather':
-          ctx.fillStyle = clearCharcoal;
-          ctx.fillRect(0, 0, size, size);
-          ctx.strokeStyle = CHARCOAL_HEX;
+          ctx.clearRect(0, 0, size, size);
+          ctx.strokeStyle = '#94a3b8';
           ctx.lineWidth = 10;
           ctx.beginPath();
           ctx.moveTo(size * 0.5, size * 0.06);
           ctx.lineTo(size * 0.5, size * 0.92);
           ctx.stroke();
-          ctx.strokeStyle = CORAL_HEX;
+          ctx.strokeStyle = '#e2e8f0';
           ctx.lineWidth = 4;
           for (let i = 0; i < 22; i += 1) {
             const y = size * (0.12 + i * 0.033);
@@ -649,11 +655,11 @@
           break;
         case 'umbrella': {
           const umb = ctx.createRadialGradient(size * 0.5, size * 0.5, size * 0.08, size * 0.5, size * 0.5, size * 0.5);
-          umb.addColorStop(0, CORAL_HEX);
-          umb.addColorStop(1, CHARCOAL_HEX);
+          umb.addColorStop(0, '#f5ede1');
+          umb.addColorStop(1, '#5b7690');
           ctx.fillStyle = umb;
           ctx.fillRect(0, 0, size, size);
-          ctx.strokeStyle = coralMid;
+          ctx.strokeStyle = 'rgba(255,255,255,0.30)';
           ctx.lineWidth = 6;
           for (let i = 0; i < 8; i += 1) {
             const ang = i * D.TAU / 8;
@@ -665,9 +671,9 @@
           break;
         }
         case 'shuttlecock':
-          ctx.fillStyle = CHARCOAL_HEX;
+          ctx.fillStyle = '#fefce8';
           ctx.fillRect(0, 0, size, size);
-          ctx.strokeStyle = coralMid;
+          ctx.strokeStyle = 'rgba(148,163,184,0.22)';
           ctx.lineWidth = 5;
           for (let i = 0; i < 12; i += 1) {
             const x = 34 + i * 38;
@@ -676,13 +682,13 @@
             ctx.lineTo(size * 0.5, size - 22);
             ctx.stroke();
           }
-          ctx.fillStyle = CORAL_HEX;
+          ctx.fillStyle = '#d97706';
           ctx.fillRect(0, size * 0.05, size, size * 0.08);
           break;
         case 'frisbee':
-          ctx.fillStyle = CORAL_HEX;
+          ctx.fillStyle = '#4da4d8';
           ctx.fillRect(0, 0, size, size);
-          ctx.strokeStyle = CHARCOAL_HEX;
+          ctx.strokeStyle = '#10212f';
           ctx.lineWidth = 12;
           ctx.beginPath();
           ctx.arc(size * 0.5, size * 0.5, size * 0.34, 0, D.TAU);
@@ -691,15 +697,15 @@
           ctx.beginPath();
           ctx.arc(size * 0.5, size * 0.5, size * 0.17, 0, D.TAU);
           ctx.stroke();
-          ctx.fillStyle = charcoalSoft;
+          ctx.fillStyle = 'rgba(255,255,255,0.72)';
           ctx.fillRect(size * 0.16, size * 0.44, size * 0.68, size * 0.08);
           break;
         case 'crate':
-          ctx.fillStyle = CHARCOAL_HEX;
+          ctx.fillStyle = '#8b5a2b';
           ctx.fillRect(0, 0, size, size);
-          ctx.fillStyle = coralSoft;
+          ctx.fillStyle = 'rgba(255,255,255,0.08)';
           for (let i = 0; i < 5; i += 1) ctx.fillRect(0, i * size / 5 + 12, size, 8);
-          ctx.strokeStyle = CORAL_HEX;
+          ctx.strokeStyle = '#5b3717';
           ctx.lineWidth = 16;
           ctx.strokeRect(22, 22, size - 44, size - 44);
           ctx.beginPath();
@@ -710,9 +716,9 @@
           ctx.stroke();
           break;
         case 'brick':
-          ctx.fillStyle = CORAL_HEX;
+          ctx.fillStyle = '#b45309';
           ctx.fillRect(0, 0, size, size);
-          ctx.strokeStyle = CHARCOAL_HEX;
+          ctx.strokeStyle = '#f5d7b2';
           ctx.lineWidth = 8;
           for (let y = 0; y <= size; y += 96) {
             ctx.beginPath();
@@ -731,10 +737,10 @@
           }
           break;
         default:
-          ctx.fillStyle = hex(baseColor || PALETTE_CORAL);
+          ctx.fillStyle = hex(baseColor);
           ctx.fillRect(0, 0, size, size);
-          drawNoiseDots(ctx, size, rng, 220, CHARCOAL_HEX, 0.03, 0.08, 2.1);
-          ctx.strokeStyle = coralMid;
+          drawNoiseDots(ctx, size, rng, 220, '#ffffff', 0.03, 0.08, 2.1);
+          ctx.strokeStyle = 'rgba(255,255,255,0.15)';
           ctx.lineWidth = 2;
           ctx.strokeRect(10, 10, size - 20, size - 20);
           break;
@@ -813,12 +819,12 @@
         canopy.scale.y = 0.7;
         const shaft = new THREE.Mesh(
           new THREE.CylinderGeometry(0.03, 0.03, 1.28, 12),
-          new THREE.MeshStandardMaterial({ color: PALETTE_CHARCOAL, roughness: 0.82 })
+          new THREE.MeshStandardMaterial({ color: 0x6b4a24, roughness: 0.82 })
         );
         shaft.position.y = -0.30;
         const hook = new THREE.Mesh(
           new THREE.TorusGeometry(0.12, 0.022, 8, 24, Math.PI),
-          new THREE.MeshStandardMaterial({ color: PALETTE_CHARCOAL, roughness: 0.84 })
+          new THREE.MeshStandardMaterial({ color: 0x6b4a24, roughness: 0.84 })
         );
         hook.rotation.z = Math.PI * 0.5;
         hook.position.set(0, -0.92, 0.08);
@@ -828,7 +834,7 @@
       case 'shuttlecock': {
         const cork = new THREE.Mesh(
           new THREE.SphereGeometry(0.18, 20, 20),
-          new THREE.MeshStandardMaterial({ color: PALETTE_CORAL, roughness: 0.76 })
+          new THREE.MeshStandardMaterial({ color: 0xd97706, roughness: 0.76 })
         );
         cork.scale.y = 0.8;
         cork.position.y = -0.28;
@@ -899,7 +905,7 @@
     }
     app.render.chamberLines = new THREE.LineSegments(
       new THREE.EdgesGeometry(new THREE.BoxGeometry(app.cfg.world.halfWidth * 2, app.cfg.world.ceiling, app.cfg.world.halfDepth * 2)),
-      new THREE.LineBasicMaterial({ color: PALETTE_CORAL, transparent: true, opacity: 0.18 })
+      new THREE.LineBasicMaterial({ color: 0x314654, transparent: true, opacity: 0.42 })
     );
     app.render.chamberLines.position.y = app.cfg.world.ceiling * 0.5;
     app.render.chamberGroup.add(app.render.chamberLines);
@@ -920,8 +926,8 @@
   function setupRenderer() {
     const render = app.render;
     render.scene = new THREE.Scene();
-    render.scene.background = new THREE.Color(PALETTE_CHARCOAL);
-    render.scene.fog = new THREE.Fog(PALETTE_CHARCOAL, 180, 820);
+    render.scene.background = new THREE.Color(0x091019);
+    render.scene.fog = new THREE.Fog(0x091019, 180, 820);
 
     render.camera = new THREE.PerspectiveCamera(app.cfg.camera.fov, render.mainEl.clientWidth / Math.max(1, render.mainEl.clientHeight), 0.05, 3000);
     render.renderer = new THREE.WebGLRenderer({ antialias: true });
@@ -934,8 +940,8 @@
     render.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     render.mainEl.insertBefore(render.renderer.domElement, render.mainEl.firstChild);
 
-    const ambient = new THREE.AmbientLight(PALETTE_CHARCOAL, 3.8);
-    const dir = new THREE.DirectionalLight(PALETTE_CORAL, 0.78);
+    const ambient = new THREE.AmbientLight(0x1c2832, 1.28);
+    const dir = new THREE.DirectionalLight(0xeaf1f7, 1.18);
     dir.position.set(26, 38, 20);
     dir.castShadow = true;
     dir.shadow.mapSize.width = 2048;
@@ -946,11 +952,11 @@
     dir.shadow.camera.bottom = -40;
     dir.shadow.camera.near = 1;
     dir.shadow.camera.far = 180;
-    const hemi = new THREE.HemisphereLight(PALETTE_CORAL, PALETTE_CHARCOAL, 0.20);
-    const rim = new THREE.DirectionalLight(PALETTE_CORAL, 0.20);
-    const fill = new THREE.PointLight(PALETTE_CORAL, 0.08, 140);
-    const point = new THREE.PointLight(PALETTE_CORAL, 0.18, 56);
-    render.scene.add(ambient, dir, hemi, rim, fill, point);
+    const hemi = new THREE.HemisphereLight(0x556879, 0x070a0d, 0.58);
+    const rim = new THREE.DirectionalLight(0x90afc9, 0.58);
+    const fill = new THREE.PointLight(0x6f93b2, 0.22, 140);
+    const point = new THREE.PointLight(0x89bad8, 0.48, 56);
+    render.scene.add(ambient, dir, hemi, rim, fill, point, new THREE.AxesHelper(4));
     render.lights = { ambient: ambient, dir: dir, hemi: hemi, rim: rim, fill: fill, point: point };
 
     render.objectPivot = new THREE.Group();
@@ -965,9 +971,9 @@
     const overlay = new THREE.Mesh(new THREE.PlaneGeometry(D.FLOOR_SIZE, D.FLOOR_SIZE), render.groundOverlayMat);
     overlay.rotation.x = -Math.PI / 2;
     overlay.position.y = 0.02;
-    const grid = new THREE.GridHelper(D.FLOOR_SIZE, Math.round(D.FLOOR_SIZE / 5), PALETTE_CORAL, PALETTE_CORAL);
+    const grid = new THREE.GridHelper(D.FLOOR_SIZE, Math.round(D.FLOOR_SIZE / 5), 0x334554, 0x141b23);
     grid.material.transparent = true;
-    grid.material.opacity = 0.04;
+    grid.material.opacity = 0.06;
     render.groundGroup.add(ground, overlay, grid);
     render.scene.add(render.groundGroup);
 
@@ -1017,23 +1023,23 @@
     app.render.comparePos = new Float32Array(D.TRAIL_MAX * 3);
     app.render.compareGeo = new THREE.BufferGeometry();
     app.render.compareGeo.setAttribute('position', new THREE.BufferAttribute(app.render.comparePos, 3));
-    app.render.compareLine = new THREE.Line(app.render.compareGeo, new THREE.LineBasicMaterial({ color: PALETTE_CORAL, transparent: true, opacity: 0.20 }));
+    app.render.compareLine = new THREE.Line(app.render.compareGeo, new THREE.LineBasicMaterial({ color: SIM_COLORS.compare, transparent: true, opacity: 0.28 }));
     app.render.compareLine.frustumCulled = false;
     app.render.scene.add(app.render.compareLine);
 
     app.render.particlePositions = new Float32Array(D.PART_MAX * 3);
     app.render.particleGeo = new THREE.BufferGeometry();
     app.render.particleGeo.setAttribute('position', new THREE.BufferAttribute(app.render.particlePositions, 3));
-    app.render.particleMat = new THREE.PointsMaterial({ color: PALETTE_CORAL, size: app.cfg.visuals.particleSize, transparent: true, opacity: 0.30, depthWrite: false, blending: THREE.AdditiveBlending });
+    app.render.particleMat = new THREE.PointsMaterial({ color: SIM_COLORS.particles, size: app.cfg.visuals.particleSize, transparent: true, opacity: 0.42, depthWrite: false, blending: THREE.AdditiveBlending });
     app.render.particlePoints = new THREE.Points(app.render.particleGeo, app.render.particleMat);
     app.render.particlePoints.frustumCulled = false;
     app.render.scene.add(app.render.particlePoints);
 
-    app.render.arrows.drag = new THREE.ArrowHelper(new V3(1, 0, 0), new V3(), 1, PALETTE_CORAL, 0.5, 0.3);
-    app.render.arrows.grav = new THREE.ArrowHelper(new V3(1, 0, 0), new V3(), 1, PALETTE_CORAL, 0.5, 0.3);
-    app.render.arrows.vel = new THREE.ArrowHelper(new V3(1, 0, 0), new V3(), 1, PALETTE_CORAL, 0.5, 0.3);
-    app.render.arrows.magnus = new THREE.ArrowHelper(new V3(1, 0, 0), new V3(), 1, PALETTE_CORAL, 0.5, 0.3);
-    app.render.arrows.spin = new THREE.ArrowHelper(new V3(1, 0, 0), new V3(), 1, PALETTE_CORAL, 0.5, 0.3);
+    app.render.arrows.drag = new THREE.ArrowHelper(new V3(1, 0, 0), new V3(), 1, SIM_COLORS.drag, 0.5, 0.3);
+    app.render.arrows.grav = new THREE.ArrowHelper(new V3(1, 0, 0), new V3(), 1, SIM_COLORS.grav, 0.5, 0.3);
+    app.render.arrows.vel = new THREE.ArrowHelper(new V3(1, 0, 0), new V3(), 1, SIM_COLORS.vel, 0.5, 0.3);
+    app.render.arrows.magnus = new THREE.ArrowHelper(new V3(1, 0, 0), new V3(), 1, SIM_COLORS.magnus, 0.5, 0.3);
+    app.render.arrows.spin = new THREE.ArrowHelper(new V3(1, 0, 0), new V3(), 1, SIM_COLORS.spin, 0.5, 0.3);
     Object.keys(app.render.arrows).forEach(function (key) {
       app.render.arrows[key].visible = false;
       app.render.scene.add(app.render.arrows[key]);
@@ -1041,13 +1047,13 @@
 
     app.render.rulerGeo = new THREE.BufferGeometry();
     app.render.rulerGeo.setAttribute('position', new THREE.BufferAttribute(app.render.rulerPositions, 3));
-    app.render.rulerLine = new THREE.Line(app.render.rulerGeo, new THREE.LineBasicMaterial({ color: PALETTE_CORAL, transparent: true, opacity: 0.50 }));
+    app.render.rulerLine = new THREE.Line(app.render.rulerGeo, new THREE.LineBasicMaterial({ color: SIM_COLORS.ruler, transparent: true, opacity: 0.58 }));
     app.render.rulerLine.frustumCulled = false;
     app.render.scene.add(app.render.rulerLine);
 
     app.render.heightGeo = new THREE.BufferGeometry();
     app.render.heightGeo.setAttribute('position', new THREE.BufferAttribute(app.render.heightPositions, 3));
-    app.render.heightLine = new THREE.Line(app.render.heightGeo, new THREE.LineBasicMaterial({ color: PALETTE_CORAL, transparent: true, opacity: 0.32 }));
+    app.render.heightLine = new THREE.Line(app.render.heightGeo, new THREE.LineBasicMaterial({ color: SIM_COLORS.height, transparent: true, opacity: 0.48 }));
     app.render.heightLine.frustumCulled = false;
     app.render.scene.add(app.render.heightLine);
 
@@ -1189,6 +1195,8 @@
     tmpA.addVectors(body.launchPos, body.pos).multiplyScalar(0.5);
     const screen = { x: 0, y: 0, visible: false };
     projectPoint(tmpA, screen);
+    app.ui.rulerLabel.style.color = SIM_COLOR_HEX.ruler;
+    app.ui.rulerLabel.style.borderColor = 'rgba(116,211,255,0.26)';
     app.ui.rulerLabel.textContent = 'Range ' + body.pos.distanceTo(body.launchPos).toFixed(1) + ' m | Y ' + Math.max(0, body.pos.y).toFixed(1) + ' m';
     UI.setOverlay(app.ui.rulerLabel, screen.x, screen.y, screen.visible);
   }
@@ -1207,7 +1215,9 @@
       if (child.material) child.material.dispose();
     }
     impacts.forEach(function (impact) {
-      const color = PALETTE_CORAL;
+      let color = SIM_COLORS.impactFloor;
+      if (impact.kind.indexOf('wall') === 0) color = SIM_COLORS.impactWall;
+      if (impact.kind === 'ceiling') color = SIM_COLORS.impactCeiling;
       const marker = new THREE.Mesh(new THREE.OctahedronGeometry(0.22, 0), new THREE.MeshStandardMaterial({ color: color, emissive: color, emissiveIntensity: 0.6, roughness: 0.35 }));
       marker.position.copy(impact.pos);
       const line = new THREE.Line(
@@ -1345,9 +1355,18 @@
 
   function refreshForceLabels() {
     const labels = app.ui.forceLabels;
+    const labelColors = {
+      drag: SIM_COLOR_HEX.drag,
+      grav: SIM_COLOR_HEX.grav,
+      vel: SIM_COLOR_HEX.vel,
+      magnus: SIM_COLOR_HEX.magnus,
+      spin: SIM_COLOR_HEX.spin
+    };
     ['drag', 'grav', 'vel', 'magnus', 'spin'].forEach(function (key) {
       const state = app.render.arrowState[key];
       const screen = { x: 0, y: 0, visible: false };
+      labels[key].style.color = labelColors[key];
+      labels[key].style.borderColor = labelColors[key];
       if (!app.cfg.analysis.forceLabels || !state.visible || (key !== 'spin' && !app.cfg.env.force)) {
         UI.setOverlay(labels[key], 0, 0, false);
         return;
