@@ -17,6 +17,11 @@
     return mass >= 0.1 ? mass.toFixed(3) + ' kg' : (mass * 1000).toFixed(2) + ' g';
   }
 
+  function isResizableObject(app) {
+    const def = D.OBJ_DEFS[app.cfg.objKey];
+    return !!def && (def.shape === 'box' || def.shape === 'brick');
+  }
+
   function titleizeKey(key) {
     return key.replace(/([a-z])([A-Z])/g, '$1 $2').replace(/[_-]+/g, ' ').replace(/\b\w/g, function (match) {
       return match.toUpperCase();
@@ -44,14 +49,15 @@
       '.num-input{width:100%;background:var(--surf2);border:1px solid var(--bdr);color:var(--txt);border-radius:5px;padding:7px 10px;font-family:"JetBrains Mono",monospace;font-size:11px;outline:none}',
       '.mini-note{font-family:"JetBrains Mono",monospace;font-size:8px;color:var(--txt3);line-height:1.5;margin-top:4px}',
       '.report-box{margin-top:7px;background:var(--surf2);border:1px solid var(--bdr);border-radius:5px;padding:8px 9px;font-family:"JetBrains Mono",monospace;font-size:8px;line-height:1.7;color:var(--txt2);white-space:pre-wrap;min-height:78px}',
-      '.graph-panel{position:absolute;right:11px;top:11px;z-index:20;background:rgba(11,16,24,.86);border:1px solid var(--bdr);border-radius:6px;padding:8px 8px 6px;backdrop-filter:blur(6px);box-shadow:0 12px 26px rgba(0,0,0,.22)}',
+      '.graph-panel{position:absolute;right:11px;top:11px;z-index:20;background:rgba(18,25,35,.86);border:1px solid var(--bdr);border-radius:8px;padding:8px 8px 6px;backdrop-filter:blur(8px);box-shadow:0 12px 26px rgba(0,0,0,.18)}',
       '.graph-title{font-family:"JetBrains Mono",monospace;font-size:8px;letter-spacing:1px;color:var(--txt3);margin-bottom:5px}',
       '.graph-canvas{display:block;width:260px;height:120px}',
-      '.force-label{position:absolute;z-index:24;padding:2px 6px;border-radius:999px;background:rgba(11,16,24,.88);border:1px solid var(--bdr);font-family:"JetBrains Mono",monospace;font-size:8px;letter-spacing:.8px;color:var(--txt2);pointer-events:none;transform:translate(-50%,-50%);white-space:nowrap}',
-      '.measure-label{position:absolute;z-index:24;padding:3px 7px;border-radius:999px;background:rgba(11,16,24,.88);border:1px solid var(--bdr);font-family:"JetBrains Mono",monospace;font-size:8px;letter-spacing:.8px;color:var(--cyan);pointer-events:none;transform:translate(-50%,-50%);white-space:nowrap}',
-      '.validation-pill{position:absolute;left:50%;top:12px;transform:translateX(-50%);z-index:24;background:rgba(11,16,24,.9);border:1px solid var(--bdr);border-radius:999px;padding:5px 12px;font-family:"JetBrains Mono",monospace;font-size:8px;letter-spacing:1px;color:var(--amber);pointer-events:none;display:none}',
+      '.force-label{position:absolute;z-index:24;padding:2px 6px;border-radius:999px;background:rgba(18,25,35,.88);border:1px solid var(--bdr);font-family:"JetBrains Mono",monospace;font-size:8px;letter-spacing:.8px;color:var(--txt2);pointer-events:none;transform:translate(-50%,-50%);white-space:nowrap}',
+      '.measure-label{position:absolute;z-index:24;padding:3px 7px;border-radius:999px;background:rgba(18,25,35,.88);border:1px solid var(--bdr);font-family:"JetBrains Mono",monospace;font-size:8px;letter-spacing:.8px;color:var(--cyan);pointer-events:none;transform:translate(-50%,-50%);white-space:nowrap}',
+      '.validation-pill{position:absolute;left:50%;top:12px;transform:translateX(-50%);z-index:24;background:rgba(18,25,35,.9);border:1px solid var(--bdr);border-radius:999px;padding:5px 12px;font-family:"JetBrains Mono",monospace;font-size:8px;letter-spacing:1px;color:var(--amber);pointer-events:none;display:none}',
       '.scenario-row{display:grid;grid-template-columns:1fr 1fr;gap:5px;margin-top:6px}',
       '.measure-kbd{font-family:"JetBrains Mono",monospace;font-size:8px;color:var(--txt3);margin-top:4px;text-align:center}',
+      '.geometry-panel[hidden]{display:none!important}',
       '@media (max-width:980px){.graph-panel{right:8px;top:8px}.graph-canvas{width:220px;height:110px}}'
     ].join('');
     document.head.appendChild(style);
@@ -82,6 +88,13 @@
         '<div class="tgl-row">Compare Trails<div class="tgl on" id="tCompareTrail"></div></div>',
         '<button class="btn btn-d" id="clearImpactsBtn">Clear Markers</button>',
         '<div class="measure-kbd">Ruler tracks launch to body in-scene.</div>',
+        '</div></details>',
+        '<details class="geometry-panel" id="objectGeometryPanel"><summary>Object Geometry</summary><div class="sec-body">',
+        '<div class="ctl"><div class="ctl-row"><span class="ctl-lbl">Width Scale</span><span class="ctl-val" id="vObjScaleX">1.00x</span></div><input type="range" id="sObjScaleX" min="0.35" max="3.50" value="1.00" step="0.01"></div>',
+        '<div class="ctl"><div class="ctl-row"><span class="ctl-lbl">Height Scale</span><span class="ctl-val" id="vObjScaleY">1.00x</span></div><input type="range" id="sObjScaleY" min="0.35" max="3.50" value="1.00" step="0.01"></div>',
+        '<div class="ctl"><div class="ctl-row"><span class="ctl-lbl">Depth Scale</span><span class="ctl-val" id="vObjScaleZ">1.00x</span></div><input type="range" id="sObjScaleZ" min="0.35" max="3.50" value="1.00" step="0.01"></div>',
+        '<button class="btn btn-d" id="resetObjectScaleBtn">Reset Box Size</button>',
+        '<div class="mini-note" id="objectScaleNote">Resize box-like objects while preserving density, inertia, and collision shape.</div>',
         '</div></details>',
         '<details><summary>Scenarios</summary><div class="sec-body">',
         '<div class="ctl"><select id="savedScenarioSelect"></select></div>',
@@ -241,10 +254,38 @@
     setToggle($('tImpactMarkers'), cfg.analysis.impacts);
     setToggle($('tGraph'), cfg.analysis.graph);
     setToggle($('tCompareTrail'), cfg.analysis.compare);
+    syncGeometryControls(app);
+  }
+
+  function syncGeometryControls(app) {
+    if (!$('objectGeometryPanel')) return;
+    const panel = $('objectGeometryPanel');
+    const scale = app.cfg.objectScale || { x: 1, y: 1, z: 1 };
+    const def = P.resolveObjectDef(app.cfg.objKey, app.cfg);
+    const base = D.OBJ_DEFS[app.cfg.objKey];
+    const visible = isResizableObject(app);
+
+    panel.hidden = !visible;
+    $('sObjScaleX').value = scale.x;
+    $('sObjScaleY').value = scale.y;
+    $('sObjScaleZ').value = scale.z;
+    $('vObjScaleX').textContent = scale.x.toFixed(2) + 'x';
+    $('vObjScaleY').textContent = scale.y.toFixed(2) + 'x';
+    $('vObjScaleZ').textContent = scale.z.toFixed(2) + 'x';
+
+    if (!visible) {
+      $('objectScaleNote').textContent = 'Size controls are available for box-like objects.';
+      return;
+    }
+
+    const density = base.mass / Math.max(1e-6, base.dims[0] * base.dims[1] * base.dims[2]);
+    $('objectScaleNote').textContent =
+      'Dims ' + def.dims[0].toFixed(3) + ' x ' + def.dims[1].toFixed(3) + ' x ' + def.dims[2].toFixed(3) +
+      ' m | rho ' + density.toFixed(0) + ' kg/m^3';
   }
 
   function updateStaticPanels(app) {
-    const def = D.OBJ_DEFS[app.cfg.objKey];
+    const def = P.resolveObjectDef(app.cfg.objKey, app.cfg);
     const surface = D.SURFACES[app.cfg.surfKey];
     $('iMass').textContent = formatMass(def.mass);
     $('iCd').textContent = def.Cd0.toFixed(2);
@@ -256,23 +297,24 @@
     $('ppMk').textContent = (surface.mu_k * def.ground.muK).toFixed(3);
     $('ppMr').textContent = (surface.mu_r * def.ground.muR).toFixed(3);
     $('ppCr').textContent = (surface.cr * def.crO * def.ground.bounce).toFixed(3);
+    syncGeometryControls(app);
   }
 
   function updateDynamicPanels(app) {
     const body = app.state.body;
-    const def = D.OBJ_DEFS[app.cfg.objKey];
+    const def = P.resolveObjectDef(app.cfg.objKey, app.cfg);
     const speed = body.vel.length();
     const accel = body.acc.length();
     const spinRps = body.omegaBody.length() / D.TAU;
-    const horizontalTravel = Math.sqrt(
-      Math.pow(body.pos.x - body.launchPos.x, 2) +
-      Math.pow(body.pos.z - body.launchPos.z, 2)
-    );
     const rhoPct = body.metrics.rho / D.RHO0 * 100;
     const energyTrans = 0.5 * def.mass * speed * speed;
-    const inertiaAvg = (def.inertia[0] + def.inertia[1] + def.inertia[2]) / 3;
-    const energyRot = 0.5 * inertiaAvg * body.omegaBody.lengthSq();
+    const energyRot = 0.5 * (
+      def.inertia[0] * body.omegaBody.x * body.omegaBody.x +
+      def.inertia[1] * body.omegaBody.y * body.omegaBody.y +
+      def.inertia[2] * body.omegaBody.z * body.omegaBody.z
+    );
     const energyPot = def.mass * D.GRAV * Math.max(0, body.pos.y - body.supportY);
+    const energyState = app.state.energy || { aeroWork: 0, contactLoss: 0 };
 
     $('hSpd').textContent = speed.toFixed(2) + ' m/s';
     $('hDrag').textContent = body.metrics.drag.toFixed(3) + ' N';
@@ -291,8 +333,8 @@
     $('eKet').textContent = energyTrans.toFixed(3) + ' J';
     $('eKer').textContent = energyRot.toFixed(3) + ' J';
     $('ePe').textContent = energyPot.toFixed(3) + ' J';
-    $('eWw').textContent = (horizontalTravel * body.metrics.drag * 0.08).toFixed(3) + ' J';
-    $('eFl').textContent = (app.state.impacts.length * 0.03 + Math.max(0, horizontalTravel - speed) * 0.02).toFixed(3) + ' J';
+    $('eWw').textContent = energyState.aeroWork.toFixed(3) + ' J';
+    $('eFl').textContent = energyState.contactLoss.toFixed(3) + ' J';
 
     $('ppRho').textContent = body.metrics.rho.toFixed(4) + ' kg/m^3';
     $('ppRe').textContent = body.metrics.Re.toFixed(0);
@@ -316,9 +358,9 @@
     const height = canvas.height;
 
     ctx.clearRect(0, 0, width, height);
-    ctx.fillStyle = '#0b1018';
+    ctx.fillStyle = '#141b23';
     ctx.fillRect(0, 0, width, height);
-    ctx.strokeStyle = 'rgba(58,80,112,0.6)';
+    ctx.strokeStyle = 'rgba(114,128,144,0.45)';
     ctx.lineWidth = 1;
     for (let i = 1; i < 4; i += 1) {
       const y = i * height / 4;
@@ -354,16 +396,16 @@
       ctx.stroke();
     }
 
-    plot('drag', '#00d4ff');
-    plot('lift', '#10d9a0');
-    plot('net', '#f59e0b');
+    plot('drag', '#7fabc5');
+    plot('lift', '#88b48b');
+    plot('net', '#c9975c');
 
-    ctx.fillStyle = '#6888aa';
+    ctx.fillStyle = '#7fabc5';
     ctx.font = '10px "JetBrains Mono"';
     ctx.fillText('drag', 8, 12);
-    ctx.fillStyle = '#10d9a0';
+    ctx.fillStyle = '#88b48b';
     ctx.fillText('lift', 52, 12);
-    ctx.fillStyle = '#f59e0b';
+    ctx.fillStyle = '#c9975c';
     ctx.fillText('net', 90, 12);
   }
 
@@ -384,6 +426,7 @@
 
     $('objSelect').addEventListener('change', function () {
       app.cfg.objKey = $('objSelect').value;
+      app.cfg.objectScale = { x: 1, y: 1, z: 1 };
       app.resetObject();
     });
     $('surfSelect').addEventListener('change', function () {
@@ -423,6 +466,9 @@
     bindRange('sCamPitch', function (value) { app.cfg.camera.pitch = THREE.MathUtils.degToRad(value); $('vCamPitch').textContent = value.toFixed(0) + ' deg'; });
     bindRange('sFov', function (value) { app.cfg.camera.fov = value; $('vFov').textContent = value.toFixed(0) + ' deg'; app.updateFov(); });
     bindRange('sCamLag', function (value) { app.cfg.camera.lag = value; $('vCamLag').textContent = value.toFixed(2); });
+    bindRange('sObjScaleX', function (value) { app.cfg.objectScale.x = value; $('vObjScaleX').textContent = value.toFixed(2) + 'x'; app.updateObjectScale(); });
+    bindRange('sObjScaleY', function (value) { app.cfg.objectScale.y = value; $('vObjScaleY').textContent = value.toFixed(2) + 'x'; app.updateObjectScale(); });
+    bindRange('sObjScaleZ', function (value) { app.cfg.objectScale.z = value; $('vObjScaleZ').textContent = value.toFixed(2) + 'x'; app.updateObjectScale(); });
 
     $('presetSelect').addEventListener('change', function () { app.currentPresetName = $('presetSelect').value; });
     $('applyPresetBtn').addEventListener('click', function () { app.applyPreset($('presetSelect').value); });
@@ -492,6 +538,11 @@
     $('clearImpactsBtn').addEventListener('click', function () {
       app.state.impacts = [];
     });
+    $('resetObjectScaleBtn').addEventListener('click', function () {
+      app.cfg.objectScale = { x: 1, y: 1, z: 1 };
+      syncGeometryControls(app);
+      app.updateObjectScale();
+    });
 
     $('tWallCollision').addEventListener('click', function () { app.cfg.world.collision = !app.cfg.world.collision; setToggle($('tWallCollision'), app.cfg.world.collision); });
     $('tForceLabels').addEventListener('click', function () { app.cfg.analysis.forceLabels = !app.cfg.analysis.forceLabels; setToggle($('tForceLabels'), app.cfg.analysis.forceLabels); });
@@ -536,6 +587,7 @@
     syncScenarioControls: syncScenarioControls,
     updateStaticPanels: updateStaticPanels,
     updateDynamicPanels: updateDynamicPanels,
+    syncGeometryControls: syncGeometryControls,
     refreshSavedScenarioSelect: refreshSavedScenarioSelect,
     drawGraph: drawGraph,
     setOverlay: setOverlay

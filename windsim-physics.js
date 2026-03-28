@@ -85,6 +85,56 @@
     return pressure / (287.05 * temp);
   }
 
+  function boxInertia(width, height, depth, mass) {
+    return [
+      (mass / 12) * (height * height + depth * depth),
+      (mass / 12) * (width * width + depth * depth),
+      (mass / 12) * (width * width + height * height)
+    ];
+  }
+
+  function objectScale(cfg) {
+    const source = cfg && cfg.objectScale ? cfg.objectScale : {};
+    return {
+      x: clamp(source.x || 1, 0.35, 3.5),
+      y: clamp(source.y || 1, 0.35, 3.5),
+      z: clamp(source.z || 1, 0.35, 3.5)
+    };
+  }
+
+  function resolveObjectDef(objKey, cfg) {
+    const base = D.OBJ_DEFS[objKey];
+    if (!base) return null;
+    if (base.shape !== 'box' && base.shape !== 'brick') return base;
+
+    const scale = objectScale(cfg);
+    const dims = [
+      base.dims[0] * scale.x,
+      base.dims[1] * scale.y,
+      base.dims[2] * scale.z
+    ];
+    const baseVolume = Math.max(1e-6, base.dims[0] * base.dims[1] * base.dims[2]);
+    const volume = Math.max(1e-6, dims[0] * dims[1] * dims[2]);
+    const density = base.mass / baseVolume;
+    const mass = density * volume;
+    const cp = (base.aero.cp || [0, 0, 0]).map(function (value, index) {
+      return value * [scale.x, scale.y, scale.z][index];
+    });
+
+    return Object.assign({}, base, {
+      r: Math.max(dims[0], dims[1], dims[2]) * 0.5,
+      mass: mass,
+      area: dims[0] * dims[2],
+      dims: dims,
+      inertia: boxInertia(dims[0], dims[1], dims[2], mass),
+      aero: Object.assign({}, base.aero, {
+        chord: Math.max(dims[0], dims[1], dims[2]),
+        cp: cp
+      }),
+      objectScale: scale
+    });
+  }
+
   function getRestQuaternion(def) {
     if (def.restEuler) return new Q4().setFromEuler(new E3(def.restEuler[0], def.restEuler[1], def.restEuler[2]));
     return new Q4();
@@ -114,7 +164,8 @@
         drag: 0,
         lift: 0,
         side: 0,
-        net: 0
+        net: 0,
+        aeroPower: 0
       },
       forces: {
         drag: new V3(),
@@ -177,6 +228,7 @@
       },
       analysis: deepClone(D.DEFAULT_ANALYSIS)
     };
+    cfg.objectScale = deepClone(source.objectScale || { x: 1, y: 1, z: 1 });
     return cfg;
   }
 
@@ -195,6 +247,7 @@
         pSize: app.cfg.visuals.particleSize,
         trailLen: app.cfg.visuals.trailMax
       },
+      objectScale: deepClone(app.cfg.objectScale || { x: 1, y: 1, z: 1 }),
       world: deepClone(app.cfg.world),
       analysis: deepClone(app.cfg.analysis),
       env: deepClone(app.cfg.env),
@@ -470,6 +523,7 @@
     const body = app.state.body;
     const surf = D.SURFACES[app.cfg.surfKey];
     const ground = def.ground;
+    const kineticBefore = 0.5 * def.mass * body.vel.lengthSq();
     const support = supportExtentAlong(def, body.q, AX_Y);
     body.supportY = support;
     if (body.pos.y > support) return;
@@ -535,11 +589,17 @@
         body.omegaBody.z += Math.cos(app.state.time * 8.3) * ground.wobble * 0.5 * dt;
       }
     }
+
+    if (app.state.energy) {
+      const kineticAfter = 0.5 * def.mass * body.vel.lengthSq();
+      app.state.energy.contactLoss += Math.max(0, kineticBefore - kineticAfter);
+    }
   }
 
   function applyWallContact(app, def) {
     const body = app.state.body;
     if (!app.cfg.world.collision) return;
+    const kineticBefore = 0.5 * def.mass * body.vel.lengthSq();
 
     const ex = supportExtentAlong(def, body.q, AX_X);
     const ey = supportExtentAlong(def, body.q, AX_Y);
@@ -601,10 +661,15 @@
         body.omegaBody.multiplyScalar(0.90);
       }
     }
+
+    if (app.state.energy) {
+      const kineticAfter = 0.5 * def.mass * body.vel.lengthSq();
+      app.state.energy.contactLoss += Math.max(0, kineticBefore - kineticAfter);
+    }
   }
 
   function aerodynamicStep(app, dt) {
-    const def = D.OBJ_DEFS[app.cfg.objKey];
+    const def = resolveObjectDef(app.cfg.objKey, app.cfg);
     const body = app.state.body;
     const rho = computeRho(app.cfg.altitude);
     const wind = sampleWindAt(app, body.pos);
@@ -662,6 +727,8 @@
 
     body.forces.net.copy(body.forces.drag).add(body.forces.lift).add(body.forces.side).add(body.forces.magnus).add(body.forces.gravity).add(body.forces.wall);
     body.torques.net.copy(body.torques.aero).add(body.torques.ground).add(body.torques.wall);
+    body.metrics.aeroPower = tempH.copy(body.forces.drag).add(body.forces.lift).add(body.forces.side).add(body.forces.magnus).dot(body.vel);
+    if (app.state.energy) app.state.energy.aeroWork += body.metrics.aeroPower * dt;
 
     body.acc.copy(body.forces.net).multiplyScalar(1 / def.mass);
     body.vel.addScaledVector(body.acc, dt);
@@ -683,7 +750,7 @@
   }
 
   function resetSimulationState(app) {
-    const def = D.OBJ_DEFS[app.cfg.objKey];
+    const def = resolveObjectDef(app.cfg.objKey, app.cfg);
     if (app.state.currentTrail && app.state.currentTrail.length > 2) {
       app.state.comparisonTrail = app.state.currentTrail.slice(-app.cfg.visuals.trailMax);
     }
@@ -695,16 +762,25 @@
     app.state.currentTrail = [];
     app.state.body = createBody(def, app.cfg);
     app.state.validation = null;
+    app.state.energy = { aeroWork: 0, contactLoss: 0 };
   }
 
   function recordTelemetry(app) {
     if (app.state.time - app.state.lastTelemetry < 1 / D.TRATE) return;
     app.state.lastTelemetry = app.state.time;
 
-    const def = D.OBJ_DEFS[app.cfg.objKey];
+    const def = resolveObjectDef(app.cfg.objKey, app.cfg);
     const body = app.state.body;
     const speed = body.vel.length();
     const accel = body.acc.length();
+    const energy = app.state.energy || { aeroWork: 0, contactLoss: 0 };
+    const keTrans = 0.5 * def.mass * body.vel.lengthSq();
+    const keRot = 0.5 * (
+      def.inertia[0] * body.omegaBody.x * body.omegaBody.x +
+      def.inertia[1] * body.omegaBody.y * body.omegaBody.y +
+      def.inertia[2] * body.omegaBody.z * body.omegaBody.z
+    );
+    const pe = def.mass * D.GRAV * Math.max(0, body.pos.y - body.supportY);
 
     app.state.telemetry.push({
       time_s: +app.state.time.toFixed(3),
@@ -740,7 +816,15 @@
       wind_heading_deg: app.cfg.wind.azim,
       wind_elev_deg: app.cfg.wind.elev,
       wind_mode_strength: app.cfg.wind.modeStrength,
-      rho_kgm3: +body.metrics.rho.toFixed(5)
+      rho_kgm3: +body.metrics.rho.toFixed(5),
+      object_width_m: +def.dims[0].toFixed(4),
+      object_height_m: +def.dims[1].toFixed(4),
+      object_depth_m: +def.dims[2].toFixed(4),
+      ke_trans_J: +keTrans.toFixed(5),
+      ke_rot_J: +keRot.toFixed(5),
+      pe_J: +pe.toFixed(5),
+      aero_work_J: +energy.aeroWork.toFixed(5),
+      contact_loss_J: +energy.contactLoss.toFixed(5)
     });
 
     if (app.state.telemetry.length > 25000) app.state.telemetry.shift();
@@ -853,6 +937,7 @@
     sampleWindAt: sampleWindAt,
     supportExtentAlong: supportExtentAlong,
     projectedArea: projectedArea,
-    startValidation: startValidation
+    startValidation: startValidation,
+    resolveObjectDef: resolveObjectDef
   };
 }());
