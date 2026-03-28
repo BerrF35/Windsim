@@ -287,7 +287,7 @@
 
           switch (type) {
             case 'grass':
-              rgb = mixRgb(dark, accent, clamp(0.24 + coarse * 0.54 + ridge * 0.18, 0, 1));
+              rgb = mixRgb(dark, accent, clamp(0.16 + coarse * 0.34 + ridge * 0.10, 0, 1));
               break;
             case 'concrete':
               rgb = mixRgb(mixRgb(base, light, 0.12), { r: 222, g: 228, b: 236 }, clamp(0.04 + coarse * 0.14 + fine * 0.08, 0, 0.22));
@@ -328,7 +328,7 @@
       ctx.lineCap = 'round';
       ctx.lineJoin = 'round';
       if (type === 'grass') {
-        ctx.strokeStyle = rgba(mixRgb(accent, light, 0.35), 0.10);
+        ctx.strokeStyle = rgba(mixRgb(accent, light, 0.18), 0.05);
         ctx.lineWidth = 1.2;
         for (let i = 0; i < 22; i += 1) {
           const x0 = i * size / 22;
@@ -426,8 +426,8 @@
       for (let i = 0; i <= 8; i += 1) {
         const p = i * size / 8;
         const major = i % 4 === 0;
-        ctx.strokeStyle = major ? 'rgba(172,187,203,0.18)' : 'rgba(123,138,153,0.10)';
-        ctx.lineWidth = major ? 2.2 : 1.2;
+        ctx.strokeStyle = major ? 'rgba(172,187,203,0.12)' : 'rgba(123,138,153,0.07)';
+        ctx.lineWidth = major ? 2.0 : 1.0;
         ctx.beginPath();
         ctx.moveTo(p, 0);
         ctx.lineTo(p, size);
@@ -882,7 +882,7 @@
     }
     app.render.chamberLines = new THREE.LineSegments(
       new THREE.EdgesGeometry(new THREE.BoxGeometry(app.cfg.world.halfWidth * 2, app.cfg.world.ceiling, app.cfg.world.halfDepth * 2)),
-      new THREE.LineBasicMaterial({ color: 0x34526b, transparent: true, opacity: 0.55 })
+      new THREE.LineBasicMaterial({ color: 0x314654, transparent: true, opacity: 0.42 })
     );
     app.render.chamberLines.position.y = app.cfg.world.ceiling * 0.5;
     app.render.chamberGroup.add(app.render.chamberLines);
@@ -903,8 +903,8 @@
   function setupRenderer() {
     const render = app.render;
     render.scene = new THREE.Scene();
-    render.scene.background = new THREE.Color(0x0f151b);
-    render.scene.fog = new THREE.Fog(0x0f151b, 145, 720);
+    render.scene.background = new THREE.Color(0x0d1115);
+    render.scene.fog = new THREE.Fog(0x0d1115, 160, 760);
 
     render.camera = new THREE.PerspectiveCamera(app.cfg.camera.fov, render.mainEl.clientWidth / Math.max(1, render.mainEl.clientHeight), 0.05, 3000);
     render.renderer = new THREE.WebGLRenderer({ antialias: true });
@@ -912,13 +912,13 @@
     render.renderer.setSize(render.mainEl.clientWidth, Math.max(1, render.mainEl.clientHeight));
     render.renderer.outputEncoding = THREE.sRGBEncoding;
     render.renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    render.renderer.toneMappingExposure = 1.02;
+    render.renderer.toneMappingExposure = 0.95;
     render.renderer.shadowMap.enabled = true;
     render.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     render.mainEl.insertBefore(render.renderer.domElement, render.mainEl.firstChild);
 
-    const ambient = new THREE.AmbientLight(0x253241, 1.8);
-    const dir = new THREE.DirectionalLight(0xf4efe6, 1.6);
+    const ambient = new THREE.AmbientLight(0x22303c, 1.55);
+    const dir = new THREE.DirectionalLight(0xf4efe6, 1.42);
     dir.position.set(26, 38, 20);
     dir.castShadow = true;
     dir.shadow.mapSize.width = 2048;
@@ -929,10 +929,10 @@
     dir.shadow.camera.bottom = -40;
     dir.shadow.camera.near = 1;
     dir.shadow.camera.far = 180;
-    const hemi = new THREE.HemisphereLight(0x72879d, 0x0a0d11, 0.80);
-    const rim = new THREE.DirectionalLight(0xaabdd0, 0.85);
-    const fill = new THREE.PointLight(0xd7b07a, 0.52, 140);
-    const point = new THREE.PointLight(0x8ca8bf, 0.78, 56);
+    const hemi = new THREE.HemisphereLight(0x66798d, 0x090c10, 0.72);
+    const rim = new THREE.DirectionalLight(0xaabdd0, 0.76);
+    const fill = new THREE.PointLight(0xd7b07a, 0.44, 140);
+    const point = new THREE.PointLight(0x8ca8bf, 0.66, 56);
     render.scene.add(ambient, dir, hemi, rim, fill, point, new THREE.AxesHelper(4));
     render.lights = { ambient: ambient, dir: dir, hemi: hemi, rim: rim, fill: fill, point: point };
 
@@ -941,16 +941,16 @@
 
     render.groundGroup = new THREE.Group();
     render.groundMat = new THREE.MeshStandardMaterial(Object.assign({ color: 0xffffff, map: getSurfaceTexture(app.cfg.surfKey) }, surfaceMaterialProps(app.cfg.surfKey)));
-    render.groundOverlayMat = new THREE.MeshBasicMaterial({ color: 0xffffff, map: getGridOverlayTexture(), transparent: true, opacity: 0.18, depthWrite: false });
+    render.groundOverlayMat = new THREE.MeshBasicMaterial({ color: 0xffffff, map: getGridOverlayTexture(), transparent: true, opacity: 0.14, depthWrite: false });
     const ground = new THREE.Mesh(new THREE.PlaneGeometry(D.FLOOR_SIZE, D.FLOOR_SIZE), render.groundMat);
     ground.rotation.x = -Math.PI / 2;
     ground.receiveShadow = true;
     const overlay = new THREE.Mesh(new THREE.PlaneGeometry(D.FLOOR_SIZE, D.FLOOR_SIZE), render.groundOverlayMat);
     overlay.rotation.x = -Math.PI / 2;
     overlay.position.y = 0.02;
-    const grid = new THREE.GridHelper(D.FLOOR_SIZE, Math.round(D.FLOOR_SIZE / 5), 0x4b5c6e, 0x1d2731);
+    const grid = new THREE.GridHelper(D.FLOOR_SIZE, Math.round(D.FLOOR_SIZE / 5), 0x425160, 0x182027);
     grid.material.transparent = true;
-    grid.material.opacity = 0.12;
+    grid.material.opacity = 0.09;
     render.groundGroup.add(ground, overlay, grid);
     render.scene.add(render.groundGroup);
 
@@ -1012,11 +1012,11 @@
     app.render.particlePoints.frustumCulled = false;
     app.render.scene.add(app.render.particlePoints);
 
-    app.render.arrows.drag = new THREE.ArrowHelper(new V3(1, 0, 0), new V3(), 1, 0x7fabc5, 0.5, 0.3);
-    app.render.arrows.grav = new THREE.ArrowHelper(new V3(1, 0, 0), new V3(), 1, 0xb86d63, 0.5, 0.3);
-    app.render.arrows.vel = new THREE.ArrowHelper(new V3(1, 0, 0), new V3(), 1, 0x88b48b, 0.5, 0.3);
-    app.render.arrows.magnus = new THREE.ArrowHelper(new V3(1, 0, 0), new V3(), 1, 0x978fb2, 0.5, 0.3);
-    app.render.arrows.spin = new THREE.ArrowHelper(new V3(1, 0, 0), new V3(), 1, 0xc9975c, 0.5, 0.3);
+    app.render.arrows.drag = new THREE.ArrowHelper(new V3(1, 0, 0), new V3(), 1, 0x79c4be, 0.5, 0.3);
+    app.render.arrows.grav = new THREE.ArrowHelper(new V3(1, 0, 0), new V3(), 1, 0xcf775b, 0.5, 0.3);
+    app.render.arrows.vel = new THREE.ArrowHelper(new V3(1, 0, 0), new V3(), 1, 0x9db788, 0.5, 0.3);
+    app.render.arrows.magnus = new THREE.ArrowHelper(new V3(1, 0, 0), new V3(), 1, 0x9f90be, 0.5, 0.3);
+    app.render.arrows.spin = new THREE.ArrowHelper(new V3(1, 0, 0), new V3(), 1, 0xd5a55a, 0.5, 0.3);
     Object.keys(app.render.arrows).forEach(function (key) {
       app.render.arrows[key].visible = false;
       app.render.scene.add(app.render.arrows[key]);
@@ -1024,13 +1024,13 @@
 
     app.render.rulerGeo = new THREE.BufferGeometry();
     app.render.rulerGeo.setAttribute('position', new THREE.BufferAttribute(app.render.rulerPositions, 3));
-    app.render.rulerLine = new THREE.Line(app.render.rulerGeo, new THREE.LineBasicMaterial({ color: 0x7fabc5, transparent: true, opacity: 0.58 }));
+    app.render.rulerLine = new THREE.Line(app.render.rulerGeo, new THREE.LineBasicMaterial({ color: 0x79c4be, transparent: true, opacity: 0.58 }));
     app.render.rulerLine.frustumCulled = false;
     app.render.scene.add(app.render.rulerLine);
 
     app.render.heightGeo = new THREE.BufferGeometry();
     app.render.heightGeo.setAttribute('position', new THREE.BufferAttribute(app.render.heightPositions, 3));
-    app.render.heightLine = new THREE.Line(app.render.heightGeo, new THREE.LineBasicMaterial({ color: 0xc9975c, transparent: true, opacity: 0.48 }));
+    app.render.heightLine = new THREE.Line(app.render.heightGeo, new THREE.LineBasicMaterial({ color: 0xd5a55a, transparent: true, opacity: 0.48 }));
     app.render.heightLine.frustumCulled = false;
     app.render.scene.add(app.render.heightLine);
 
@@ -1299,11 +1299,11 @@
     if (!body) return;
     const windBlend = clamp(app.render.bodyWind.length() / 60, 0, 1);
     const speedBlend = clamp(body.vel.length() / 26, 0, 1);
-    app.render.lights.dir.intensity = 1.45 + windBlend * 0.40;
-    app.render.lights.hemi.intensity = 0.76 + windBlend * 0.16;
-    app.render.lights.rim.intensity = 0.82 + speedBlend * 0.44;
-    app.render.lights.fill.intensity = 0.52 + speedBlend * 0.24;
-    app.render.lights.point.intensity = 0.72 + windBlend * 0.34 + speedBlend * 0.18;
+    app.render.lights.dir.intensity = 1.28 + windBlend * 0.34;
+    app.render.lights.hemi.intensity = 0.68 + windBlend * 0.14;
+    app.render.lights.rim.intensity = 0.74 + speedBlend * 0.34;
+    app.render.lights.fill.intensity = 0.44 + speedBlend * 0.18;
+    app.render.lights.point.intensity = 0.60 + windBlend * 0.26 + speedBlend * 0.14;
     app.render.lights.point.position.lerp(tmpA.copy(body.pos).addScaledVector(app.render.bodyWind, 0.18).add(tmpB.set(0, 4.5, 0)), 0.18);
     app.render.lights.fill.position.lerp(tmpC.set(app.render.camera.position.x * 0.55 + app.render.focus.x * 0.45, app.render.focus.y + 10, app.render.camera.position.z * 0.55 + app.render.focus.z * 0.45), 0.14);
     app.render.lights.rim.position.set(app.render.camera.position.x * 0.35 + app.render.focus.x * 0.65, app.render.focus.y + 18, app.render.camera.position.z * 0.35 + app.render.focus.z * 0.65);
@@ -1506,6 +1506,10 @@
       event.preventDefault();
     }, { passive: false });
     window.addEventListener('resize', resizeRenderer);
+    if (window.ResizeObserver) {
+      app.render.mainResizeObserver = new window.ResizeObserver(resizeRenderer);
+      app.render.mainResizeObserver.observe(app.render.mainEl);
+    }
     document.addEventListener('keydown', function (event) {
       const tag = event.target && event.target.tagName;
       if (tag === 'INPUT' || tag === 'SELECT' || tag === 'TEXTAREA') return;
@@ -1560,6 +1564,7 @@
   app.refreshSurface = refreshSurface;
   app.resetCamera = resetCamera;
   app.updateObjectScale = updateObjectScale;
+  app.resizeRenderer = resizeRenderer;
 
   setupRenderer();
   initGeometryLayers();

@@ -28,6 +28,154 @@
     });
   }
 
+  const LAYOUT_STORAGE_KEY = 'windsim3d-layout-v1';
+  const DEFAULT_LAYOUT = {
+    sidebarWidth: 312,
+    hudHeight: 58,
+    panels: {
+      energy: { width: 188, height: 114 },
+      legend: { width: 188, height: 146 },
+      graph: { width: 340, height: 196 }
+    }
+  };
+  const PANEL_LIMITS = {
+    energy: { minWidth: 176, minHeight: 98, maxWidth: 420, maxHeight: 320 },
+    legend: { minWidth: 176, minHeight: 118, maxWidth: 420, maxHeight: 360 },
+    graph: { minWidth: 260, minHeight: 150, maxWidth: 560, maxHeight: 360 }
+  };
+
+  function clamp(value, min, max) {
+    return Math.min(max, Math.max(min, value));
+  }
+
+  function clone(value) {
+    return JSON.parse(JSON.stringify(value));
+  }
+
+  function compactLayout() {
+    return window.matchMedia('(max-width:980px)').matches;
+  }
+
+  function clampSidebarWidth(value) {
+    const viewport = Math.max(760, window.innerWidth || 0);
+    return clamp(Math.round(value), 272, Math.min(520, viewport - 260));
+  }
+
+  function clampHudHeight(value) {
+    const maxHeight = Math.min(220, Math.round((window.innerHeight || 720) * 0.42));
+    return clamp(Math.round(value), 48, Math.max(120, maxHeight));
+  }
+
+  function clampPanelSize(name, size) {
+    const limits = PANEL_LIMITS[name];
+    const maxWidth = Math.min(limits.maxWidth, Math.max(limits.minWidth, Math.round((window.innerWidth || 1280) * 0.46)));
+    const maxHeight = Math.min(limits.maxHeight, Math.max(limits.minHeight, Math.round((window.innerHeight || 720) * 0.5)));
+    return {
+      width: clamp(Math.round(size.width), limits.minWidth, maxWidth),
+      height: clamp(Math.round(size.height), limits.minHeight, maxHeight)
+    };
+  }
+
+  function normalizeLayoutState(rawState) {
+    const state = clone(DEFAULT_LAYOUT);
+    const source = rawState && typeof rawState === 'object' ? rawState : {};
+    if (Number.isFinite(source.sidebarWidth)) state.sidebarWidth = clampSidebarWidth(source.sidebarWidth);
+    if (Number.isFinite(source.hudHeight)) state.hudHeight = clampHudHeight(source.hudHeight);
+    if (source.panels && typeof source.panels === 'object') {
+      Object.keys(state.panels).forEach(function (key) {
+        if (source.panels[key] && Number.isFinite(source.panels[key].width) && Number.isFinite(source.panels[key].height)) {
+          state.panels[key] = clampPanelSize(key, source.panels[key]);
+        } else {
+          state.panels[key] = clampPanelSize(key, state.panels[key]);
+        }
+      });
+    } else {
+      Object.keys(state.panels).forEach(function (key) {
+        state.panels[key] = clampPanelSize(key, state.panels[key]);
+      });
+    }
+    return state;
+  }
+
+  function loadLayoutState() {
+    try {
+      const raw = localStorage.getItem(LAYOUT_STORAGE_KEY);
+      return normalizeLayoutState(raw ? JSON.parse(raw) : null);
+    } catch (err) {
+      return normalizeLayoutState(null);
+    }
+  }
+
+  function saveLayoutState(app) {
+    if (!app.layoutState) return;
+    try {
+      localStorage.setItem(LAYOUT_STORAGE_KEY, JSON.stringify(app.layoutState));
+    } catch (err) {
+      /* ignore storage failures */
+    }
+  }
+
+  function ensureLayoutState(app) {
+    if (!app.layoutState) app.layoutState = loadLayoutState();
+    return app.layoutState;
+  }
+
+  function applyLayoutState(app, persist) {
+    const state = normalizeLayoutState(ensureLayoutState(app));
+    const root = document.documentElement;
+    app.layoutState = state;
+    root.style.setProperty('--sidebar-width', state.sidebarWidth + 'px');
+    root.style.setProperty('--hud-height', state.hudHeight + 'px');
+    ['energy', 'legend', 'graph'].forEach(function (key) {
+      const panelId = key === 'graph' ? 'graphPanel' : key + '-panel';
+      const panel = $(panelId);
+      if (!panel) return;
+      panel.style.width = state.panels[key].width + 'px';
+      panel.style.height = state.panels[key].height + 'px';
+    });
+    if (typeof app.resizeRenderer === 'function' && !compactLayout()) app.resizeRenderer();
+    if (persist) saveLayoutState(app);
+  }
+
+  function resetLayoutState(app) {
+    app.layoutState = normalizeLayoutState(DEFAULT_LAYOUT);
+    applyLayoutState(app, true);
+  }
+
+  function startDrag(event, cursor, onMove, onEnd) {
+    const previousCursor = document.body.style.cursor;
+    event.preventDefault();
+    document.body.classList.add('layout-dragging');
+    document.body.style.cursor = cursor;
+
+    function stop() {
+      window.removeEventListener('pointermove', handleMove);
+      window.removeEventListener('pointerup', stop);
+      window.removeEventListener('pointercancel', stop);
+      document.body.classList.remove('layout-dragging');
+      document.body.style.cursor = previousCursor;
+      if (onEnd) onEnd();
+    }
+
+    function handleMove(moveEvent) {
+      onMove(moveEvent);
+    }
+
+    window.addEventListener('pointermove', handleMove);
+    window.addEventListener('pointerup', stop);
+    window.addEventListener('pointercancel', stop);
+  }
+
+  function ensurePanelHandle(panel, anchorRight) {
+    let handle = panel.querySelector('.panel-resize-handle');
+    if (handle) return handle;
+    handle = document.createElement('div');
+    handle.className = 'panel-resize-handle' + (anchorRight ? ' anchor-right' : '');
+    handle.setAttribute('aria-hidden', 'true');
+    panel.appendChild(handle);
+    return handle;
+  }
+
   function saveScenarioList(app) {
     localStorage.setItem(D.STORAGE_KEY, JSON.stringify(app.savedScenarios));
   }
@@ -46,19 +194,25 @@
     const style = document.createElement('style');
     style.id = 'windsim-ui-style';
     style.textContent = [
-      '.num-input{width:100%;background:var(--surf2);border:1px solid var(--bdr);color:var(--txt);border-radius:5px;padding:7px 10px;font-family:"JetBrains Mono",monospace;font-size:11px;outline:none}',
+      '.num-input{width:100%;background:linear-gradient(180deg,rgba(37,46,57,.98),rgba(27,34,42,.98));border:1px solid rgba(255,255,255,.08);color:var(--txt);border-radius:7px;padding:7px 10px;font-family:"JetBrains Mono",monospace;font-size:11px;outline:none}',
       '.mini-note{font-family:"JetBrains Mono",monospace;font-size:8px;color:var(--txt3);line-height:1.5;margin-top:4px}',
-      '.report-box{margin-top:7px;background:var(--surf2);border:1px solid var(--bdr);border-radius:5px;padding:8px 9px;font-family:"JetBrains Mono",monospace;font-size:8px;line-height:1.7;color:var(--txt2);white-space:pre-wrap;min-height:78px}',
-      '.graph-panel{position:absolute;right:11px;top:11px;z-index:20;background:rgba(18,25,35,.86);border:1px solid var(--bdr);border-radius:8px;padding:8px 8px 6px;backdrop-filter:blur(8px);box-shadow:0 12px 26px rgba(0,0,0,.18)}',
-      '.graph-title{font-family:"JetBrains Mono",monospace;font-size:8px;letter-spacing:1px;color:var(--txt3);margin-bottom:5px}',
-      '.graph-canvas{display:block;width:260px;height:120px}',
-      '.force-label{position:absolute;z-index:24;padding:2px 6px;border-radius:999px;background:rgba(18,25,35,.88);border:1px solid var(--bdr);font-family:"JetBrains Mono",monospace;font-size:8px;letter-spacing:.8px;color:var(--txt2);pointer-events:none;transform:translate(-50%,-50%);white-space:nowrap}',
-      '.measure-label{position:absolute;z-index:24;padding:3px 7px;border-radius:999px;background:rgba(18,25,35,.88);border:1px solid var(--bdr);font-family:"JetBrains Mono",monospace;font-size:8px;letter-spacing:.8px;color:var(--cyan);pointer-events:none;transform:translate(-50%,-50%);white-space:nowrap}',
-      '.validation-pill{position:absolute;left:50%;top:12px;transform:translateX(-50%);z-index:24;background:rgba(18,25,35,.9);border:1px solid var(--bdr);border-radius:999px;padding:5px 12px;font-family:"JetBrains Mono",monospace;font-size:8px;letter-spacing:1px;color:var(--amber);pointer-events:none;display:none}',
+      '.report-box{margin-top:7px;background:linear-gradient(180deg,rgba(255,255,255,.03),rgba(255,255,255,.01));border:1px solid rgba(255,255,255,.08);border-radius:8px;padding:8px 9px;font-family:"JetBrains Mono",monospace;font-size:8px;line-height:1.7;color:var(--txt2);white-space:pre-wrap;min-height:78px}',
+      '.graph-panel{position:absolute;right:11px;top:44px;z-index:20;background:linear-gradient(180deg,rgba(16,20,24,.9),rgba(11,14,18,.94));border:1px solid rgba(255,255,255,.075);border-radius:12px;padding:10px 10px 12px;backdrop-filter:blur(12px);box-shadow:0 14px 32px rgba(0,0,0,.26);display:flex;flex-direction:column;gap:8px}',
+      '.graph-head{display:flex;justify-content:space-between;align-items:baseline;gap:10px}',
+      '.graph-title{font-family:"JetBrains Mono",monospace;font-size:8px;letter-spacing:1.2px;color:var(--txt3)}',
+      '.graph-meta{font-family:"JetBrains Mono",monospace;font-size:8px;color:var(--txt3)}',
+      '.graph-canvas-wrap{flex:1;min-height:120px}',
+      '.graph-canvas{display:block;width:100%;height:100%}',
+      '.panel-resize-handle{position:absolute;right:6px;bottom:6px;width:18px;height:18px;border-radius:6px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.08);cursor:nwse-resize}',
+      '.panel-resize-handle::before{content:"";position:absolute;inset:4px;background:linear-gradient(135deg,transparent 0,transparent 25%,rgba(127,139,151,.75) 25%,rgba(127,139,151,.75) 36%,transparent 36%,transparent 48%,rgba(127,139,151,.75) 48%,rgba(127,139,151,.75) 59%,transparent 59%,transparent 71%,rgba(127,139,151,.75) 71%,rgba(127,139,151,.75) 82%,transparent 82%)}',
+      '.panel-resize-handle.anchor-right{left:6px;right:auto;cursor:nesw-resize}',
+      '.force-label{position:absolute;z-index:24;padding:2px 6px;border-radius:999px;background:rgba(14,18,22,.9);border:1px solid rgba(255,255,255,.08);font-family:"JetBrains Mono",monospace;font-size:8px;letter-spacing:.8px;color:var(--txt2);pointer-events:none;transform:translate(-50%,-50%);white-space:nowrap}',
+      '.measure-label{position:absolute;z-index:24;padding:3px 7px;border-radius:999px;background:rgba(14,18,22,.9);border:1px solid rgba(255,255,255,.08);font-family:"JetBrains Mono",monospace;font-size:8px;letter-spacing:.8px;color:var(--cyan);pointer-events:none;transform:translate(-50%,-50%);white-space:nowrap}',
+      '.validation-pill{position:absolute;left:50%;top:12px;transform:translateX(-50%);z-index:24;background:rgba(14,18,22,.92);border:1px solid rgba(255,255,255,.08);border-radius:999px;padding:5px 12px;font-family:"JetBrains Mono",monospace;font-size:8px;letter-spacing:1px;color:var(--amber);pointer-events:none;display:none}',
       '.scenario-row{display:grid;grid-template-columns:1fr 1fr;gap:5px;margin-top:6px}',
       '.measure-kbd{font-family:"JetBrains Mono",monospace;font-size:8px;color:var(--txt3);margin-top:4px;text-align:center}',
       '.geometry-panel[hidden]{display:none!important}',
-      '@media (max-width:980px){.graph-panel{right:8px;top:8px}.graph-canvas{width:220px;height:110px}}'
+      '@media (max-width:980px){.graph-panel{right:8px;top:44px;left:8px;width:auto!important;max-width:none}.graph-canvas-wrap{min-height:110px}.panel-resize-handle{display:none}}'
     ].join('');
     document.head.appendChild(style);
   }
@@ -89,6 +243,10 @@
         '<button class="btn btn-d" id="clearImpactsBtn">Clear Markers</button>',
         '<div class="measure-kbd">Ruler tracks launch to body in-scene.</div>',
         '</div></details>',
+        '<details><summary>Workspace</summary><div class="sec-body">',
+        '<button class="btn btn-d" id="resetLayoutBtn">Reset Layout</button>',
+        '<div class="mini-note">Drag the center divider, the telemetry grip above the bottom bar, and the panel corners to customize the workspace.</div>',
+        '</div></details>',
         '<details class="geometry-panel" id="objectGeometryPanel"><summary>Object Geometry</summary><div class="sec-body">',
         '<div class="ctl"><div class="ctl-row"><span class="ctl-lbl">Width Scale</span><span class="ctl-val" id="vObjScaleX">1.00x</span></div><input type="range" id="sObjScaleX" min="0.35" max="3.50" value="1.00" step="0.01"></div>',
         '<div class="ctl"><div class="ctl-row"><span class="ctl-lbl">Height Scale</span><span class="ctl-val" id="vObjScaleY">1.00x</span></div><input type="range" id="sObjScaleY" min="0.35" max="3.50" value="1.00" step="0.01"></div>',
@@ -114,8 +272,8 @@
     if (!$('graphPanel')) {
       main.insertAdjacentHTML('beforeend', [
         '<div class="graph-panel" id="graphPanel">',
-        '<div class="graph-title">FORCE HISTORY</div>',
-        '<canvas class="graph-canvas" id="graphCanvas" width="260" height="120"></canvas>',
+        '<div class="graph-head"><div class="graph-title">FORCE HISTORY</div><div class="graph-meta">10 s rolling window</div></div>',
+        '<div class="graph-canvas-wrap"><canvas class="graph-canvas" id="graphCanvas" width="340" height="160"></canvas></div>',
         '</div>',
         '<div class="measure-label" id="rulerLabel" style="display:none">0.0 m</div>',
         '<div class="validation-pill" id="validationPill">VALIDATION RUNNING</div>',
@@ -284,6 +442,65 @@
       ' m | rho ' + density.toFixed(0) + ' kg/m^3';
   }
 
+  function bindLayoutControls(app) {
+    if (app.layoutControlsBound) return;
+    app.layoutControlsBound = true;
+
+    function bindPanelResize(panelId, key, anchorRight) {
+      const panel = $(panelId);
+      const handle = ensurePanelHandle(panel, anchorRight);
+      handle.addEventListener('pointerdown', function (event) {
+        if (compactLayout()) return;
+        const startSize = clone(ensureLayoutState(app).panels[key]);
+        const startX = event.clientX;
+        const startY = event.clientY;
+        startDrag(event, anchorRight ? 'nesw-resize' : 'nwse-resize', function (moveEvent) {
+          const next = clampPanelSize(key, {
+            width: startSize.width + (anchorRight ? (startX - moveEvent.clientX) : (moveEvent.clientX - startX)),
+            height: startSize.height + (moveEvent.clientY - startY)
+          });
+          ensureLayoutState(app).panels[key] = next;
+          applyLayoutState(app, false);
+        }, function () {
+          saveLayoutState(app);
+        });
+      });
+    }
+
+    $('sidebar-resizer').addEventListener('pointerdown', function (event) {
+      if (compactLayout()) return;
+      const startWidth = ensureLayoutState(app).sidebarWidth;
+      const startX = event.clientX;
+      startDrag(event, 'col-resize', function (moveEvent) {
+        ensureLayoutState(app).sidebarWidth = clampSidebarWidth(startWidth + (moveEvent.clientX - startX));
+        applyLayoutState(app, false);
+      }, function () {
+        saveLayoutState(app);
+      });
+    });
+
+    $('hud-resizer').addEventListener('pointerdown', function (event) {
+      if (compactLayout()) return;
+      const startHeight = ensureLayoutState(app).hudHeight;
+      const startY = event.clientY;
+      startDrag(event, 'ns-resize', function (moveEvent) {
+        ensureLayoutState(app).hudHeight = clampHudHeight(startHeight + (startY - moveEvent.clientY));
+        applyLayoutState(app, false);
+      }, function () {
+        saveLayoutState(app);
+      });
+    });
+
+    bindPanelResize('energy-panel', 'energy', false);
+    bindPanelResize('legend-panel', 'legend', false);
+    bindPanelResize('graphPanel', 'graph', true);
+
+    window.addEventListener('resize', function () {
+      app.layoutState = normalizeLayoutState(ensureLayoutState(app));
+      applyLayoutState(app, false);
+    });
+  }
+
   function updateStaticPanels(app) {
     const def = P.resolveObjectDef(app.cfg.objKey, app.cfg);
     const surface = D.SURFACES[app.cfg.surfKey];
@@ -346,67 +563,111 @@
     if ($('hAoA')) $('hAoA').textContent = body.metrics.aoa.toFixed(1) + ' deg';
   }
 
+  function syncGraphCanvasSize(canvas) {
+    const rect = canvas.getBoundingClientRect();
+    const width = Math.max(240, Math.round(rect.width));
+    const height = Math.max(120, Math.round(rect.height));
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    const pixelWidth = Math.round(width * dpr);
+    const pixelHeight = Math.round(height * dpr);
+    if (canvas.width !== pixelWidth || canvas.height !== pixelHeight) {
+      canvas.width = pixelWidth;
+      canvas.height = pixelHeight;
+    }
+    const ctx = canvas.getContext('2d');
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    return { ctx: ctx, width: width, height: height };
+  }
+
   function drawGraph(app) {
     const panel = $('graphPanel');
-    panel.style.display = app.cfg.analysis.graph ? 'block' : 'none';
+    panel.style.display = app.cfg.analysis.graph ? 'flex' : 'none';
     if (!app.cfg.analysis.graph) return;
 
     const canvas = $('graphCanvas');
-    const ctx = canvas.getContext('2d');
+    const sized = syncGraphCanvasSize(canvas);
+    const ctx = sized.ctx;
+    const width = sized.width;
+    const height = sized.height;
     const history = app.state.forceHistory;
-    const width = canvas.width;
-    const height = canvas.height;
+    const padX = 34;
+    const padY = 16;
+    const plotWidth = Math.max(24, width - padX - 12);
+    const plotHeight = Math.max(24, height - padY * 2);
 
     ctx.clearRect(0, 0, width, height);
-    ctx.fillStyle = '#141b23';
+    const fill = ctx.createLinearGradient(0, 0, 0, height);
+    fill.addColorStop(0, '#131921');
+    fill.addColorStop(1, '#0d1116');
+    ctx.fillStyle = fill;
     ctx.fillRect(0, 0, width, height);
-    ctx.strokeStyle = 'rgba(114,128,144,0.45)';
+
+    ctx.strokeStyle = 'rgba(127,139,151,0.24)';
     ctx.lineWidth = 1;
-    for (let i = 1; i < 4; i += 1) {
-      const y = i * height / 4;
+    for (let i = 0; i <= 4; i += 1) {
+      const y = padY + i * plotHeight / 4;
       ctx.beginPath();
-      ctx.moveTo(0, y);
-      ctx.lineTo(width, y);
+      ctx.moveTo(padX, y);
+      ctx.lineTo(width - 8, y);
       ctx.stroke();
     }
+    for (let i = 0; i <= 4; i += 1) {
+      const x = padX + i * plotWidth / 4;
+      ctx.beginPath();
+      ctx.moveTo(x, padY);
+      ctx.lineTo(x, height - padY);
+      ctx.stroke();
+    }
+
+    ctx.fillStyle = 'rgba(127,139,151,0.84)';
+    ctx.font = '10px "JetBrains Mono"';
+    ctx.textAlign = 'right';
+    ctx.fillText('0', padX - 6, height - padY + 3);
 
     if (history.length < 2) return;
     const end = history[history.length - 1].time;
     const start = Math.max(0, end - 10);
     const span = Math.max(0.1, end - start);
     let maxForce = 1;
-    history.forEach(function (p) {
-      if (p.time >= start) maxForce = Math.max(maxForce, p.drag, p.lift, p.net);
+    history.forEach(function (point) {
+      if (point.time >= start) maxForce = Math.max(maxForce, point.drag, point.lift, point.net);
     });
+
+    ctx.fillText(maxForce.toFixed(2), padX - 6, padY + 3);
+    ctx.textAlign = 'left';
+    ctx.fillText('-' + span.toFixed(span < 9.5 ? 1 : 0) + 's', padX, height - 3);
+    ctx.fillText('now', width - 28, height - 3);
 
     function plot(metric, color) {
       let started = false;
       ctx.strokeStyle = color;
       ctx.lineWidth = 2;
       ctx.beginPath();
-      history.forEach(function (p) {
-        if (p.time < start) return;
-        const x = (p.time - start) / span * width;
-        const y = height - (p[metric] / maxForce) * (height - 8) - 4;
+      history.forEach(function (point) {
+        if (point.time < start) return;
+        const x = padX + (point.time - start) / span * plotWidth;
+        const y = height - padY - (point[metric] / maxForce) * plotHeight;
         if (!started) {
           ctx.moveTo(x, y);
           started = true;
-        } else ctx.lineTo(x, y);
+        } else {
+          ctx.lineTo(x, y);
+        }
       });
       ctx.stroke();
     }
 
-    plot('drag', '#7fabc5');
-    plot('lift', '#88b48b');
-    plot('net', '#c9975c');
+    plot('drag', '#79c4be');
+    plot('lift', '#9db788');
+    plot('net', '#d5a55a');
 
-    ctx.fillStyle = '#7fabc5';
     ctx.font = '10px "JetBrains Mono"';
-    ctx.fillText('drag', 8, 12);
-    ctx.fillStyle = '#88b48b';
-    ctx.fillText('lift', 52, 12);
-    ctx.fillStyle = '#c9975c';
-    ctx.fillText('net', 90, 12);
+    ctx.fillStyle = '#79c4be';
+    ctx.fillText('drag', padX, 11);
+    ctx.fillStyle = '#9db788';
+    ctx.fillText('lift', padX + 44, 11);
+    ctx.fillStyle = '#d5a55a';
+    ctx.fillText('net', padX + 82, 11);
   }
 
   function setOverlay(el, x, y, visible) {
@@ -538,6 +799,9 @@
     $('clearImpactsBtn').addEventListener('click', function () {
       app.state.impacts = [];
     });
+    $('resetLayoutBtn').addEventListener('click', function () {
+      resetLayoutState(app);
+    });
     $('resetObjectScaleBtn').addEventListener('click', function () {
       app.cfg.objectScale = { x: 1, y: 1, z: 1 };
       syncGeometryControls(app);
@@ -556,6 +820,7 @@
     injectUiStyles();
     injectExtraPanels(app);
     app.savedScenarios = loadScenarioList();
+    app.layoutState = loadLayoutState();
     app.ui = {
       graphCanvas: $('graphCanvas'),
       graphPanel: $('graphPanel'),
@@ -577,7 +842,9 @@
 
     populateStaticSelects(app);
     bindEvents(app);
+    bindLayoutControls(app);
     syncScenarioControls(app);
+    applyLayoutState(app, false);
     updateStaticPanels(app);
   }
 
