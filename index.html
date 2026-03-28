@@ -8,31 +8,28 @@
 <style>
 *,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
 :root{
-  --bg:#0a0c0e;
-  --surf:#12161a;
-  --surf2:#1a2127;
-  --surf3:#232d35;
-  --bdr:#37414a;
-  --bdr2:#5e6c78;
-  --cyan:#65d0c3;
-  --green:#c0ce73;
-  --amber:#eab15d;
-  --red:#e37a63;
-  --violet:#a892c8;
-  --orange:#f08c4e;
-  --txt:#f0eee8;
-  --txt2:#cfd4d1;
-  --txt3:#8f9893;
+  --bg:#0a0f14;
+  --surf:#121922;
+  --surf2:#17212c;
+  --surf3:#1f2b38;
+  --bdr:#273444;
+  --bdr2:#42576c;
+  --cyan:#89bad8;
+  --green:#6fa4c5;
+  --amber:#b7d7ea;
+  --red:#7babc9;
+  --violet:#5f89aa;
+  --orange:#9ec7e1;
+  --txt:#eef4f8;
+  --txt2:#c2ced8;
+  --txt3:#8191a0;
   --sidebar-width:336px;
   --hud-height:136px
 }
 html,body{height:100%;overflow:hidden}
 body{
   font-family:'Barlow',sans-serif;
-  background:
-    radial-gradient(circle at 12% 0%,rgba(240,140,78,.14) 0%,rgba(240,140,78,0) 28%),
-    radial-gradient(circle at 84% 14%,rgba(101,208,195,.11) 0%,rgba(101,208,195,0) 24%),
-    linear-gradient(135deg,#181413 0%,#0f1113 42%,#07090b 100%);
+  background:linear-gradient(180deg,#10161d 0%,#0a0f14 100%);
   color:var(--txt);
   display:flex
 }
@@ -44,32 +41,20 @@ body{
   flex:0 0 var(--sidebar-width);
   min-width:296px;
   max-width:min(560px,48vw);
-  background:
-    linear-gradient(180deg,rgba(25,28,31,.985),rgba(14,17,20,.995));
+  background:#0f151d;
   border-right:1px solid rgba(255,255,255,.04);
-  box-shadow:22px 0 54px rgba(0,0,0,.42),inset -1px 0 0 rgba(255,255,255,.04);
+  box-shadow:16px 0 34px rgba(0,0,0,.28),inset -1px 0 0 rgba(255,255,255,.03);
   display:flex;
   flex-direction:column;
   overflow-y:auto;
   overflow-x:hidden
-}
-#sidebar::before{
-  content:'';
-  position:sticky;
-  top:0;
-  display:block;
-  height:4px;
-  background:linear-gradient(90deg,var(--cyan),var(--amber),var(--red));
-  z-index:2
 }
 #sidebar-resizer{
   flex:0 0 16px;
   position:relative;
   cursor:col-resize;
   touch-action:none;
-  background:
-    linear-gradient(180deg,rgba(255,255,255,.032),rgba(255,255,255,0)),
-    linear-gradient(180deg,rgba(101,208,195,.08),rgba(101,208,195,0));
+  background:#0d1319;
   border-right:1px solid rgba(255,255,255,.03)
 }
 #sidebar-resizer::before{
@@ -77,33 +62,17 @@ body{
   position:absolute;
   left:50%;
   top:50%;
-  width:6px;
-  height:120px;
+  width:4px;
+  height:112px;
   transform:translate(-50%,-50%);
   border-radius:999px;
-  background:linear-gradient(180deg,rgba(101,208,195,.04),rgba(101,208,195,.78),rgba(234,177,93,.64),rgba(234,177,93,.04));
+  background:linear-gradient(180deg,rgba(137,186,216,.08),rgba(137,186,216,.58),rgba(137,186,216,.08));
   box-shadow:0 0 0 1px rgba(0,0,0,.34)
-}
-#sidebar-resizer::after{
-  content:'DRAG';
-  position:absolute;
-  left:50%;
-  bottom:18px;
-  transform:translateX(-50%);
-  font-family:'JetBrains Mono',monospace;
-  font-size:7px;
-  letter-spacing:1.8px;
-  color:rgba(207,212,209,.45);
-  writing-mode:vertical-rl;
-  text-orientation:mixed
 }
 .sb-logo{
   padding:16px 20px 14px;
   border-bottom:1px solid rgba(255,255,255,.06);
-  background:
-    radial-gradient(circle at left top,rgba(240,140,78,.20),rgba(240,140,78,0) 36%),
-    radial-gradient(circle at right top,rgba(101,208,195,.14),rgba(101,208,195,0) 34%),
-    linear-gradient(180deg,rgba(255,255,255,.035),rgba(255,255,255,0))
+  background:linear-gradient(180deg,rgba(255,255,255,.02),rgba(255,255,255,0))
 }
 .logo-txt{font-size:22px;font-weight:700;letter-spacing:5px;line-height:1}
 .lw{color:var(--cyan)}
@@ -117,7 +86,7 @@ body{
 }
 details{
   border-bottom:1px solid rgba(255,255,255,.045);
-  background:linear-gradient(180deg,rgba(255,255,255,.014),rgba(255,255,255,0))
+  background:transparent
 }
 summary{
   list-style:none;
@@ -150,7 +119,7 @@ input[type=range]{
   height:6px;
   appearance:none;
   -webkit-appearance:none;
-  background:linear-gradient(90deg,rgba(94,108,120,.92),rgba(101,208,195,.42),rgba(234,177,93,.22));
+  background:linear-gradient(90deg,rgba(66,87,108,.9),rgba(137,186,216,.36));
   border-radius:999px;
   outline:none;
   cursor:pointer
@@ -160,14 +129,14 @@ input[type=range]::-webkit-slider-thumb{
   width:16px;
   height:16px;
   border-radius:50%;
-  background:#f7f3ea;
-  border:2px solid #65d0c3;
+  background:#edf4f8;
+  border:2px solid #89bad8;
   cursor:pointer;
   box-shadow:0 2px 10px rgba(0,0,0,.32)
 }
 select{
   width:100%;
-  background:linear-gradient(180deg,rgba(39,45,51,.98),rgba(25,31,36,.98));
+  background:#151e27;
   border:1px solid rgba(255,255,255,.10);
   color:var(--txt);
   border-radius:7px;
@@ -183,13 +152,13 @@ select{
   background-repeat:no-repeat;
   background-position:right 10px center
 }
-select:focus{border-color:#8fd8cf}
+select:focus{border-color:#89bad8}
 select option{background:var(--surf)}
 .obj-info-grid{
   display:grid;
   grid-template-columns:1fr 1fr 1fr;
   gap:6px 12px;
-  background:linear-gradient(180deg,rgba(255,255,255,.038),rgba(255,255,255,.014));
+  background:rgba(255,255,255,.02);
   border:1px solid rgba(255,255,255,.085);
   border-radius:12px;
   padding:10px 12px;
@@ -230,7 +199,7 @@ select option{background:var(--surf)}
   left:2px;
   transition:left .18s,background .18s
 }
-.tgl.on{background:linear-gradient(90deg,rgba(101,208,195,.44),rgba(234,177,93,.22))}
+.tgl.on{background:rgba(137,186,216,.30)}
 .tgl.on::after{left:20px;background:#e8f2f1}
 .btn{
   display:block;
@@ -248,16 +217,12 @@ select option{background:var(--surf)}
   text-transform:uppercase
 }
 .btn:last-child{margin-bottom:0}
-.btn-c{background:linear-gradient(135deg,rgba(101,208,195,.18),rgba(101,208,195,.06));color:var(--cyan);border:1px solid rgba(101,208,195,.38)}
-.btn-c:hover{background:linear-gradient(135deg,rgba(101,208,195,.28),rgba(101,208,195,.10))}
-.btn-r{background:linear-gradient(135deg,rgba(227,122,99,.18),rgba(227,122,99,.06));color:var(--red);border:1px solid rgba(227,122,99,.34)}
-.btn-r:hover{background:linear-gradient(135deg,rgba(227,122,99,.28),rgba(227,122,99,.10))}
-.btn-g{background:linear-gradient(135deg,rgba(234,177,93,.18),rgba(234,177,93,.06));color:var(--amber);border:1px solid rgba(234,177,93,.34)}
-.btn-g:hover{background:linear-gradient(135deg,rgba(234,177,93,.28),rgba(234,177,93,.10))}
-.btn-d{background:linear-gradient(180deg,rgba(44,51,58,.98),rgba(27,33,38,.98));color:var(--txt2);border:1px solid rgba(255,255,255,.10)}
-.btn-d:hover{background:#303942;border-color:#6b7985}
+.btn-c,.btn-g,.btn-r{background:rgba(137,186,216,.10);color:var(--cyan);border:1px solid rgba(137,186,216,.30)}
+.btn-c:hover,.btn-g:hover,.btn-r:hover{background:rgba(137,186,216,.16)}
+.btn-d{background:#151e27;color:var(--txt2);border:1px solid rgba(255,255,255,.10)}
+.btn-d:hover{background:#1b2631;border-color:#4d6379}
 .phys-box{
-  background:linear-gradient(180deg,rgba(255,255,255,.04),rgba(255,255,255,.014));
+  background:rgba(255,255,255,.02);
   border:1px solid rgba(255,255,255,.09);
   border-radius:12px;
   padding:10px 12px;
@@ -276,41 +241,20 @@ select option{background:var(--surf)}
   min-width:0;
   position:relative;
   overflow:hidden;
-  background:
-    radial-gradient(circle at top right,rgba(101,208,195,.08),rgba(101,208,195,0) 28%),
-    radial-gradient(circle at 18% 12%,rgba(240,140,78,.08),rgba(240,140,78,0) 34%),
-    linear-gradient(180deg,rgba(255,255,255,.012),rgba(255,255,255,0))
-}
-#main::before{
-  content:'';
-  position:absolute;
-  inset:0;
-  pointer-events:none;
-  z-index:1;
-  background:
-    radial-gradient(circle at top,rgba(255,255,255,.05),rgba(255,255,255,0) 32%),
-    radial-gradient(circle at 50% 110%,rgba(0,0,0,.34),rgba(0,0,0,0) 36%)
-}
-#main::after{
-  content:'';
-  position:absolute;
-  inset:0;
-  pointer-events:none;
-  z-index:1;
-  box-shadow:inset 0 0 120px rgba(0,0,0,.28)
+  background:#0b1015
 }
 #main canvas{display:block;position:absolute;inset:0;touch-action:none}
 #status-pill,#energy-panel,#legend-panel,#scale-pill,.orbit-hint{
-  backdrop-filter:blur(14px);
-  box-shadow:0 18px 38px rgba(0,0,0,.34)
+  backdrop-filter:blur(10px);
+  box-shadow:0 14px 28px rgba(0,0,0,.26)
 }
 #status-pill{
   position:absolute;
   top:14px;
   right:14px;
   z-index:20;
-  background:linear-gradient(135deg,rgba(13,16,19,.94),rgba(27,31,36,.82));
-  border:1px solid rgba(234,177,93,.22);
+  background:rgba(12,17,23,.90);
+  border:1px solid rgba(137,186,216,.18);
   border-radius:999px;
   padding:6px 13px;
   font-family:'JetBrains Mono',monospace;
@@ -325,7 +269,7 @@ select option{background:var(--surf)}
   top:14px;
   left:14px;
   z-index:20;
-  background:linear-gradient(180deg,rgba(13,16,19,.9),rgba(19,23,27,.82));
+  background:rgba(12,17,23,.88);
   border:1px solid rgba(255,255,255,.09);
   border-radius:14px;
   padding:9px 12px;
@@ -348,23 +292,12 @@ select option{background:var(--surf)}
 }
 #energy-panel,#legend-panel{
   position:relative;
-  background:linear-gradient(180deg,rgba(16,19,22,.94),rgba(10,13,16,.96));
+  background:rgba(12,17,23,.92);
   border:1px solid rgba(255,255,255,.10);
   border-radius:16px;
   padding:14px 14px 16px;
   pointer-events:auto;
   overflow:auto
-}
-#energy-panel::before,#legend-panel::before{
-  content:'';
-  position:absolute;
-  left:0;
-  right:0;
-  top:0;
-  height:2px;
-  border-radius:16px 16px 0 0;
-  background:linear-gradient(90deg,var(--cyan),var(--amber),rgba(255,255,255,0));
-  pointer-events:none
 }
 #energy-panel{
   min-width:220px;
@@ -380,12 +313,12 @@ select option{background:var(--surf)}
   text-transform:uppercase;
   margin-bottom:10px;
   padding-bottom:8px;
-  border-bottom:1px solid rgba(255,255,255,.07)
+  border-bottom:1px solid rgba(255,255,255,.06)
 }
 .ep-row{display:flex;justify-content:space-between;gap:12px;margin-bottom:3px}
 .ep-row:last-child{margin-bottom:0}
 .ep-l{color:var(--txt3)}
-.ep-v{color:var(--amber);font-weight:600}
+.ep-v{color:var(--cyan);font-weight:600}
 #legend-panel{
   min-width:220px;
   min-height:180px;
@@ -401,7 +334,7 @@ select option{background:var(--surf)}
   right:14px;
   bottom:calc(var(--hud-height) + 18px);
   z-index:20;
-  background:linear-gradient(180deg,rgba(13,16,19,.94),rgba(20,23,27,.84));
+  background:rgba(12,17,23,.88);
   border:1px solid rgba(255,255,255,.09);
   border-radius:999px;
   padding:7px 12px;
@@ -430,7 +363,7 @@ select option{background:var(--surf)}
   height:6px;
   transform:translate(-50%,-50%);
   border-radius:999px;
-  background:linear-gradient(90deg,rgba(101,208,195,.16),rgba(101,208,195,.74),rgba(234,177,93,.42),rgba(234,177,93,.12));
+  background:linear-gradient(90deg,rgba(137,186,216,.12),rgba(137,186,216,.72),rgba(137,186,216,.12));
   box-shadow:0 0 0 1px rgba(0,0,0,.24)
 }
 #hud-resizer::after{
@@ -452,7 +385,7 @@ select option{background:var(--surf)}
   right:0;
   z-index:20;
   height:var(--hud-height);
-  background:linear-gradient(180deg,rgba(14,17,20,.94),rgba(8,11,13,.98));
+  background:rgba(11,16,22,.95);
   border-top:1px solid rgba(255,255,255,.08);
   display:grid;
   grid-template-columns:repeat(auto-fit,minmax(132px,1fr));
@@ -469,15 +402,12 @@ select option{background:var(--surf)}
   border-top:2px solid var(--cyan);
   border-radius:14px;
   min-width:132px;
-  background:linear-gradient(180deg,rgba(255,255,255,.04),rgba(255,255,255,.01));
+  background:rgba(255,255,255,.02);
   box-shadow:inset 0 1px 0 rgba(255,255,255,.03);
   display:flex;
   flex-direction:column;
   justify-content:center
 }
-.hi:nth-child(4n+2){border-top-color:var(--amber)}
-.hi:nth-child(4n+3){border-top-color:var(--violet)}
-.hi:nth-child(4n+4){border-top-color:var(--green)}
 .hl{
   font-family:'JetBrains Mono',monospace;
   font-size:7.5px;
@@ -491,7 +421,7 @@ select option{background:var(--surf)}
   font-family:'JetBrains Mono',monospace;
   font-size:13px;
   font-weight:600;
-  color:var(--txt);
+  color:var(--cyan);
   white-space:nowrap
 }
 body.layout-dragging,body.layout-dragging *{user-select:none}
@@ -549,7 +479,7 @@ body.layout-dragging,body.layout-dragging *{user-select:none}
   <details open><summary>Telemetry</summary><div class="sec-body"><button class="btn btn-g" onclick="downloadCSV()">Export CSV</button><button class="btn btn-d" onclick="clearTelemetry()">Clear Data</button><div id="tcount">0 data points recorded</div></div></details>
 </div>
 <div id="sidebar-resizer" aria-hidden="true"></div>
-<div id="main"><div class="orbit-hint" id="orbitHint">DRAG: orbit . SHIFT+DRAG: pan . SCROLL: zoom<br>AXES: X = East, Y = Up, Z = North</div><div id="status-pill"><span id="sTxt" class="sr">RUNNING</span></div><div id="overlay-stack"><div id="energy-panel"><div class="panel-cap">Energy State</div><div class="ep-row"><span class="ep-l">KE trans</span><span class="ep-v" id="eKet">0.000 J</span></div><div class="ep-row"><span class="ep-l">KE rot</span><span class="ep-v" id="eKer">0.000 J</span></div><div class="ep-row"><span class="ep-l">PE grav</span><span class="ep-v" id="ePe">0.000 J</span></div><div class="ep-row"><span class="ep-l">Wind dE</span><span class="ep-v" id="eWw">0.000 J</span></div><div class="ep-row"><span class="ep-l">Loss dE</span><span class="ep-v" id="eFl">0.000 J</span></div></div><div id="legend-panel"><div class="legend-title">Force Legend</div><div class="legend-row"><span class="legend-chip" style="background:#65d0c3"></span>Drag</div><div class="legend-row"><span class="legend-chip" style="background:#e37a63"></span>Gravity</div><div class="legend-row"><span class="legend-chip" style="background:#c0ce73"></span>Velocity</div><div class="legend-row"><span class="legend-chip" style="background:#a892c8"></span>Magnus</div><div class="legend-row"><span class="legend-chip" style="background:#eab15d"></span>Spin Axis</div></div></div><div id="scale-pill">GRID: 1 LARGE CELL = 5 M</div><div id="hud-resizer" aria-hidden="true"></div><div id="hud"><div class="hi"><div class="hl">Speed</div><div class="hv" id="hSpd">0.00 m/s</div></div><div class="hi"><div class="hl">Drag F</div><div class="hv" id="hDrag">0.000 N</div></div><div class="hi"><div class="hl">Net F</div><div class="hv" id="hNet">0.000 N</div></div><div class="hi"><div class="hl">Accel</div><div class="hv" id="hAcc">0.00 m/s^2</div></div><div class="hi"><div class="hl">Height Y</div><div class="hv" id="hH">0.00 m</div></div><div class="hi"><div class="hl">X pos</div><div class="hv" id="hX">0.00 m</div></div><div class="hi"><div class="hl">Z pos</div><div class="hv" id="hZ">0.00 m</div></div><div class="hi"><div class="hl">Reynolds</div><div class="hv" id="hRe">--</div></div><div class="hi"><div class="hl">Curr Cd</div><div class="hv" id="hCd">--</div></div><div class="hi"><div class="hl">Spin</div><div class="hv" id="hSpin">0.00 r/s</div></div><div class="hi"><div class="hl">Heading</div><div class="hv" id="hHead">90 deg E</div></div><div class="hi"><div class="hl">Air rho</div><div class="hv" id="hRho">1.225 kg/m^3</div></div><div class="hi"><div class="hl">Sim Time</div><div class="hv" id="hT">0.00 s</div></div></div></div>
+<div id="main"><div class="orbit-hint" id="orbitHint">DRAG: orbit . SHIFT+DRAG: pan . SCROLL: zoom<br>AXES: X = East, Y = Up, Z = North</div><div id="status-pill"><span id="sTxt" class="sr">RUNNING</span></div><div id="overlay-stack"><div id="energy-panel"><div class="panel-cap">Energy State</div><div class="ep-row"><span class="ep-l">KE trans</span><span class="ep-v" id="eKet">0.000 J</span></div><div class="ep-row"><span class="ep-l">KE rot</span><span class="ep-v" id="eKer">0.000 J</span></div><div class="ep-row"><span class="ep-l">PE grav</span><span class="ep-v" id="ePe">0.000 J</span></div><div class="ep-row"><span class="ep-l">Wind dE</span><span class="ep-v" id="eWw">0.000 J</span></div><div class="ep-row"><span class="ep-l">Loss dE</span><span class="ep-v" id="eFl">0.000 J</span></div></div><div id="legend-panel"><div class="legend-title">Force Legend</div><div class="legend-row"><span class="legend-chip" style="background:#9ac6e0"></span>Drag</div><div class="legend-row"><span class="legend-chip" style="background:#78aac8"></span>Gravity</div><div class="legend-row"><span class="legend-chip" style="background:#c7e1ef"></span>Velocity</div><div class="legend-row"><span class="legend-chip" style="background:#6b94b2"></span>Magnus</div><div class="legend-row"><span class="legend-chip" style="background:#aacfe6"></span>Spin Axis</div></div></div><div id="scale-pill">GRID: 1 LARGE CELL = 5 M</div><div id="hud-resizer" aria-hidden="true"></div><div id="hud"><div class="hi"><div class="hl">Speed</div><div class="hv" id="hSpd">0.00 m/s</div></div><div class="hi"><div class="hl">Drag F</div><div class="hv" id="hDrag">0.000 N</div></div><div class="hi"><div class="hl">Net F</div><div class="hv" id="hNet">0.000 N</div></div><div class="hi"><div class="hl">Accel</div><div class="hv" id="hAcc">0.00 m/s^2</div></div><div class="hi"><div class="hl">Height Y</div><div class="hv" id="hH">0.00 m</div></div><div class="hi"><div class="hl">X pos</div><div class="hv" id="hX">0.00 m</div></div><div class="hi"><div class="hl">Z pos</div><div class="hv" id="hZ">0.00 m</div></div><div class="hi"><div class="hl">Reynolds</div><div class="hv" id="hRe">--</div></div><div class="hi"><div class="hl">Curr Cd</div><div class="hv" id="hCd">--</div></div><div class="hi"><div class="hl">Spin</div><div class="hv" id="hSpin">0.00 r/s</div></div><div class="hi"><div class="hl">Heading</div><div class="hv" id="hHead">90 deg E</div></div><div class="hi"><div class="hl">Air rho</div><div class="hv" id="hRho">1.225 kg/m^3</div></div><div class="hi"><div class="hl">Sim Time</div><div class="hv" id="hT">0.00 s</div></div></div></div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script type="application/disabled+javascript" data-legacy="windsim-inline-archive">
 'use strict';

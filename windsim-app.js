@@ -270,7 +270,7 @@
     const texture = makeCanvasTexture(app.render.surfaceTexCache, 'surface-' + type, function (ctx, size) {
       const base = rgbFromHex(surf.tint);
       const accent = rgbFromHex(surf.accent);
-      const light = mixRgb(base, { r: 245, g: 247, b: 250 }, 0.18);
+      const light = mixRgb(base, { r: 238, g: 243, b: 248 }, 0.16);
       const dark = mixRgb(base, { r: 10, g: 12, b: 16 }, 0.28);
       const seed = seedFromText('surface:' + type);
       const image = ctx.createImageData(size, size);
@@ -287,7 +287,7 @@
 
           switch (type) {
             case 'grass':
-              rgb = mixRgb(dark, accent, clamp(0.10 + coarse * 0.22 + ridge * 0.06, 0, 1));
+              rgb = mixRgb(dark, accent, clamp(0.08 + coarse * 0.18 + ridge * 0.05, 0, 1));
               break;
             case 'concrete':
               rgb = mixRgb(mixRgb(base, light, 0.12), { r: 222, g: 228, b: 236 }, clamp(0.04 + coarse * 0.14 + fine * 0.08, 0, 0.22));
@@ -328,7 +328,7 @@
       ctx.lineCap = 'round';
       ctx.lineJoin = 'round';
       if (type === 'grass') {
-        ctx.strokeStyle = rgba(mixRgb(accent, light, 0.12), 0.025);
+        ctx.strokeStyle = rgba(mixRgb(accent, light, 0.10), 0.02);
         ctx.lineWidth = 1.0;
         for (let i = 0; i < 22; i += 1) {
           const x0 = i * size / 22;
@@ -903,8 +903,8 @@
   function setupRenderer() {
     const render = app.render;
     render.scene = new THREE.Scene();
-    render.scene.background = new THREE.Color(0x0b0e11);
-    render.scene.fog = new THREE.Fog(0x0b0e11, 170, 780);
+    render.scene.background = new THREE.Color(0x091019);
+    render.scene.fog = new THREE.Fog(0x091019, 180, 820);
 
     render.camera = new THREE.PerspectiveCamera(app.cfg.camera.fov, render.mainEl.clientWidth / Math.max(1, render.mainEl.clientHeight), 0.05, 3000);
     render.renderer = new THREE.WebGLRenderer({ antialias: true });
@@ -917,8 +917,8 @@
     render.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     render.mainEl.insertBefore(render.renderer.domElement, render.mainEl.firstChild);
 
-    const ambient = new THREE.AmbientLight(0x1f2a32, 1.34);
-    const dir = new THREE.DirectionalLight(0xf2ece1, 1.22);
+    const ambient = new THREE.AmbientLight(0x1c2832, 1.28);
+    const dir = new THREE.DirectionalLight(0xeaf1f7, 1.18);
     dir.position.set(26, 38, 20);
     dir.castShadow = true;
     dir.shadow.mapSize.width = 2048;
@@ -929,10 +929,10 @@
     dir.shadow.camera.bottom = -40;
     dir.shadow.camera.near = 1;
     dir.shadow.camera.far = 180;
-    const hemi = new THREE.HemisphereLight(0x596a78, 0x080a0c, 0.62);
-    const rim = new THREE.DirectionalLight(0x9fb2c0, 0.64);
-    const fill = new THREE.PointLight(0xd39a63, 0.34, 140);
-    const point = new THREE.PointLight(0x82b8bb, 0.54, 56);
+    const hemi = new THREE.HemisphereLight(0x556879, 0x070a0d, 0.58);
+    const rim = new THREE.DirectionalLight(0x90afc9, 0.58);
+    const fill = new THREE.PointLight(0x6f93b2, 0.22, 140);
+    const point = new THREE.PointLight(0x89bad8, 0.48, 56);
     render.scene.add(ambient, dir, hemi, rim, fill, point, new THREE.AxesHelper(4));
     render.lights = { ambient: ambient, dir: dir, hemi: hemi, rim: rim, fill: fill, point: point };
 
@@ -948,7 +948,7 @@
     const overlay = new THREE.Mesh(new THREE.PlaneGeometry(D.FLOOR_SIZE, D.FLOOR_SIZE), render.groundOverlayMat);
     overlay.rotation.x = -Math.PI / 2;
     overlay.position.y = 0.02;
-    const grid = new THREE.GridHelper(D.FLOOR_SIZE, Math.round(D.FLOOR_SIZE / 5), 0x36424d, 0x141a20);
+    const grid = new THREE.GridHelper(D.FLOOR_SIZE, Math.round(D.FLOOR_SIZE / 5), 0x334554, 0x141b23);
     grid.material.transparent = true;
     grid.material.opacity = 0.06;
     render.groundGroup.add(ground, overlay, grid);
@@ -1012,11 +1012,11 @@
     app.render.particlePoints.frustumCulled = false;
     app.render.scene.add(app.render.particlePoints);
 
-    app.render.arrows.drag = new THREE.ArrowHelper(new V3(1, 0, 0), new V3(), 1, 0x79c4be, 0.5, 0.3);
-    app.render.arrows.grav = new THREE.ArrowHelper(new V3(1, 0, 0), new V3(), 1, 0xcf775b, 0.5, 0.3);
-    app.render.arrows.vel = new THREE.ArrowHelper(new V3(1, 0, 0), new V3(), 1, 0x9db788, 0.5, 0.3);
-    app.render.arrows.magnus = new THREE.ArrowHelper(new V3(1, 0, 0), new V3(), 1, 0x9f90be, 0.5, 0.3);
-    app.render.arrows.spin = new THREE.ArrowHelper(new V3(1, 0, 0), new V3(), 1, 0xd5a55a, 0.5, 0.3);
+    app.render.arrows.drag = new THREE.ArrowHelper(new V3(1, 0, 0), new V3(), 1, 0x9ac6e0, 0.5, 0.3);
+    app.render.arrows.grav = new THREE.ArrowHelper(new V3(1, 0, 0), new V3(), 1, 0x78aac8, 0.5, 0.3);
+    app.render.arrows.vel = new THREE.ArrowHelper(new V3(1, 0, 0), new V3(), 1, 0xc7e1ef, 0.5, 0.3);
+    app.render.arrows.magnus = new THREE.ArrowHelper(new V3(1, 0, 0), new V3(), 1, 0x6b94b2, 0.5, 0.3);
+    app.render.arrows.spin = new THREE.ArrowHelper(new V3(1, 0, 0), new V3(), 1, 0xaacfe6, 0.5, 0.3);
     Object.keys(app.render.arrows).forEach(function (key) {
       app.render.arrows[key].visible = false;
       app.render.scene.add(app.render.arrows[key]);
@@ -1024,13 +1024,13 @@
 
     app.render.rulerGeo = new THREE.BufferGeometry();
     app.render.rulerGeo.setAttribute('position', new THREE.BufferAttribute(app.render.rulerPositions, 3));
-    app.render.rulerLine = new THREE.Line(app.render.rulerGeo, new THREE.LineBasicMaterial({ color: 0x79c4be, transparent: true, opacity: 0.58 }));
+    app.render.rulerLine = new THREE.Line(app.render.rulerGeo, new THREE.LineBasicMaterial({ color: 0x9ac6e0, transparent: true, opacity: 0.58 }));
     app.render.rulerLine.frustumCulled = false;
     app.render.scene.add(app.render.rulerLine);
 
     app.render.heightGeo = new THREE.BufferGeometry();
     app.render.heightGeo.setAttribute('position', new THREE.BufferAttribute(app.render.heightPositions, 3));
-    app.render.heightLine = new THREE.Line(app.render.heightGeo, new THREE.LineBasicMaterial({ color: 0xd5a55a, transparent: true, opacity: 0.48 }));
+    app.render.heightLine = new THREE.Line(app.render.heightGeo, new THREE.LineBasicMaterial({ color: 0xaacfe6, transparent: true, opacity: 0.48 }));
     app.render.heightLine.frustumCulled = false;
     app.render.scene.add(app.render.heightLine);
 

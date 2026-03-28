@@ -349,7 +349,7 @@
   };
 
   const SURFACES = {
-    grass: { mu_s: 0.35, mu_k: 0.28, mu_r: 0.025, cr: 0.55, tint: 0x161c17, accent: 0x4d5b4e },
+    grass: { mu_s: 0.35, mu_k: 0.28, mu_r: 0.025, cr: 0.55, tint: 0x151d1e, accent: 0x36515a },
     concrete: { mu_s: 0.65, mu_k: 0.55, mu_r: 0.008, cr: 0.72, tint: 0x2d3139, accent: 0x6b7280 },
     hardwood: { mu_s: 0.55, mu_k: 0.48, mu_r: 0.010, cr: 0.76, tint: 0x4b2f1f, accent: 0xa46a3f },
     sand: { mu_s: 0.45, mu_k: 0.35, mu_r: 0.050, cr: 0.20, tint: 0x5c4724, accent: 0xc8a96d },
