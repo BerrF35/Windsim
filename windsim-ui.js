@@ -28,20 +28,20 @@
     });
   }
 
-  const LAYOUT_STORAGE_KEY = 'windsim3d-layout-v1';
+  const LAYOUT_STORAGE_KEY = 'windsim3d-layout-v2';
   const DEFAULT_LAYOUT = {
-    sidebarWidth: 312,
-    hudHeight: 58,
+    sidebarWidth: 336,
+    hudHeight: 136,
     panels: {
-      energy: { width: 188, height: 114 },
-      legend: { width: 188, height: 146 },
-      graph: { width: 340, height: 196 }
+      energy: { width: 232, height: 168 },
+      legend: { width: 232, height: 192 },
+      graph: { width: 420, height: 240 }
     }
   };
   const PANEL_LIMITS = {
-    energy: { minWidth: 176, minHeight: 98, maxWidth: 420, maxHeight: 320 },
-    legend: { minWidth: 176, minHeight: 118, maxWidth: 420, maxHeight: 360 },
-    graph: { minWidth: 260, minHeight: 150, maxWidth: 560, maxHeight: 360 }
+    energy: { minWidth: 220, minHeight: 156, maxWidth: 460, maxHeight: 360 },
+    legend: { minWidth: 220, minHeight: 180, maxWidth: 460, maxHeight: 420 },
+    graph: { minWidth: 340, minHeight: 220, maxWidth: 720, maxHeight: 460 }
   };
 
   function clamp(value, min, max) {
@@ -58,12 +58,12 @@
 
   function clampSidebarWidth(value) {
     const viewport = Math.max(760, window.innerWidth || 0);
-    return clamp(Math.round(value), 272, Math.min(520, viewport - 260));
+    return clamp(Math.round(value), 296, Math.min(560, viewport - 220));
   }
 
   function clampHudHeight(value) {
-    const maxHeight = Math.min(220, Math.round((window.innerHeight || 720) * 0.42));
-    return clamp(Math.round(value), 48, Math.max(120, maxHeight));
+    const maxHeight = Math.min(300, Math.round((window.innerHeight || 720) * 0.54));
+    return clamp(Math.round(value), 96, Math.max(152, maxHeight));
   }
 
   function clampPanelSize(name, size) {
@@ -194,25 +194,26 @@
     const style = document.createElement('style');
     style.id = 'windsim-ui-style';
     style.textContent = [
-      '.num-input{width:100%;background:linear-gradient(180deg,rgba(37,46,57,.98),rgba(27,34,42,.98));border:1px solid rgba(255,255,255,.08);color:var(--txt);border-radius:7px;padding:7px 10px;font-family:"JetBrains Mono",monospace;font-size:11px;outline:none}',
+      '.num-input{width:100%;background:linear-gradient(180deg,rgba(41,47,52,.98),rgba(24,30,34,.98));border:1px solid rgba(255,255,255,.10);color:var(--txt);border-radius:10px;padding:8px 10px;font-family:"JetBrains Mono",monospace;font-size:11px;outline:none}',
       '.mini-note{font-family:"JetBrains Mono",monospace;font-size:8px;color:var(--txt3);line-height:1.5;margin-top:4px}',
-      '.report-box{margin-top:7px;background:linear-gradient(180deg,rgba(255,255,255,.03),rgba(255,255,255,.01));border:1px solid rgba(255,255,255,.08);border-radius:8px;padding:8px 9px;font-family:"JetBrains Mono",monospace;font-size:8px;line-height:1.7;color:var(--txt2);white-space:pre-wrap;min-height:78px}',
-      '.graph-panel{position:absolute;right:11px;top:44px;z-index:20;background:linear-gradient(180deg,rgba(16,20,24,.9),rgba(11,14,18,.94));border:1px solid rgba(255,255,255,.075);border-radius:12px;padding:10px 10px 12px;backdrop-filter:blur(12px);box-shadow:0 14px 32px rgba(0,0,0,.26);display:flex;flex-direction:column;gap:8px}',
-      '.graph-head{display:flex;justify-content:space-between;align-items:baseline;gap:10px}',
-      '.graph-title{font-family:"JetBrains Mono",monospace;font-size:8px;letter-spacing:1.2px;color:var(--txt3)}',
-      '.graph-meta{font-family:"JetBrains Mono",monospace;font-size:8px;color:var(--txt3)}',
-      '.graph-canvas-wrap{flex:1;min-height:120px}',
+      '.report-box{margin-top:7px;background:linear-gradient(180deg,rgba(255,255,255,.04),rgba(255,255,255,.014));border:1px solid rgba(255,255,255,.09);border-radius:12px;padding:10px 11px;font-family:"JetBrains Mono",monospace;font-size:8px;line-height:1.7;color:var(--txt2);white-space:pre-wrap;min-height:78px}',
+      '.graph-panel{position:absolute;right:14px;top:64px;z-index:20;background:linear-gradient(180deg,rgba(16,19,22,.95),rgba(10,13,16,.97));border:1px solid rgba(255,255,255,.10);border-radius:16px;padding:14px 14px 16px;backdrop-filter:blur(14px);box-shadow:0 18px 40px rgba(0,0,0,.36);display:flex;flex-direction:column;gap:12px}',
+      '.graph-panel::before{content:"";position:absolute;left:0;right:0;top:0;height:2px;border-radius:16px 16px 0 0;background:linear-gradient(90deg,var(--cyan),var(--amber),rgba(255,255,255,0));pointer-events:none}',
+      '.graph-head{display:flex;justify-content:space-between;align-items:baseline;gap:10px;padding-bottom:8px;border-bottom:1px solid rgba(255,255,255,.07)}',
+      '.graph-title{font-family:"JetBrains Mono",monospace;font-size:8.5px;letter-spacing:1.8px;color:var(--txt3);text-transform:uppercase}',
+      '.graph-meta{font-family:"JetBrains Mono",monospace;font-size:8px;letter-spacing:1.2px;color:var(--amber);text-transform:uppercase}',
+      '.graph-canvas-wrap{flex:1;min-height:180px;padding:8px;background:linear-gradient(180deg,rgba(6,9,11,.68),rgba(12,15,18,.42));border:1px solid rgba(255,255,255,.06);border-radius:12px;box-shadow:inset 0 1px 0 rgba(255,255,255,.03)}',
       '.graph-canvas{display:block;width:100%;height:100%}',
-      '.panel-resize-handle{position:absolute;right:6px;bottom:6px;width:18px;height:18px;border-radius:6px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.08);cursor:nwse-resize}',
-      '.panel-resize-handle::before{content:"";position:absolute;inset:4px;background:linear-gradient(135deg,transparent 0,transparent 25%,rgba(127,139,151,.75) 25%,rgba(127,139,151,.75) 36%,transparent 36%,transparent 48%,rgba(127,139,151,.75) 48%,rgba(127,139,151,.75) 59%,transparent 59%,transparent 71%,rgba(127,139,151,.75) 71%,rgba(127,139,151,.75) 82%,transparent 82%)}',
-      '.panel-resize-handle.anchor-right{left:6px;right:auto;cursor:nesw-resize}',
-      '.force-label{position:absolute;z-index:24;padding:2px 6px;border-radius:999px;background:rgba(14,18,22,.9);border:1px solid rgba(255,255,255,.08);font-family:"JetBrains Mono",monospace;font-size:8px;letter-spacing:.8px;color:var(--txt2);pointer-events:none;transform:translate(-50%,-50%);white-space:nowrap}',
-      '.measure-label{position:absolute;z-index:24;padding:3px 7px;border-radius:999px;background:rgba(14,18,22,.9);border:1px solid rgba(255,255,255,.08);font-family:"JetBrains Mono",monospace;font-size:8px;letter-spacing:.8px;color:var(--cyan);pointer-events:none;transform:translate(-50%,-50%);white-space:nowrap}',
-      '.validation-pill{position:absolute;left:50%;top:12px;transform:translateX(-50%);z-index:24;background:rgba(14,18,22,.92);border:1px solid rgba(255,255,255,.08);border-radius:999px;padding:5px 12px;font-family:"JetBrains Mono",monospace;font-size:8px;letter-spacing:1px;color:var(--amber);pointer-events:none;display:none}',
+      '.panel-resize-handle{position:absolute;right:10px;bottom:10px;width:24px;height:24px;border-radius:9px;background:linear-gradient(135deg,rgba(101,208,195,.18),rgba(234,177,93,.12));border:1px solid rgba(255,255,255,.14);box-shadow:0 8px 18px rgba(0,0,0,.24);cursor:nwse-resize}',
+      '.panel-resize-handle::before{content:"";position:absolute;inset:5px;background:linear-gradient(135deg,transparent 0,transparent 22%,rgba(255,255,255,.88) 22%,rgba(255,255,255,.88) 32%,transparent 32%,transparent 46%,rgba(255,255,255,.88) 46%,rgba(255,255,255,.88) 56%,transparent 56%,transparent 70%,rgba(255,255,255,.88) 70%,rgba(255,255,255,.88) 80%,transparent 80%)}',
+      '.panel-resize-handle.anchor-right{left:10px;right:auto;cursor:nesw-resize}',
+      '.force-label{position:absolute;z-index:24;padding:3px 7px;border-radius:999px;background:rgba(14,18,22,.92);border:1px solid rgba(255,255,255,.10);font-family:"JetBrains Mono",monospace;font-size:8px;letter-spacing:1px;color:var(--txt2);pointer-events:none;transform:translate(-50%,-50%);white-space:nowrap}',
+      '.measure-label{position:absolute;z-index:24;padding:4px 8px;border-radius:999px;background:rgba(14,18,22,.92);border:1px solid rgba(255,255,255,.10);font-family:"JetBrains Mono",monospace;font-size:8px;letter-spacing:1px;color:var(--cyan);pointer-events:none;transform:translate(-50%,-50%);white-space:nowrap}',
+      '.validation-pill{position:absolute;left:50%;top:14px;transform:translateX(-50%);z-index:24;background:rgba(14,18,22,.94);border:1px solid rgba(255,255,255,.10);border-radius:999px;padding:6px 13px;font-family:"JetBrains Mono",monospace;font-size:8px;letter-spacing:1.2px;color:var(--amber);pointer-events:none;display:none}',
       '.scenario-row{display:grid;grid-template-columns:1fr 1fr;gap:5px;margin-top:6px}',
       '.measure-kbd{font-family:"JetBrains Mono",monospace;font-size:8px;color:var(--txt3);margin-top:4px;text-align:center}',
       '.geometry-panel[hidden]{display:none!important}',
-      '@media (max-width:980px){.graph-panel{right:8px;top:44px;left:8px;width:auto!important;max-width:none}.graph-canvas-wrap{min-height:110px}.panel-resize-handle{display:none}}'
+      '@media (max-width:980px){.graph-panel{right:8px;top:64px;left:8px;width:auto!important;max-width:none}.graph-canvas-wrap{min-height:140px}.panel-resize-handle{display:none}}'
     ].join('');
     document.head.appendChild(style);
   }
@@ -245,7 +246,7 @@
         '</div></details>',
         '<details><summary>Workspace</summary><div class="sec-body">',
         '<button class="btn btn-d" id="resetLayoutBtn">Reset Layout</button>',
-        '<div class="mini-note">Drag the center divider, the telemetry grip above the bottom bar, and the panel corners to customize the workspace.</div>',
+        '<div class="mini-note">Use the highlighted center divider, the telemetry grip above the bottom strip, and the panel corners to resize the workspace.</div>',
         '</div></details>',
         '<details class="geometry-panel" id="objectGeometryPanel"><summary>Object Geometry</summary><div class="sec-body">',
         '<div class="ctl"><div class="ctl-row"><span class="ctl-lbl">Width Scale</span><span class="ctl-val" id="vObjScaleX">1.00x</span></div><input type="range" id="sObjScaleX" min="0.35" max="3.50" value="1.00" step="0.01"></div>',
@@ -272,7 +273,7 @@
     if (!$('graphPanel')) {
       main.insertAdjacentHTML('beforeend', [
         '<div class="graph-panel" id="graphPanel">',
-        '<div class="graph-head"><div class="graph-title">FORCE HISTORY</div><div class="graph-meta">10 s rolling window</div></div>',
+        '<div class="graph-head"><div class="graph-title">Force History</div><div class="graph-meta">Live 10s</div></div>',
         '<div class="graph-canvas-wrap"><canvas class="graph-canvas" id="graphCanvas" width="340" height="160"></canvas></div>',
         '</div>',
         '<div class="measure-label" id="rulerLabel" style="display:none">0.0 m</div>',

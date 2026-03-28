@@ -270,7 +270,7 @@
     const texture = makeCanvasTexture(app.render.surfaceTexCache, 'surface-' + type, function (ctx, size) {
       const base = rgbFromHex(surf.tint);
       const accent = rgbFromHex(surf.accent);
-      const light = mixRgb(base, { r: 245, g: 247, b: 250 }, 0.22);
+      const light = mixRgb(base, { r: 245, g: 247, b: 250 }, 0.18);
       const dark = mixRgb(base, { r: 10, g: 12, b: 16 }, 0.28);
       const seed = seedFromText('surface:' + type);
       const image = ctx.createImageData(size, size);
@@ -287,7 +287,7 @@
 
           switch (type) {
             case 'grass':
-              rgb = mixRgb(dark, accent, clamp(0.16 + coarse * 0.34 + ridge * 0.10, 0, 1));
+              rgb = mixRgb(dark, accent, clamp(0.10 + coarse * 0.22 + ridge * 0.06, 0, 1));
               break;
             case 'concrete':
               rgb = mixRgb(mixRgb(base, light, 0.12), { r: 222, g: 228, b: 236 }, clamp(0.04 + coarse * 0.14 + fine * 0.08, 0, 0.22));
@@ -328,8 +328,8 @@
       ctx.lineCap = 'round';
       ctx.lineJoin = 'round';
       if (type === 'grass') {
-        ctx.strokeStyle = rgba(mixRgb(accent, light, 0.18), 0.05);
-        ctx.lineWidth = 1.2;
+        ctx.strokeStyle = rgba(mixRgb(accent, light, 0.12), 0.025);
+        ctx.lineWidth = 1.0;
         for (let i = 0; i < 22; i += 1) {
           const x0 = i * size / 22;
           ctx.beginPath();
@@ -903,8 +903,8 @@
   function setupRenderer() {
     const render = app.render;
     render.scene = new THREE.Scene();
-    render.scene.background = new THREE.Color(0x0d1115);
-    render.scene.fog = new THREE.Fog(0x0d1115, 160, 760);
+    render.scene.background = new THREE.Color(0x0b0e11);
+    render.scene.fog = new THREE.Fog(0x0b0e11, 170, 780);
 
     render.camera = new THREE.PerspectiveCamera(app.cfg.camera.fov, render.mainEl.clientWidth / Math.max(1, render.mainEl.clientHeight), 0.05, 3000);
     render.renderer = new THREE.WebGLRenderer({ antialias: true });
@@ -912,13 +912,13 @@
     render.renderer.setSize(render.mainEl.clientWidth, Math.max(1, render.mainEl.clientHeight));
     render.renderer.outputEncoding = THREE.sRGBEncoding;
     render.renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    render.renderer.toneMappingExposure = 0.95;
+    render.renderer.toneMappingExposure = 0.88;
     render.renderer.shadowMap.enabled = true;
     render.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     render.mainEl.insertBefore(render.renderer.domElement, render.mainEl.firstChild);
 
-    const ambient = new THREE.AmbientLight(0x22303c, 1.55);
-    const dir = new THREE.DirectionalLight(0xf4efe6, 1.42);
+    const ambient = new THREE.AmbientLight(0x1f2a32, 1.34);
+    const dir = new THREE.DirectionalLight(0xf2ece1, 1.22);
     dir.position.set(26, 38, 20);
     dir.castShadow = true;
     dir.shadow.mapSize.width = 2048;
@@ -929,10 +929,10 @@
     dir.shadow.camera.bottom = -40;
     dir.shadow.camera.near = 1;
     dir.shadow.camera.far = 180;
-    const hemi = new THREE.HemisphereLight(0x66798d, 0x090c10, 0.72);
-    const rim = new THREE.DirectionalLight(0xaabdd0, 0.76);
-    const fill = new THREE.PointLight(0xd7b07a, 0.44, 140);
-    const point = new THREE.PointLight(0x8ca8bf, 0.66, 56);
+    const hemi = new THREE.HemisphereLight(0x596a78, 0x080a0c, 0.62);
+    const rim = new THREE.DirectionalLight(0x9fb2c0, 0.64);
+    const fill = new THREE.PointLight(0xd39a63, 0.34, 140);
+    const point = new THREE.PointLight(0x82b8bb, 0.54, 56);
     render.scene.add(ambient, dir, hemi, rim, fill, point, new THREE.AxesHelper(4));
     render.lights = { ambient: ambient, dir: dir, hemi: hemi, rim: rim, fill: fill, point: point };
 
@@ -941,16 +941,16 @@
 
     render.groundGroup = new THREE.Group();
     render.groundMat = new THREE.MeshStandardMaterial(Object.assign({ color: 0xffffff, map: getSurfaceTexture(app.cfg.surfKey) }, surfaceMaterialProps(app.cfg.surfKey)));
-    render.groundOverlayMat = new THREE.MeshBasicMaterial({ color: 0xffffff, map: getGridOverlayTexture(), transparent: true, opacity: 0.14, depthWrite: false });
+    render.groundOverlayMat = new THREE.MeshBasicMaterial({ color: 0xffffff, map: getGridOverlayTexture(), transparent: true, opacity: 0.10, depthWrite: false });
     const ground = new THREE.Mesh(new THREE.PlaneGeometry(D.FLOOR_SIZE, D.FLOOR_SIZE), render.groundMat);
     ground.rotation.x = -Math.PI / 2;
     ground.receiveShadow = true;
     const overlay = new THREE.Mesh(new THREE.PlaneGeometry(D.FLOOR_SIZE, D.FLOOR_SIZE), render.groundOverlayMat);
     overlay.rotation.x = -Math.PI / 2;
     overlay.position.y = 0.02;
-    const grid = new THREE.GridHelper(D.FLOOR_SIZE, Math.round(D.FLOOR_SIZE / 5), 0x425160, 0x182027);
+    const grid = new THREE.GridHelper(D.FLOOR_SIZE, Math.round(D.FLOOR_SIZE / 5), 0x36424d, 0x141a20);
     grid.material.transparent = true;
-    grid.material.opacity = 0.09;
+    grid.material.opacity = 0.06;
     render.groundGroup.add(ground, overlay, grid);
     render.scene.add(render.groundGroup);
 
@@ -1299,11 +1299,11 @@
     if (!body) return;
     const windBlend = clamp(app.render.bodyWind.length() / 60, 0, 1);
     const speedBlend = clamp(body.vel.length() / 26, 0, 1);
-    app.render.lights.dir.intensity = 1.28 + windBlend * 0.34;
-    app.render.lights.hemi.intensity = 0.68 + windBlend * 0.14;
-    app.render.lights.rim.intensity = 0.74 + speedBlend * 0.34;
-    app.render.lights.fill.intensity = 0.44 + speedBlend * 0.18;
-    app.render.lights.point.intensity = 0.60 + windBlend * 0.26 + speedBlend * 0.14;
+    app.render.lights.dir.intensity = 1.10 + windBlend * 0.28;
+    app.render.lights.hemi.intensity = 0.56 + windBlend * 0.12;
+    app.render.lights.rim.intensity = 0.60 + speedBlend * 0.28;
+    app.render.lights.fill.intensity = 0.32 + speedBlend * 0.14;
+    app.render.lights.point.intensity = 0.46 + windBlend * 0.20 + speedBlend * 0.10;
     app.render.lights.point.position.lerp(tmpA.copy(body.pos).addScaledVector(app.render.bodyWind, 0.18).add(tmpB.set(0, 4.5, 0)), 0.18);
     app.render.lights.fill.position.lerp(tmpC.set(app.render.camera.position.x * 0.55 + app.render.focus.x * 0.45, app.render.focus.y + 10, app.render.camera.position.z * 0.55 + app.render.focus.z * 0.45), 0.14);
     app.render.lights.rim.position.set(app.render.camera.position.x * 0.35 + app.render.focus.x * 0.65, app.render.focus.y + 18, app.render.camera.position.z * 0.35 + app.render.focus.z * 0.65);
