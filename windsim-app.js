@@ -3,6 +3,7 @@
 
   const D = window.WindSimData;
   const P = window.WindSimPhysics;
+  const S = window.WindSimSolvers;
   const UI = window.WindSimUI;
   const V3 = THREE.Vector3;
 
@@ -95,7 +96,7 @@
   }
 
   function normalizeScenario(source) {
-    const cfg = P.makeConfigFromPreset('baseline');
+    const cfg = S.getSolver('sandbox').makeConfigFromPreset('baseline');
     const src = source || {};
 
     cfg.solverKey = src.solverKey || src.solver || cfg.solverKey;
@@ -149,7 +150,7 @@
     cfg.camera.pitch = clamp(cfg.camera.pitch, THREE.MathUtils.degToRad(5), THREE.MathUtils.degToRad(88));
     cfg.camera.fov = clamp(cfg.camera.fov, 25, 100);
     cfg.camera.lag = clamp(cfg.camera.lag, 0.01, 0.4);
-    if (!D.SOLVER_PROFILES[cfg.solverKey]) cfg.solverKey = 'sandbox';
+    if (!S.hasSolver(cfg.solverKey)) cfg.solverKey = 'sandbox';
     if (!cfg.objectScale) cfg.objectScale = { x: 1, y: 1, z: 1 };
     return cfg;
   }
@@ -159,8 +160,11 @@
   const tmpC = new V3();
   const tmpD = new V3();
 
+  const defaultSolver = S.getSolver('sandbox');
+
   const app = {
-    cfg: P.makeConfigFromPreset('baseline'),
+    solver: defaultSolver,
+    cfg: defaultSolver.makeConfigFromPreset('baseline'),
     currentPresetName: 'baseline',
     savedScenarios: [],
     state: {
@@ -235,8 +239,15 @@
     ui: null
   };
 
+  function bindSolver(solverKey) {
+    const solver = S.getSolver(solverKey);
+    app.solver = solver;
+    if (app.cfg) app.cfg.solverKey = solver.key;
+    return solver;
+  }
+
   function currentDef() {
-    return P.resolveObjectDef(app.cfg.objKey, app.cfg);
+    return app.solver.resolveObjectDef(app.cfg.objKey, app.cfg);
   }
 
   function makeCanvasTexture(cache, key, painter) {
@@ -1083,7 +1094,7 @@
       let particle = app.render.particles[i];
       if (!particle) particle = app.render.particles[i] = spawnParticle();
       tmpA.set(particle.x, particle.y, particle.z);
-      const wind = P.sampleWindAt(app, tmpA);
+      const wind = app.solver.sampleWindAt(app, tmpA);
       particle.x += (wind.x + (Math.random() - 0.5) * jitter) * dt;
       particle.y += (wind.y + (Math.random() - 0.5) * jitter * 0.18) * dt;
       particle.z += (wind.z + (Math.random() - 0.5) * jitter) * dt;
@@ -1343,7 +1354,7 @@
     updateGround();
     app.render.objectPivot.position.copy(body.pos);
     app.render.objectPivot.quaternion.copy(body.q);
-    app.render.bodyWind.copy(P.sampleWindAt(app, body.pos));
+    app.render.bodyWind.copy(app.solver.sampleWindAt(app, body.pos));
     tmpA.copy(app.render.bodyWind).sub(body.vel);
     if (app.cfg.env.force && tmpA.lengthSq() > 1e-4 && body.metrics.drag > 1e-5) setArrow('drag', body.pos, tmpA, Math.min(body.metrics.drag / def.mass * 1.25, 10)); else app.render.arrowState.drag.visible = app.render.arrows.drag.visible = false;
     if (app.cfg.env.force && app.cfg.env.grav) setArrow('grav', body.pos, tmpB.set(0, -1, 0), Math.min(D.GRAV * 0.3, 5)); else app.render.arrowState.grav.visible = app.render.arrows.grav.visible = false;
@@ -1380,12 +1391,13 @@
 
   function applyScenario(source) {
     app.cfg = normalizeScenario(source);
+    bindSolver(app.cfg.solverKey);
     app.state.paused = false;
     setObjectVisual();
     refreshSurface();
     updateChamber();
     updateFov();
-    P.resetSimulationState(app);
+    app.solver.resetSimulationState(app);
     setParticleSize();
     initParticles();
     syncCameraInputs();
@@ -1403,7 +1415,7 @@
   }
 
   function resetObject() {
-    P.resetSimulationState(app);
+    app.solver.resetSimulationState(app);
     setObjectVisual();
     UI.updateStaticPanels(app);
     UI.updateDynamicPanels(app);
@@ -1415,10 +1427,10 @@
     const def = currentDef();
     setObjectVisual();
     if (body) {
-      body.supportY = P.supportExtentAlong(def, body.q, tmpA.set(0, 1, 0));
+      body.supportY = app.solver.supportExtentAlong(def, body.q, tmpA.set(0, 1, 0));
       if (body.pos.y < body.supportY) body.pos.y = body.supportY;
-      const ex = P.supportExtentAlong(def, body.q, tmpB.set(1, 0, 0));
-      const ez = P.supportExtentAlong(def, body.q, tmpC.set(0, 0, 1));
+      const ex = app.solver.supportExtentAlong(def, body.q, tmpB.set(1, 0, 0));
+      const ez = app.solver.supportExtentAlong(def, body.q, tmpC.set(0, 0, 1));
       body.pos.x = clamp(body.pos.x, -app.cfg.world.halfWidth + ex, app.cfg.world.halfWidth - ex);
       body.pos.z = clamp(body.pos.z, -app.cfg.world.halfDepth + ez, app.cfg.world.halfDepth - ez);
       body.pos.y = Math.min(body.pos.y, app.cfg.world.ceiling - body.supportY);
@@ -1429,7 +1441,7 @@
   }
 
   function startValidation(caseId) {
-    if (!P.startValidation(app, caseId)) return;
+    if (!app.solver.startValidation(app, caseId)) return;
     UI.syncScenarioControls(app);
     UI.updateStaticPanels(app);
     UI.updateDynamicPanels(app);
@@ -1572,7 +1584,7 @@
     app.render.lastDt = dt;
     updateCameraKeys(dt);
     if (!app.state.paused && dt > 0) {
-      P.step(app, dt);
+      app.solver.step(app, dt);
       updateParticles(dt);
     } else {
       updateParticles(0);

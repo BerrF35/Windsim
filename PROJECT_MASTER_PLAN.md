@@ -356,8 +356,9 @@ Current status:
   - local tool artifacts cleaned from the workspace
   - baseline regression checklist added
   - reduced-order physics audit added
+  - explicit sandbox solver registry and app-bound solver contract added
 - Next milestone:
-  - formalize the current solver boundary and start converting the existing physics loop into an explicit sandbox solver contract
+  - continue decoupling app/runtime behavior from raw physics helpers and begin research-workflow foundations on top of the solver contract
 
 When work advances, this section must be updated with:
 

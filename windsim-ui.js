@@ -8,6 +8,10 @@
     return document.getElementById(id);
   }
 
+  function activeSolver(app) {
+    return app && app.solver ? app.solver : P;
+  }
+
   function setToggle(el, on) {
     if (!el) return;
     el.classList.toggle('on', !!on);
@@ -419,7 +423,7 @@
     if (!$('objectGeometryPanel')) return;
     const panel = $('objectGeometryPanel');
     const scale = app.cfg.objectScale || { x: 1, y: 1, z: 1 };
-    const def = P.resolveObjectDef(app.cfg.objKey, app.cfg);
+    const def = activeSolver(app).resolveObjectDef(app.cfg.objKey, app.cfg);
     const base = D.OBJ_DEFS[app.cfg.objKey];
     const visible = isResizableObject(app);
 
@@ -502,7 +506,7 @@
   }
 
   function updateStaticPanels(app) {
-    const def = P.resolveObjectDef(app.cfg.objKey, app.cfg);
+    const def = activeSolver(app).resolveObjectDef(app.cfg.objKey, app.cfg);
     const surface = D.SURFACES[app.cfg.surfKey];
     $('iMass').textContent = formatMass(def.mass);
     $('iCd').textContent = def.Cd0.toFixed(2);
@@ -519,7 +523,7 @@
 
   function updateDynamicPanels(app) {
     const body = app.state.body;
-    const def = P.resolveObjectDef(app.cfg.objKey, app.cfg);
+    const def = activeSolver(app).resolveObjectDef(app.cfg.objKey, app.cfg);
     const speed = body.vel.length();
     const accel = body.acc.length();
     const spinRps = body.omegaBody.length() / D.TAU;
@@ -735,7 +739,7 @@
       const name = window.prompt('Scenario name');
       if (!name) return;
       const existing = app.savedScenarios.findIndex(function (entry) { return entry.name === name; });
-      const payload = { name: name, scenario: P.defaultScenarioSnapshot(app) };
+      const payload = { name: name, scenario: activeSolver(app).defaultScenarioSnapshot(app) };
       if (existing >= 0) app.savedScenarios.splice(existing, 1, payload);
       else app.savedScenarios.push(payload);
       saveScenarioList(app);
@@ -757,7 +761,7 @@
     });
 
     $('exportScenarioBtn').addEventListener('click', function () {
-      const blob = new Blob([JSON.stringify(P.defaultScenarioSnapshot(app), null, 2)], { type: 'application/json' });
+      const blob = new Blob([JSON.stringify(activeSolver(app).defaultScenarioSnapshot(app), null, 2)], { type: 'application/json' });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;

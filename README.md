@@ -102,7 +102,7 @@ This makes the project useful not just as a visual sandbox, but also as a lightw
 
 - Frontend: HTML, CSS, JavaScript
 - Rendering: Three.js
-- Architecture: modular browser app split across `index.html`, `windsim-data.js`, `windsim-physics.js`, `windsim-ui.js`, and `windsim-app.js`
+- Architecture: modular browser app split across `index.html`, `windsim-data.js`, `windsim-physics.js`, `windsim-solvers.js`, `windsim-ui.js`, and `windsim-app.js`
 - Visual assets: procedural canvas-generated textures
 - Data output: in-browser CSV export
 
