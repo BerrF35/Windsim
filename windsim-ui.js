@@ -306,12 +306,13 @@
         '<div class="tgl-row">Force Graph<div class="tgl on" id="tGraph"></div></div>',
         '<div class="tgl-row">Compare Trails<div class="tgl on" id="tCompareTrail"></div></div>',
         '<div class="tgl-row">Flow Probe Slice<div class="tgl" id="tFlowSlice"></div></div>',
+        '<div class="ctl"><div class="ctl-row"><span class="ctl-lbl">Slice Plane</span></div><select id="flowSlicePlaneSelect"></select></div>',
         '<div class="ctl"><div class="ctl-row"><span class="ctl-lbl">Slice Height</span><span class="ctl-val" id="vFlowSliceH">8.0 m</span></div><input type="range" id="sFlowSliceH" min="1" max="220" value="8" step="0.5"></div>',
         '<div class="ctl"><div class="ctl-row"><span class="ctl-lbl">Slice Span</span><span class="ctl-val" id="vFlowSliceSpan">36 m</span></div><input type="range" id="sFlowSliceSpan" min="12" max="120" value="36" step="2"></div>',
         '<button class="btn btn-d" id="clearImpactsBtn">Clear Markers</button>',
         '<div class="report-box" id="flowSliceInfo">Probe slice off.</div>',
         '<div class="measure-kbd">Ruler tracks launch to body in-scene.</div>',
-        '<div class="mini-note">Probe slice samples the current reduced-order wind field only. It is not CFD and it does not include two-way wake coupling.</div>',
+        '<div class="mini-note">Probe slice samples the current reduced-order wind field only. Vertical cuts show in-plane projected flow. It is not CFD and it does not include two-way wake coupling.</div>',
         '</div></details>',
         '<details><summary>Playback</summary><div class="sec-body">',
         '<div class="ctl"><div class="ctl-row"><span class="ctl-lbl">Recorded Timeline</span><span class="ctl-val" id="playbackFrameStat">0 / 0</span></div><input type="range" id="playbackScrub" min="0" max="0" value="0" step="1"></div>',
@@ -431,6 +432,9 @@
     populateSelect($('windModeSelect'), Object.keys(D.WIND_MODES).map(function (key) {
       return { value: key, label: D.WIND_MODES[key].label };
     }));
+    populateSelect($('flowSlicePlaneSelect'), Object.keys(D.FLOW_SLICE_PLANES).map(function (key) {
+      return { value: key, label: D.FLOW_SLICE_PLANES[key].label };
+    }));
     populateSelect($('sweepVarSelect'), EXPERIMENT_FIELDS);
     populateSelect($('validationSelect'), [{ value: '', label: 'Select Validation Case' }].concat(Object.keys(D.VALIDATION_CASES).map(function (key) {
       return { value: key, label: D.VALIDATION_CASES[key].label };
@@ -527,6 +531,7 @@
     setToggle($('tGraph'), cfg.analysis.graph);
     setToggle($('tCompareTrail'), cfg.analysis.compare);
     setToggle($('tFlowSlice'), cfg.analysis.flowSlice);
+    $('flowSlicePlaneSelect').value = cfg.analysis.flowSlicePlane;
     $('sFlowSliceH').max = String(Math.max(20, Math.round(cfg.world.ceiling)));
     $('sFlowSliceH').value = cfg.analysis.flowSliceHeight;
     $('vFlowSliceH').textContent = cfg.analysis.flowSliceHeight.toFixed(1) + ' m';
@@ -588,8 +593,10 @@
     const stats = app.render && app.render.flowProbeStats ? app.render.flowProbeStats : null;
     const ceiling = Math.max(1, app.cfg.world.ceiling);
     const maxSpan = Math.max(24, Math.round(Math.min(app.cfg.world.halfWidth * 2, app.cfg.world.halfDepth * 2)));
+    if (!Object.prototype.hasOwnProperty.call(D.FLOW_SLICE_PLANES, app.cfg.analysis.flowSlicePlane)) app.cfg.analysis.flowSlicePlane = 'horizontal';
     app.cfg.analysis.flowSliceHeight = clamp(app.cfg.analysis.flowSliceHeight, 0.5, ceiling);
     app.cfg.analysis.flowSliceSpan = clamp(app.cfg.analysis.flowSliceSpan, 12, maxSpan);
+    $('flowSlicePlaneSelect').value = app.cfg.analysis.flowSlicePlane;
     $('sFlowSliceH').max = String(Math.max(20, Math.round(ceiling)));
     $('sFlowSliceH').value = String(app.cfg.analysis.flowSliceHeight);
     $('vFlowSliceH').textContent = app.cfg.analysis.flowSliceHeight.toFixed(1) + ' m';
@@ -602,13 +609,23 @@
       return;
     }
 
+    const fixedAxis = (stats.fixedAxis || 'y').toUpperCase();
+    const secondSpan = Number.isFinite(stats.sectionHeight) ? stats.sectionHeight : stats.span;
+    const speedLine = stats.projected
+      ? 'shown in-plane mean ' + stats.meanSpeed.toFixed(2) + ' m/s | peak ' + stats.peakSpeed.toFixed(2) + ' m/s'
+      : 'mean speed ' + stats.meanSpeed.toFixed(2) + ' m/s | peak ' + stats.peakSpeed.toFixed(2) + ' m/s';
+    const sampledLine = stats.projected
+      ? '\nfull sampled mean ' + stats.sampledMeanSpeed.toFixed(2) + ' m/s | peak ' + stats.sampledPeakSpeed.toFixed(2) + ' m/s'
+      : '';
+
     info.textContent =
-      'Reduced-order flow slice\n' +
+      'Reduced-order flow slice | ' + stats.planeLabel + '\n' +
       'samples: ' + stats.sampleCount +
-      ' | y ' + stats.height.toFixed(1) + ' m' +
-      ' | span ' + stats.span.toFixed(0) + ' m\n' +
-      'mean speed ' + stats.meanSpeed.toFixed(2) + ' m/s' +
-      ' | peak ' + stats.peakSpeed.toFixed(2) + ' m/s\n' +
+      ' | fixed ' + fixedAxis + ' ' + stats.fixedValue.toFixed(1) + ' m' +
+      ' | span ' + stats.span.toFixed(0) + ' m' +
+      (stats.planeKey === 'horizontal' ? '' : ' x ' + secondSpan.toFixed(0) + ' m') + '\n' +
+      speedLine +
+      sampledLine + '\n' +
       'anchor x ' + stats.anchorX.toFixed(1) + ' m' +
       ' | z ' + stats.anchorZ.toFixed(1) + ' m';
   }
@@ -1128,6 +1145,10 @@
     $('tFlowSlice').addEventListener('click', function () {
       app.cfg.analysis.flowSlice = !app.cfg.analysis.flowSlice;
       setToggle($('tFlowSlice'), app.cfg.analysis.flowSlice);
+      syncFlowProbeInfo(app);
+    });
+    $('flowSlicePlaneSelect').addEventListener('change', function () {
+      app.cfg.analysis.flowSlicePlane = $('flowSlicePlaneSelect').value;
       syncFlowProbeInfo(app);
     });
     $('sFlowSliceH').addEventListener('input', function (event) {

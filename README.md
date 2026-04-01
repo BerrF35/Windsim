@@ -25,7 +25,7 @@ The current build includes a full 3D scene, a large continuous test space, objec
 - Recorded playback timeline with scrubbing and frame stepping for run inspection
 - Mounted sweep tool for repeatable reduced-order comparisons across wind and environment ranges
 - Saved sweep library with restore and current-vs-saved comparison workflow
-- Reduced-order flow probe slice for inspecting the active analytic wind field around the test area
+- Multi-plane reduced-order flow probe slices for inspecting the active analytic wind field around the test area
 - Free camera movement with orbit, pan, zoom, follow mode, and adjustable cinematic response
 - Preset scenarios for quick comparisons between calm tests, crosswinds, storms, high-altitude runs, spin-heavy launches, and cargo drops
 - CSV telemetry export for analysis outside the app

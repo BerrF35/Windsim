@@ -56,6 +56,12 @@
     wake: { label: 'Obstacle Wake', desc: 'Virtual bluff-body wake' }
   };
 
+  const FLOW_SLICE_PLANES = {
+    horizontal: { label: 'Horizontal (XZ)', fixedAxis: 'y', projected: false },
+    vertical_x: { label: 'Vertical (XY)', fixedAxis: 'z', projected: true },
+    vertical_z: { label: 'Vertical (YZ)', fixedAxis: 'x', projected: true }
+  };
+
   const DEFAULT_WORLD = {
     halfWidth: 120,
     halfDepth: 120,
@@ -71,6 +77,7 @@
     compare: true,
     markers: true,
     flowSlice: false,
+    flowSlicePlane: 'horizontal',
     flowSliceHeight: 8,
     flowSliceSpan: 36
   };
@@ -442,6 +449,7 @@
     DEFAULT_ANALYSIS: DEFAULT_ANALYSIS,
     SOLVER_PROFILES: SOLVER_PROFILES,
     WIND_MODES: WIND_MODES,
+    FLOW_SLICE_PLANES: FLOW_SLICE_PLANES,
     OBJ_DEFS: OBJ_DEFS,
     SURFACES: SURFACES,
     PRESETS: PRESETS,

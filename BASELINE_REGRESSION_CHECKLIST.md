@@ -78,8 +78,9 @@ These checks should pass on every meaningful change.
 - Graph toggle works.
 - Compare trail toggle works.
 - Flow probe slice toggle works.
+- Flow probe slice plane selector switches between horizontal and vertical section views.
 - Flow probe slice height and span controls update the overlay cleanly.
-- Flow probe slice remains labeled as reduced-order field sampling rather than CFD output.
+- Vertical flow probe slices remain labeled as in-plane projections of the reduced-order field rather than CFD output.
 - Mounted mode still shows meaningful drag / lift / net-force graph updates while the object remains fixed.
 - Force arrows remain color coded and legible.
 

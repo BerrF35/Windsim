@@ -193,6 +193,7 @@
     cfg.world.halfDepth = clamp(cfg.world.halfDepth, 10, 320);
     cfg.world.ceiling = clamp(cfg.world.ceiling, 6, 600);
     cfg.analysis.flowSlice = !!cfg.analysis.flowSlice;
+    if (!Object.prototype.hasOwnProperty.call(D.FLOW_SLICE_PLANES, cfg.analysis.flowSlicePlane)) cfg.analysis.flowSlicePlane = 'horizontal';
     cfg.analysis.flowSliceHeight = clamp(num(cfg.analysis.flowSliceHeight, 8), 0.5, cfg.world.ceiling);
     cfg.analysis.flowSliceSpan = clamp(num(cfg.analysis.flowSliceSpan, 36), 12, Math.max(20, Math.min(cfg.world.halfWidth * 2, cfg.world.halfDepth * 2)));
     cfg.camera.distance = clamp(cfg.camera.distance, 4, 140);
@@ -305,10 +306,18 @@
       flowProbeStats: {
         active: false,
         sampleCount: 0,
+        planeKey: 'horizontal',
+        planeLabel: D.FLOW_SLICE_PLANES.horizontal.label,
+        projected: false,
+        fixedAxis: 'y',
+        fixedValue: 0,
         height: 0,
         span: 0,
+        sectionHeight: 0,
         meanSpeed: 0,
         peakSpeed: 0,
+        sampledMeanSpeed: 0,
+        sampledPeakSpeed: 0,
         anchorX: 0,
         anchorZ: 0
       },
@@ -1563,6 +1572,10 @@
     };
   }
 
+  function flowProbePlaneKey() {
+    return Object.prototype.hasOwnProperty.call(D.FLOW_SLICE_PLANES, app.cfg.analysis.flowSlicePlane) ? app.cfg.analysis.flowSlicePlane : 'horizontal';
+  }
+
   function updateFlowProbeSlice() {
     const line = app.render.flowProbeLine;
     const tips = app.render.flowProbeTips;
@@ -1577,15 +1590,21 @@
     }
 
     const anchor = flowProbeAnchor();
+    const planeKey = flowProbePlaneKey();
+    const planeDef = D.FLOW_SLICE_PLANES[planeKey];
     const height = clamp(app.cfg.analysis.flowSliceHeight, 0.5, app.cfg.world.ceiling);
     const spanLimit = Math.max(20, Math.min(app.cfg.world.halfWidth * 2, app.cfg.world.halfDepth * 2));
     const span = clamp(app.cfg.analysis.flowSliceSpan, 12, spanLimit);
-    const cell = FLOW_PROBE_GRID > 1 ? span / (FLOW_PROBE_GRID - 1) : span;
+    const sectionHeight = planeKey === 'horizontal' ? span : Math.min(span, Math.max(2, app.cfg.world.ceiling - 0.5));
+    const cell = FLOW_PROBE_GRID > 1 ? Math.min(span, sectionHeight) / (FLOW_PROBE_GRID - 1) : Math.min(span, sectionHeight);
     const refSpeed = Math.max(1, app.cfg.wind.speed + app.cfg.wind.gust * 0.12 + app.cfg.wind.modeStrength * 0.10);
     let meanSpeed = 0;
     let peakSpeed = 0;
+    let sampledMeanSpeed = 0;
+    let sampledPeakSpeed = 0;
     let sampleIndex = 0;
 
+    app.cfg.analysis.flowSlicePlane = planeKey;
     app.cfg.analysis.flowSliceHeight = height;
     app.cfg.analysis.flowSliceSpan = span;
 
@@ -1593,21 +1612,41 @@
       for (let col = 0; col < FLOW_PROBE_GRID; col += 1) {
         const u = FLOW_PROBE_GRID === 1 ? 0.5 : col / (FLOW_PROBE_GRID - 1);
         const v = FLOW_PROBE_GRID === 1 ? 0.5 : row / (FLOW_PROBE_GRID - 1);
-        const x = clamp(anchor.x + (u - 0.5) * span, -app.cfg.world.halfWidth + 0.8, app.cfg.world.halfWidth - 0.8);
-        const z = clamp(anchor.z + (v - 0.5) * span, -app.cfg.world.halfDepth + 0.8, app.cfg.world.halfDepth - 0.8);
-        tmpA.set(x, height, z);
+        let x = anchor.x;
+        let y = height;
+        let z = anchor.z;
+
+        if (planeKey === 'vertical_x') {
+          x = clamp(anchor.x + (u - 0.5) * span, -app.cfg.world.halfWidth + 0.8, app.cfg.world.halfWidth - 0.8);
+          y = clamp(height + (v - 0.5) * sectionHeight, 0.5, app.cfg.world.ceiling);
+          z = clamp(anchor.z, -app.cfg.world.halfDepth + 0.8, app.cfg.world.halfDepth - 0.8);
+        } else if (planeKey === 'vertical_z') {
+          x = clamp(anchor.x, -app.cfg.world.halfWidth + 0.8, app.cfg.world.halfWidth - 0.8);
+          y = clamp(height + (v - 0.5) * sectionHeight, 0.5, app.cfg.world.ceiling);
+          z = clamp(anchor.z + (u - 0.5) * span, -app.cfg.world.halfDepth + 0.8, app.cfg.world.halfDepth - 0.8);
+        } else {
+          x = clamp(anchor.x + (u - 0.5) * span, -app.cfg.world.halfWidth + 0.8, app.cfg.world.halfWidth - 0.8);
+          y = height;
+          z = clamp(anchor.z + (v - 0.5) * span, -app.cfg.world.halfDepth + 0.8, app.cfg.world.halfDepth - 0.8);
+        }
+
+        tmpA.set(x, y, z);
         tmpB.copy(app.solver.sampleWindAt(app, tmpA));
-        const speed = tmpB.length();
+        const sampledSpeed = tmpB.length();
+        if (planeKey === 'vertical_x') tmpD.set(tmpB.x, tmpB.y, 0);
+        else if (planeKey === 'vertical_z') tmpD.set(0, tmpB.y, tmpB.z);
+        else tmpD.copy(tmpB);
+        const speed = tmpD.length();
         const len = speed > 1e-5 ? Math.min(speed * 0.16, Math.max(0.5, cell * 0.46)) : 0;
         tmpC.copy(tmpA);
-        if (speed > 1e-5 && len > 0) tmpC.addScaledVector(tmpB.multiplyScalar(1 / speed), len);
+        if (speed > 1e-5 && len > 0) tmpC.addScaledVector(tmpD.multiplyScalar(1 / speed), len);
         const colorT = clamp(Math.sqrt(speed / refSpeed), 0, 1);
         const color = mixRgb(FLOW_PROBE_LOW_RGB, FLOW_PROBE_HIGH_RGB, colorT);
         const seg = sampleIndex * 6;
         const tip = sampleIndex * 3;
 
         app.render.flowProbePositions[seg] = x;
-        app.render.flowProbePositions[seg + 1] = height;
+        app.render.flowProbePositions[seg + 1] = y;
         app.render.flowProbePositions[seg + 2] = z;
         app.render.flowProbePositions[seg + 3] = tmpC.x;
         app.render.flowProbePositions[seg + 4] = tmpC.y;
@@ -1629,6 +1668,8 @@
 
         meanSpeed += speed;
         if (speed > peakSpeed) peakSpeed = speed;
+        sampledMeanSpeed += sampledSpeed;
+        if (sampledSpeed > sampledPeakSpeed) sampledPeakSpeed = sampledSpeed;
         sampleIndex += 1;
       }
     }
@@ -1644,10 +1685,18 @@
 
     app.render.flowProbeStats.active = true;
     app.render.flowProbeStats.sampleCount = sampleIndex;
+    app.render.flowProbeStats.planeKey = planeKey;
+    app.render.flowProbeStats.planeLabel = planeDef.label;
+    app.render.flowProbeStats.projected = !!planeDef.projected;
+    app.render.flowProbeStats.fixedAxis = planeDef.fixedAxis;
+    app.render.flowProbeStats.fixedValue = planeDef.fixedAxis === 'x' ? anchor.x : (planeDef.fixedAxis === 'z' ? anchor.z : height);
     app.render.flowProbeStats.height = height;
     app.render.flowProbeStats.span = span;
+    app.render.flowProbeStats.sectionHeight = sectionHeight;
     app.render.flowProbeStats.meanSpeed = sampleIndex ? meanSpeed / sampleIndex : 0;
     app.render.flowProbeStats.peakSpeed = peakSpeed;
+    app.render.flowProbeStats.sampledMeanSpeed = sampleIndex ? sampledMeanSpeed / sampleIndex : 0;
+    app.render.flowProbeStats.sampledPeakSpeed = sampledPeakSpeed;
     app.render.flowProbeStats.anchorX = anchor.x;
     app.render.flowProbeStats.anchorZ = anchor.z;
   }
