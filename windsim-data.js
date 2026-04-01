@@ -71,6 +71,16 @@
     markers: true
   };
 
+  const SOLVER_PROFILES = {
+    sandbox: {
+      label: 'Sandbox Solver',
+      classification: 'reduced-order',
+      fieldModel: 'analytic-local-wind',
+      couplingModel: 'one-way',
+      integrator: 'semi-implicit-euler-substepped'
+    }
+  };
+
   const OBJ_DEFS = {
     soccer: {
       label: 'Soccer Ball',
@@ -425,6 +435,7 @@
     STORAGE_KEY: STORAGE_KEY,
     DEFAULT_WORLD: DEFAULT_WORLD,
     DEFAULT_ANALYSIS: DEFAULT_ANALYSIS,
+    SOLVER_PROFILES: SOLVER_PROFILES,
     WIND_MODES: WIND_MODES,
     OBJ_DEFS: OBJ_DEFS,
     SURFACES: SURFACES,

@@ -1,0 +1,5 @@
+.aider*
+.edge-headless*
+.chrome-headless*
+_verify*.png
+_dump*.html

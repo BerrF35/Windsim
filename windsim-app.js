@@ -98,6 +98,7 @@
     const cfg = P.makeConfigFromPreset('baseline');
     const src = source || {};
 
+    cfg.solverKey = src.solverKey || src.solver || cfg.solverKey;
     cfg.objKey = src.objKey || src.obj || cfg.objKey;
     cfg.surfKey = src.surfKey || src.surf || cfg.surfKey;
     cfg.altitude = num(src.altitude, cfg.altitude);
@@ -148,6 +149,7 @@
     cfg.camera.pitch = clamp(cfg.camera.pitch, THREE.MathUtils.degToRad(5), THREE.MathUtils.degToRad(88));
     cfg.camera.fov = clamp(cfg.camera.fov, 25, 100);
     cfg.camera.lag = clamp(cfg.camera.lag, 0.01, 0.4);
+    if (!D.SOLVER_PROFILES[cfg.solverKey]) cfg.solverKey = 'sandbox';
     if (!cfg.objectScale) cfg.objectScale = { x: 1, y: 1, z: 1 };
     return cfg;
   }

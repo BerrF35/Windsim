@@ -189,6 +189,7 @@
     const preset = typeof presetLike === 'string' ? D.PRESETS[presetLike] : presetLike;
     const source = preset || D.PRESETS.baseline;
     const cfg = {
+      solverKey: source.solverKey || source.solver || 'sandbox',
       objKey: source.obj,
       surfKey: source.surf,
       altitude: source.altitude,
@@ -235,6 +236,7 @@
   function defaultScenarioSnapshot(app) {
     return {
       version: 2,
+      solver: app.cfg.solverKey || 'sandbox',
       obj: app.cfg.objKey,
       surf: app.cfg.surfKey,
       altitude: app.cfg.altitude,
@@ -771,6 +773,7 @@
 
     const def = resolveObjectDef(app.cfg.objKey, app.cfg);
     const body = app.state.body;
+    const solver = D.SOLVER_PROFILES[app.cfg.solverKey] || D.SOLVER_PROFILES.sandbox;
     const speed = body.vel.length();
     const accel = body.acc.length();
     const energy = app.state.energy || { aeroWork: 0, contactLoss: 0 };
@@ -784,6 +787,12 @@
 
     app.state.telemetry.push({
       time_s: +app.state.time.toFixed(3),
+      solver_key: app.cfg.solverKey,
+      solver_label: solver.label,
+      solver_class: solver.classification,
+      field_model: solver.fieldModel,
+      coupling_model: solver.couplingModel,
+      integrator_model: solver.integrator,
       object: def.label,
       surface: app.cfg.surfKey,
       wind_mode: app.cfg.wind.mode,

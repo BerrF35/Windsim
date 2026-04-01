@@ -347,9 +347,17 @@ The next implementation sequence is:
 Current status:
 
 - Phase 0: in progress
-- Active focus: persistent planning, documentation alignment, and baseline protection
+- Active focus: baseline protection, regression discipline, and reduced-order audit
 - Current product classification: advanced reduced-order aerodynamic sandbox
 - Research-grade CFD status: not yet implemented
+- Completed in current phase:
+  - persistent master plan added
+  - README aligned with the modular repo architecture
+  - local tool artifacts cleaned from the workspace
+  - baseline regression checklist added
+  - reduced-order physics audit added
+- Next milestone:
+  - formalize the current solver boundary and start converting the existing physics loop into an explicit sandbox solver contract
 
 When work advances, this section must be updated with:
 
