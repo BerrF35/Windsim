@@ -16,6 +16,7 @@
   const BEAUFORT_T = [0.3, 1.6, 3.4, 5.5, 8, 10.8, 13.9, 17.2, 20.8, 24.5, 28.5, 32.7];
   const COMPASS16 = ['N', 'NNE', 'NE', 'ENE', 'E', 'ESE', 'SE', 'SSE', 'S', 'SSW', 'SW', 'WSW', 'W', 'WNW', 'NW', 'NNW'];
   const STORAGE_KEY = 'windsim3d-scenarios-v2';
+  const EXPERIMENT_STORAGE_KEY = 'windsim3d-experiments-v1';
 
   function sphereInertia(radius, mass) {
     const value = 0.4 * mass * radius * radius;
@@ -433,6 +434,7 @@
     BEAUFORT_T: BEAUFORT_T,
     COMPASS16: COMPASS16,
     STORAGE_KEY: STORAGE_KEY,
+    EXPERIMENT_STORAGE_KEY: EXPERIMENT_STORAGE_KEY,
     DEFAULT_WORLD: DEFAULT_WORLD,
     DEFAULT_ANALYSIS: DEFAULT_ANALYSIS,
     SOLVER_PROFILES: SOLVER_PROFILES,

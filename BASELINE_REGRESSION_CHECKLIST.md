@@ -96,6 +96,10 @@ These checks should pass on every meaningful change.
 - Sweep export produces CSV when rows exist.
 - Sweep results reflect the selected variable range and step count.
 - Sweep remains labeled as mounted reduced-order sampling rather than CFD output.
+- Saved sweep list persists after reload.
+- Using a saved sweep restores the sweep setup and stored rows.
+- Compare renders a delta report against the selected saved sweep.
+- Current sweep report is marked stale after configuration changes that invalidate the run context.
 
 ### Persistence
 

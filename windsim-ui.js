@@ -228,6 +228,27 @@
     }
   }
 
+  function saveExperimentList(app) {
+    try {
+      localStorage.setItem(D.EXPERIMENT_STORAGE_KEY, JSON.stringify(app.state.experiment.savedRuns));
+    } catch (err) {
+      /* ignore storage failures */
+    }
+  }
+
+  function loadExperimentList() {
+    try {
+      const raw = localStorage.getItem(D.EXPERIMENT_STORAGE_KEY);
+      const parsed = raw ? JSON.parse(raw) : [];
+      if (!Array.isArray(parsed)) return [];
+      return parsed.filter(function (entry) {
+        return entry && typeof entry.id === 'string' && typeof entry.name === 'string' && Array.isArray(entry.rows);
+      });
+    } catch (err) {
+      return [];
+    }
+  }
+
   function injectUiStyles() {
     if ($('windsim-ui-style')) return;
     const style = document.createElement('style');
@@ -300,7 +321,11 @@
         '<div class="scenario-row"><div class="ctl"><div class="ctl-row"><span class="ctl-lbl">Start</span></div><input class="num-input" id="sweepStartInput" type="number" value="0" step="0.1"></div><div class="ctl"><div class="ctl-row"><span class="ctl-lbl">End</span></div><input class="num-input" id="sweepEndInput" type="number" value="40" step="0.1"></div></div>',
         '<div class="ctl"><div class="ctl-row"><span class="ctl-lbl">Steps</span></div><input class="num-input" id="sweepStepsInput" type="number" value="9" min="1" max="41" step="1"></div>',
         '<div class="scenario-row"><button class="btn btn-g" id="runSweepBtn">Run Sweep</button><button class="btn btn-d" id="exportSweepBtn">Export Sweep</button></div>',
+        '<div class="ctl"><div class="ctl-row"><span class="ctl-lbl">Saved Sweeps</span></div><select id="savedSweepSelect"></select></div>',
+        '<div class="scenario-row"><button class="btn btn-d" id="saveSweepBtn">Save Sweep</button><button class="btn btn-d" id="compareSweepBtn">Compare</button></div>',
+        '<div class="scenario-row"><button class="btn btn-d" id="useSavedSweepBtn">Use Saved</button><button class="btn btn-r" id="deleteSweepBtn">Delete Saved</button></div>',
         '<div class="report-box" id="experimentReport">No sweep run.</div>',
+        '<div class="report-box" id="experimentCompareReport">No saved comparison yet.</div>',
         '<div class="mini-note">Sweep uses instantaneous mounted reduced-order samples with the object fixed. This is not CFD and not a time-averaged tunnel solution.</div>',
         '</div></details>',
         '<details><summary>Workspace</summary><div class="sec-body">',
@@ -367,6 +392,28 @@
       };
     }));
     if (app.savedScenarios.length) select.value = app.savedScenarios[0].name;
+  }
+
+  function refreshSavedSweepSelect(app) {
+    const select = $('savedSweepSelect');
+    if (!select) return;
+    const runs = app.state.experiment.savedRuns || [];
+    const options = runs.length ? runs.map(function (run) {
+      return {
+        value: run.id,
+        label: run.name + ' | ' + (run.objectLabel || run.objectKey || 'object') + ' | ' + ((run.sweep && run.sweep.label) || 'Sweep')
+      };
+    }) : [{ value: '__none__', label: 'No saved sweeps' }];
+    populateSelect(select, options);
+    if (!runs.length) {
+      select.value = '__none__';
+      app.state.experiment.selectedSavedId = '';
+      return;
+    }
+    if (!app.state.experiment.selectedSavedId || !runs.some(function (run) { return run.id === app.state.experiment.selectedSavedId; })) {
+      app.state.experiment.selectedSavedId = runs[0].id;
+    }
+    select.value = app.state.experiment.selectedSavedId;
   }
 
   function populateStaticSelects(app) {
@@ -480,28 +527,47 @@
   function syncExperimentPanel(app) {
     const experiment = app.state.experiment;
     const report = $('experimentReport');
+    const compareReport = $('experimentCompareReport');
     function formatCoeff(value) {
       return Number.isFinite(value) ? value.toFixed(3) : 'n/a';
     }
+    refreshSavedSweepSelect(app);
+    const selectedRun = experiment.savedRuns.find(function (run) { return run.id === experiment.selectedSavedId; }) || null;
     $('sweepVarSelect').value = experiment.variable;
     $('sweepStartInput').value = String(experiment.start);
     $('sweepEndInput').value = String(experiment.end);
     $('sweepStepsInput').value = String(experiment.steps);
     $('exportSweepBtn').disabled = !experiment.rows.length;
+    $('saveSweepBtn').disabled = !experiment.rows.length;
+    $('compareSweepBtn').disabled = !experiment.rows.length || !selectedRun;
+    $('useSavedSweepBtn').disabled = !selectedRun;
+    $('deleteSweepBtn').disabled = !selectedRun;
 
     if (!experiment.rows.length) {
       report.textContent = 'No sweep run.';
-      return;
+    } else {
+      const lines = experiment.rows.map(function (row) {
+        return row.sweep_value.toFixed(2) + ' ' + row.sweep_unit +
+          ' | drag ' + row.drag_N.toFixed(3) +
+          ' N | lift ' + row.lift_N.toFixed(3) +
+          ' N | Cd ' + formatCoeff(row.cd_current) +
+          ' | Re ' + (row.reynolds > 1e6 ? (row.reynolds / 1e6).toFixed(2) + 'M' : (row.reynolds > 1e3 ? (row.reynolds / 1e3).toFixed(1) + 'k' : row.reynolds.toFixed(0)));
+      });
+      report.textContent = 'Mounted sweep: ' + experiment.variable + (experiment.dirty ? ' [stale]' : '') + '\n' + 'rows: ' + experiment.rows.length + '\n\n' + lines.join('\n');
     }
 
-    const lines = experiment.rows.map(function (row) {
-      return row.sweep_value.toFixed(2) + ' ' + row.sweep_unit +
-        ' | drag ' + row.drag_N.toFixed(3) +
-        ' N | lift ' + row.lift_N.toFixed(3) +
-        ' N | Cd ' + formatCoeff(row.cd_current) +
-        ' | Re ' + (row.reynolds > 1e6 ? (row.reynolds / 1e6).toFixed(2) + 'M' : (row.reynolds > 1e3 ? (row.reynolds / 1e3).toFixed(1) + 'k' : row.reynolds.toFixed(0)));
-    });
-    report.textContent = 'Mounted sweep: ' + experiment.variable + '\n' + 'rows: ' + experiment.rows.length + '\n\n' + lines.join('\n');
+    if (experiment.comparison && experiment.comparison.text) {
+      compareReport.textContent = experiment.comparison.text;
+    } else if (selectedRun) {
+      compareReport.textContent =
+        'Selected saved sweep: ' + selectedRun.name + '\n' +
+        'rows: ' + selectedRun.rows.length + '\n' +
+        'object: ' + (selectedRun.objectLabel || selectedRun.objectKey || 'unknown') + '\n' +
+        'mode: ' + (selectedRun.windMode || 'unknown') + '\n' +
+        'Click Compare to evaluate deltas against the current sweep.';
+    } else {
+      compareReport.textContent = 'No saved comparison yet.';
+    }
   }
 
   function syncGeometryControls(app) {
@@ -806,6 +872,7 @@
     function bindRange(id, handler) {
       $(id).addEventListener('input', function (event) {
         handler(parseFloat(event.target.value));
+        if (app.markExperimentDirty) app.markExperimentDirty();
       });
     }
 
@@ -817,6 +884,7 @@
     $('surfSelect').addEventListener('change', function () {
       app.cfg.surfKey = $('surfSelect').value;
       if (app.refreshSurface) app.refreshSurface();
+      if (app.markExperimentDirty) app.markExperimentDirty();
       updateStaticPanels(app);
     });
 
@@ -826,8 +894,8 @@
     bindRange('sTurb', function (value) { app.cfg.wind.turb = value; $('vTurb').textContent = value.toFixed(0) + '%'; });
     bindRange('sGust', function (value) { app.cfg.wind.gust = value; $('vGust').textContent = value.toFixed(0) + '%'; });
     bindRange('sModeStrength', function (value) { app.cfg.wind.modeStrength = value; $('vModeStrength').textContent = value.toFixed(0) + '%'; });
-    $('windModeSelect').addEventListener('change', function () { app.cfg.wind.mode = $('windModeSelect').value; });
-    $('seedInput').addEventListener('change', function () { app.cfg.seed = parseInt($('seedInput').value, 10) || 0; });
+    $('windModeSelect').addEventListener('change', function () { app.cfg.wind.mode = $('windModeSelect').value; if (app.markExperimentDirty) app.markExperimentDirty(); });
+    $('seedInput').addEventListener('change', function () { app.cfg.seed = parseInt($('seedInput').value, 10) || 0; if (app.markExperimentDirty) app.markExperimentDirty(); });
 
     bindRange('sH0', function (value) { app.cfg.launch.h0 = value; $('vH0').textContent = value.toFixed(1) + ' m'; });
     bindRange('sVX', function (value) { app.cfg.launch.vx = value; $('vVX').textContent = value.toFixed(0) + ' m/s'; });
@@ -982,6 +1050,33 @@
     $('exportSweepBtn').addEventListener('click', function () {
       app.exportMountedSweepCSV();
     });
+    $('savedSweepSelect').addEventListener('change', function () {
+      app.state.experiment.selectedSavedId = $('savedSweepSelect').value === '__none__' ? '' : $('savedSweepSelect').value;
+      app.state.experiment.comparison = null;
+      syncExperimentPanel(app);
+    });
+    $('saveSweepBtn').addEventListener('click', function () {
+      const name = window.prompt('Sweep name');
+      if (name === null) return;
+      if (!app.saveMountedSweep(name)) return;
+      saveExperimentList(app);
+      refreshSavedSweepSelect(app);
+      syncExperimentPanel(app);
+    });
+    $('compareSweepBtn').addEventListener('click', function () {
+      app.compareCurrentSweepToSaved($('savedSweepSelect').value === '__none__' ? '' : $('savedSweepSelect').value);
+    });
+    $('useSavedSweepBtn').addEventListener('click', function () {
+      app.useSavedSweep($('savedSweepSelect').value === '__none__' ? '' : $('savedSweepSelect').value);
+    });
+    $('deleteSweepBtn').addEventListener('click', function () {
+      const runId = $('savedSweepSelect').value === '__none__' ? '' : $('savedSweepSelect').value;
+      if (!runId) return;
+      app.deleteSavedSweep(runId);
+      saveExperimentList(app);
+      refreshSavedSweepSelect(app);
+      syncExperimentPanel(app);
+    });
     $('tForceLabels').addEventListener('click', function () { app.cfg.analysis.forceLabels = !app.cfg.analysis.forceLabels; setToggle($('tForceLabels'), app.cfg.analysis.forceLabels); });
     $('tRuler').addEventListener('click', function () { app.cfg.analysis.ruler = !app.cfg.analysis.ruler; setToggle($('tRuler'), app.cfg.analysis.ruler); });
     $('tImpactMarkers').addEventListener('click', function () { app.cfg.analysis.impacts = !app.cfg.analysis.impacts; setToggle($('tImpactMarkers'), app.cfg.analysis.impacts); });
@@ -993,6 +1088,7 @@
     injectUiStyles();
     injectExtraPanels(app);
     app.savedScenarios = loadScenarioList();
+    app.state.experiment.savedRuns = loadExperimentList();
     app.layoutState = loadLayoutState();
     app.ui = {
       graphCanvas: $('graphCanvas'),
@@ -1014,6 +1110,7 @@
     }
 
     populateStaticSelects(app);
+    refreshSavedSweepSelect(app);
     bindEvents(app);
     bindLayoutControls(app);
     syncScenarioControls(app);

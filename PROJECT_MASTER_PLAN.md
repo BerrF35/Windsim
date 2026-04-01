@@ -360,8 +360,11 @@ Current status:
   - mounted wind-tunnel test mode added to the sandbox solver path
   - recorded playback timeline with scrubbing and frame stepping added
   - mounted sweep experiment panel added for repeatable reduced-order comparisons
+  - saved sweep result management and current-vs-saved comparison workflow added
+- Deferred product requirement:
+  - dedicated landing / home entry flow so users choose an experience before entering the simulator
 - Next milestone:
-  - extend experiment tooling into comparison workflows and more structured result management before moving toward field-visualization work
+  - prepare the next field-visualization and analysis layer now that experiment comparison and result management are in place
 
 When work advances, this section must be updated with:
 
