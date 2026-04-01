@@ -35,6 +35,8 @@
   const SURFACE_WORLD_TILE = 32;
   const GRID_WORLD_TILE = 40;
   const PLAYBACK_MAX_FRAMES = 6000;
+  const FLOW_PROBE_GRID = 7;
+  const FLOW_PROBE_SAMPLES = FLOW_PROBE_GRID * FLOW_PROBE_GRID;
   const SWEEP_FIELDS = {
     wind_speed: {
       label: 'Wind Speed',
@@ -118,6 +120,8 @@
     spin: '#FFD166',
     ruler: '#74D3FF'
   };
+  const FLOW_PROBE_LOW_RGB = rgbFromHex(0x4f6f88);
+  const FLOW_PROBE_HIGH_RGB = rgbFromHex(0xffd166);
 
   function seedFromText(text) {
     let hash = 2166136261 >>> 0;
@@ -188,6 +192,9 @@
     cfg.world.halfWidth = clamp(cfg.world.halfWidth, 10, 320);
     cfg.world.halfDepth = clamp(cfg.world.halfDepth, 10, 320);
     cfg.world.ceiling = clamp(cfg.world.ceiling, 6, 600);
+    cfg.analysis.flowSlice = !!cfg.analysis.flowSlice;
+    cfg.analysis.flowSliceHeight = clamp(num(cfg.analysis.flowSliceHeight, 8), 0.5, cfg.world.ceiling);
+    cfg.analysis.flowSliceSpan = clamp(num(cfg.analysis.flowSliceSpan, 36), 12, Math.max(20, Math.min(cfg.world.halfWidth * 2, cfg.world.halfDepth * 2)));
     cfg.camera.distance = clamp(cfg.camera.distance, 4, 140);
     cfg.camera.pitch = clamp(cfg.camera.pitch, THREE.MathUtils.degToRad(5), THREE.MathUtils.degToRad(88));
     cfg.camera.fov = clamp(cfg.camera.fov, 25, 100);
@@ -287,6 +294,24 @@
       heightLine: null,
       heightPositions: new Float32Array(6),
       impactGroup: null,
+      flowProbeGeo: null,
+      flowProbeLine: null,
+      flowProbePositions: new Float32Array(FLOW_PROBE_SAMPLES * 6),
+      flowProbeColors: new Float32Array(FLOW_PROBE_SAMPLES * 6),
+      flowProbeTipGeo: null,
+      flowProbeTips: null,
+      flowProbeTipPositions: new Float32Array(FLOW_PROBE_SAMPLES * 3),
+      flowProbeTipColors: new Float32Array(FLOW_PROBE_SAMPLES * 3),
+      flowProbeStats: {
+        active: false,
+        sampleCount: 0,
+        height: 0,
+        span: 0,
+        meanSpeed: 0,
+        peakSpeed: 0,
+        anchorX: 0,
+        anchorZ: 0
+      },
       lastImpactStamp: '',
       bodyWind: new V3(),
       focus: new V3(0, 2, 0),
@@ -1501,6 +1526,22 @@
 
     app.render.impactGroup = new THREE.Group();
     app.render.scene.add(app.render.impactGroup);
+
+    app.render.flowProbeGeo = new THREE.BufferGeometry();
+    app.render.flowProbeGeo.setAttribute('position', new THREE.BufferAttribute(app.render.flowProbePositions, 3));
+    app.render.flowProbeGeo.setAttribute('color', new THREE.BufferAttribute(app.render.flowProbeColors, 3));
+    app.render.flowProbeLine = new THREE.LineSegments(app.render.flowProbeGeo, new THREE.LineBasicMaterial({ vertexColors: true, transparent: true, opacity: 0.72 }));
+    app.render.flowProbeLine.frustumCulled = false;
+    app.render.flowProbeLine.visible = false;
+    app.render.scene.add(app.render.flowProbeLine);
+
+    app.render.flowProbeTipGeo = new THREE.BufferGeometry();
+    app.render.flowProbeTipGeo.setAttribute('position', new THREE.BufferAttribute(app.render.flowProbeTipPositions, 3));
+    app.render.flowProbeTipGeo.setAttribute('color', new THREE.BufferAttribute(app.render.flowProbeTipColors, 3));
+    app.render.flowProbeTips = new THREE.Points(app.render.flowProbeTipGeo, new THREE.PointsMaterial({ size: 4.5, vertexColors: true, transparent: true, opacity: 0.9, sizeAttenuation: false, depthWrite: false }));
+    app.render.flowProbeTips.frustumCulled = false;
+    app.render.flowProbeTips.visible = false;
+    app.render.scene.add(app.render.flowProbeTips);
   }
 
   function setParticleSize() {
@@ -1512,6 +1553,103 @@
     app.render.particles = [];
     for (let i = 0; i < count; i += 1) app.render.particles.push(spawnParticle());
     app.render.particleGeo.setDrawRange(0, count);
+  }
+
+  function flowProbeAnchor() {
+    const body = displayBody();
+    return {
+      x: body ? body.pos.x : 0,
+      z: body ? body.pos.z : 0
+    };
+  }
+
+  function updateFlowProbeSlice() {
+    const line = app.render.flowProbeLine;
+    const tips = app.render.flowProbeTips;
+    if (!line || !tips) return;
+
+    if (!app.cfg.analysis.flowSlice) {
+      line.visible = false;
+      tips.visible = false;
+      app.render.flowProbeStats.active = false;
+      app.render.flowProbeStats.sampleCount = 0;
+      return;
+    }
+
+    const anchor = flowProbeAnchor();
+    const height = clamp(app.cfg.analysis.flowSliceHeight, 0.5, app.cfg.world.ceiling);
+    const spanLimit = Math.max(20, Math.min(app.cfg.world.halfWidth * 2, app.cfg.world.halfDepth * 2));
+    const span = clamp(app.cfg.analysis.flowSliceSpan, 12, spanLimit);
+    const cell = FLOW_PROBE_GRID > 1 ? span / (FLOW_PROBE_GRID - 1) : span;
+    const refSpeed = Math.max(1, app.cfg.wind.speed + app.cfg.wind.gust * 0.12 + app.cfg.wind.modeStrength * 0.10);
+    let meanSpeed = 0;
+    let peakSpeed = 0;
+    let sampleIndex = 0;
+
+    app.cfg.analysis.flowSliceHeight = height;
+    app.cfg.analysis.flowSliceSpan = span;
+
+    for (let row = 0; row < FLOW_PROBE_GRID; row += 1) {
+      for (let col = 0; col < FLOW_PROBE_GRID; col += 1) {
+        const u = FLOW_PROBE_GRID === 1 ? 0.5 : col / (FLOW_PROBE_GRID - 1);
+        const v = FLOW_PROBE_GRID === 1 ? 0.5 : row / (FLOW_PROBE_GRID - 1);
+        const x = clamp(anchor.x + (u - 0.5) * span, -app.cfg.world.halfWidth + 0.8, app.cfg.world.halfWidth - 0.8);
+        const z = clamp(anchor.z + (v - 0.5) * span, -app.cfg.world.halfDepth + 0.8, app.cfg.world.halfDepth - 0.8);
+        tmpA.set(x, height, z);
+        tmpB.copy(app.solver.sampleWindAt(app, tmpA));
+        const speed = tmpB.length();
+        const len = speed > 1e-5 ? Math.min(speed * 0.16, Math.max(0.5, cell * 0.46)) : 0;
+        tmpC.copy(tmpA);
+        if (speed > 1e-5 && len > 0) tmpC.addScaledVector(tmpB.multiplyScalar(1 / speed), len);
+        const colorT = clamp(Math.sqrt(speed / refSpeed), 0, 1);
+        const color = mixRgb(FLOW_PROBE_LOW_RGB, FLOW_PROBE_HIGH_RGB, colorT);
+        const seg = sampleIndex * 6;
+        const tip = sampleIndex * 3;
+
+        app.render.flowProbePositions[seg] = x;
+        app.render.flowProbePositions[seg + 1] = height;
+        app.render.flowProbePositions[seg + 2] = z;
+        app.render.flowProbePositions[seg + 3] = tmpC.x;
+        app.render.flowProbePositions[seg + 4] = tmpC.y;
+        app.render.flowProbePositions[seg + 5] = tmpC.z;
+
+        app.render.flowProbeColors[seg] = color.r / 255;
+        app.render.flowProbeColors[seg + 1] = color.g / 255;
+        app.render.flowProbeColors[seg + 2] = color.b / 255;
+        app.render.flowProbeColors[seg + 3] = color.r / 255;
+        app.render.flowProbeColors[seg + 4] = color.g / 255;
+        app.render.flowProbeColors[seg + 5] = color.b / 255;
+
+        app.render.flowProbeTipPositions[tip] = tmpC.x;
+        app.render.flowProbeTipPositions[tip + 1] = tmpC.y;
+        app.render.flowProbeTipPositions[tip + 2] = tmpC.z;
+        app.render.flowProbeTipColors[tip] = color.r / 255;
+        app.render.flowProbeTipColors[tip + 1] = color.g / 255;
+        app.render.flowProbeTipColors[tip + 2] = color.b / 255;
+
+        meanSpeed += speed;
+        if (speed > peakSpeed) peakSpeed = speed;
+        sampleIndex += 1;
+      }
+    }
+
+    app.render.flowProbeGeo.attributes.position.needsUpdate = true;
+    app.render.flowProbeGeo.attributes.color.needsUpdate = true;
+    app.render.flowProbeTipGeo.attributes.position.needsUpdate = true;
+    app.render.flowProbeTipGeo.attributes.color.needsUpdate = true;
+    app.render.flowProbeGeo.setDrawRange(0, sampleIndex * 2);
+    app.render.flowProbeTipGeo.setDrawRange(0, sampleIndex);
+    line.visible = true;
+    tips.visible = true;
+
+    app.render.flowProbeStats.active = true;
+    app.render.flowProbeStats.sampleCount = sampleIndex;
+    app.render.flowProbeStats.height = height;
+    app.render.flowProbeStats.span = span;
+    app.render.flowProbeStats.meanSpeed = sampleIndex ? meanSpeed / sampleIndex : 0;
+    app.render.flowProbeStats.peakSpeed = peakSpeed;
+    app.render.flowProbeStats.anchorX = anchor.x;
+    app.render.flowProbeStats.anchorZ = anchor.z;
   }
 
   function updateParticles(dt) {
@@ -1805,6 +1943,7 @@
     syncTrails();
     syncRuler();
     syncImpactMarkers();
+    updateFlowProbeSlice();
   }
 
   function refreshForceLabels() {
@@ -2204,6 +2343,7 @@
     UI.updateDynamicPanels(app);
     UI.drawGraph(app);
     UI.syncPlaybackControls(app);
+    if (UI.syncFlowProbeInfo) UI.syncFlowProbeInfo(app);
     syncValidationUi();
     syncStatus();
     app.render.renderer.render(app.render.scene, app.render.camera);
@@ -2219,6 +2359,7 @@
   app.updateFov = updateFov;
   app.startValidation = startValidation;
   app.refreshSurface = refreshSurface;
+  app.refreshScene = refreshScene;
   app.resetCamera = resetCamera;
   app.updateObjectScale = updateObjectScale;
   app.resizeRenderer = resizeRenderer;

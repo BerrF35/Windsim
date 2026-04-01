@@ -361,10 +361,11 @@ Current status:
   - recorded playback timeline with scrubbing and frame stepping added
   - mounted sweep experiment panel added for repeatable reduced-order comparisons
   - saved sweep result management and current-vs-saved comparison workflow added
+  - reduced-order flow probe slice added for live wind-field inspection without pretending CFD
 - Deferred product requirement:
   - dedicated landing / home entry flow so users choose an experience before entering the simulator
 - Next milestone:
-  - prepare the next field-visualization and analysis layer now that experiment comparison and result management are in place
+  - extend field visualization beyond probe slices into more expressive but still honestly labeled reduced-order flow views
 
 When work advances, this section must be updated with:
 

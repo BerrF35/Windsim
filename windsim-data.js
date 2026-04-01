@@ -69,7 +69,10 @@
     impacts: true,
     graph: true,
     compare: true,
-    markers: true
+    markers: true,
+    flowSlice: false,
+    flowSliceHeight: 8,
+    flowSliceSpan: 36
   };
 
   const SOLVER_PROFILES = {

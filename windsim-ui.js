@@ -305,8 +305,13 @@
         '<div class="tgl-row">Impact Markers<div class="tgl on" id="tImpactMarkers"></div></div>',
         '<div class="tgl-row">Force Graph<div class="tgl on" id="tGraph"></div></div>',
         '<div class="tgl-row">Compare Trails<div class="tgl on" id="tCompareTrail"></div></div>',
+        '<div class="tgl-row">Flow Probe Slice<div class="tgl" id="tFlowSlice"></div></div>',
+        '<div class="ctl"><div class="ctl-row"><span class="ctl-lbl">Slice Height</span><span class="ctl-val" id="vFlowSliceH">8.0 m</span></div><input type="range" id="sFlowSliceH" min="1" max="220" value="8" step="0.5"></div>',
+        '<div class="ctl"><div class="ctl-row"><span class="ctl-lbl">Slice Span</span><span class="ctl-val" id="vFlowSliceSpan">36 m</span></div><input type="range" id="sFlowSliceSpan" min="12" max="120" value="36" step="2"></div>',
         '<button class="btn btn-d" id="clearImpactsBtn">Clear Markers</button>',
+        '<div class="report-box" id="flowSliceInfo">Probe slice off.</div>',
         '<div class="measure-kbd">Ruler tracks launch to body in-scene.</div>',
+        '<div class="mini-note">Probe slice samples the current reduced-order wind field only. It is not CFD and it does not include two-way wake coupling.</div>',
         '</div></details>',
         '<details><summary>Playback</summary><div class="sec-body">',
         '<div class="ctl"><div class="ctl-row"><span class="ctl-lbl">Recorded Timeline</span><span class="ctl-val" id="playbackFrameStat">0 / 0</span></div><input type="range" id="playbackScrub" min="0" max="0" value="0" step="1"></div>',
@@ -521,6 +526,13 @@
     setToggle($('tImpactMarkers'), cfg.analysis.impacts);
     setToggle($('tGraph'), cfg.analysis.graph);
     setToggle($('tCompareTrail'), cfg.analysis.compare);
+    setToggle($('tFlowSlice'), cfg.analysis.flowSlice);
+    $('sFlowSliceH').max = String(Math.max(20, Math.round(cfg.world.ceiling)));
+    $('sFlowSliceH').value = cfg.analysis.flowSliceHeight;
+    $('vFlowSliceH').textContent = cfg.analysis.flowSliceHeight.toFixed(1) + ' m';
+    $('sFlowSliceSpan').max = String(Math.max(24, Math.round(Math.min(cfg.world.halfWidth * 2, cfg.world.halfDepth * 2))));
+    $('sFlowSliceSpan').value = cfg.analysis.flowSliceSpan;
+    $('vFlowSliceSpan').textContent = cfg.analysis.flowSliceSpan.toFixed(0) + ' m';
     syncGeometryControls(app);
   }
 
@@ -568,6 +580,37 @@
     } else {
       compareReport.textContent = 'No saved comparison yet.';
     }
+  }
+
+  function syncFlowProbeInfo(app) {
+    const info = $('flowSliceInfo');
+    if (!info) return;
+    const stats = app.render && app.render.flowProbeStats ? app.render.flowProbeStats : null;
+    const ceiling = Math.max(1, app.cfg.world.ceiling);
+    const maxSpan = Math.max(24, Math.round(Math.min(app.cfg.world.halfWidth * 2, app.cfg.world.halfDepth * 2)));
+    app.cfg.analysis.flowSliceHeight = clamp(app.cfg.analysis.flowSliceHeight, 0.5, ceiling);
+    app.cfg.analysis.flowSliceSpan = clamp(app.cfg.analysis.flowSliceSpan, 12, maxSpan);
+    $('sFlowSliceH').max = String(Math.max(20, Math.round(ceiling)));
+    $('sFlowSliceH').value = String(app.cfg.analysis.flowSliceHeight);
+    $('vFlowSliceH').textContent = app.cfg.analysis.flowSliceHeight.toFixed(1) + ' m';
+    $('sFlowSliceSpan').max = String(maxSpan);
+    $('sFlowSliceSpan').value = String(app.cfg.analysis.flowSliceSpan);
+    $('vFlowSliceSpan').textContent = app.cfg.analysis.flowSliceSpan.toFixed(0) + ' m';
+
+    if (!app.cfg.analysis.flowSlice || !stats || !stats.active) {
+      info.textContent = 'Probe slice off.';
+      return;
+    }
+
+    info.textContent =
+      'Reduced-order flow slice\n' +
+      'samples: ' + stats.sampleCount +
+      ' | y ' + stats.height.toFixed(1) + ' m' +
+      ' | span ' + stats.span.toFixed(0) + ' m\n' +
+      'mean speed ' + stats.meanSpeed.toFixed(2) + ' m/s' +
+      ' | peak ' + stats.peakSpeed.toFixed(2) + ' m/s\n' +
+      'anchor x ' + stats.anchorX.toFixed(1) + ' m' +
+      ' | z ' + stats.anchorZ.toFixed(1) + ' m';
   }
 
   function syncGeometryControls(app) {
@@ -1082,6 +1125,19 @@
     $('tImpactMarkers').addEventListener('click', function () { app.cfg.analysis.impacts = !app.cfg.analysis.impacts; setToggle($('tImpactMarkers'), app.cfg.analysis.impacts); });
     $('tGraph').addEventListener('click', function () { app.cfg.analysis.graph = !app.cfg.analysis.graph; setToggle($('tGraph'), app.cfg.analysis.graph); });
     $('tCompareTrail').addEventListener('click', function () { app.cfg.analysis.compare = !app.cfg.analysis.compare; setToggle($('tCompareTrail'), app.cfg.analysis.compare); });
+    $('tFlowSlice').addEventListener('click', function () {
+      app.cfg.analysis.flowSlice = !app.cfg.analysis.flowSlice;
+      setToggle($('tFlowSlice'), app.cfg.analysis.flowSlice);
+      syncFlowProbeInfo(app);
+    });
+    $('sFlowSliceH').addEventListener('input', function (event) {
+      app.cfg.analysis.flowSliceHeight = parseFloat(event.target.value) || 0.5;
+      syncFlowProbeInfo(app);
+    });
+    $('sFlowSliceSpan').addEventListener('input', function (event) {
+      app.cfg.analysis.flowSliceSpan = parseFloat(event.target.value) || 12;
+      syncFlowProbeInfo(app);
+    });
   }
 
   function install(app) {
@@ -1118,6 +1174,7 @@
     updateStaticPanels(app);
     syncPlaybackControls(app);
     syncExperimentPanel(app);
+    syncFlowProbeInfo(app);
   }
 
   window.WindSimUI = {
@@ -1131,6 +1188,7 @@
     drawGraph: drawGraph,
     setOverlay: setOverlay,
     syncPlaybackControls: syncPlaybackControls,
-    syncExperimentPanel: syncExperimentPanel
+    syncExperimentPanel: syncExperimentPanel,
+    syncFlowProbeInfo: syncFlowProbeInfo
   };
 }());

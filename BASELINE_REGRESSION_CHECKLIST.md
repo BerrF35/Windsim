@@ -77,6 +77,9 @@ These checks should pass on every meaningful change.
 - Impact markers toggle works.
 - Graph toggle works.
 - Compare trail toggle works.
+- Flow probe slice toggle works.
+- Flow probe slice height and span controls update the overlay cleanly.
+- Flow probe slice remains labeled as reduced-order field sampling rather than CFD output.
 - Mounted mode still shows meaningful drag / lift / net-force graph updates while the object remains fixed.
 - Force arrows remain color coded and legible.
 
