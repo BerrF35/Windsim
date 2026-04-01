@@ -12,6 +12,33 @@
     return app && app.solver ? app.solver : P;
   }
 
+  function displayFrame(app) {
+    return app && typeof app.getDisplayFrame === 'function' ? app.getDisplayFrame() : null;
+  }
+
+  function displayBody(app) {
+    const frame = displayFrame(app);
+    return frame ? frame.body : app.state.body;
+  }
+
+  function displayEnergy(app) {
+    const frame = displayFrame(app);
+    return frame ? frame.energy : app.state.energy;
+  }
+
+  function displayForceHistory(app) {
+    return app && typeof app.getDisplayForceHistory === 'function' ? app.getDisplayForceHistory() : app.state.forceHistory;
+  }
+
+  function displayTime(app) {
+    const frame = displayFrame(app);
+    return frame ? frame.time : app.state.time;
+  }
+
+  function vecLength(source) {
+    return Math.hypot(source.x, source.y, source.z);
+  }
+
   function setToggle(el, on) {
     if (!el) return;
     el.classList.toggle('on', !!on);
@@ -201,6 +228,7 @@
       '.num-input{width:100%;background:#262D33;border:1px solid rgba(236,114,90,.18);color:var(--txt);border-radius:10px;padding:8px 10px;font-family:"JetBrains Mono",monospace;font-size:11px;outline:none}',
       '.mini-note{font-family:"JetBrains Mono",monospace;font-size:8px;color:var(--txt3);line-height:1.5;margin-top:4px}',
       '.report-box{margin-top:7px;background:rgba(236,114,90,.03);border:1px solid rgba(236,114,90,.14);border-radius:12px;padding:10px 11px;font-family:"JetBrains Mono",monospace;font-size:8px;line-height:1.7;color:var(--txt2);white-space:pre-wrap;min-height:78px}',
+      '.btn[disabled]{opacity:.46;cursor:not-allowed}',
       '.graph-panel{position:absolute;right:14px;top:64px;z-index:20;background:rgba(38,45,51,.92);border:1px solid rgba(236,114,90,.16);border-radius:16px;padding:14px 14px 16px;backdrop-filter:blur(10px);box-shadow:0 14px 30px rgba(38,45,51,.42);display:flex;flex-direction:column;gap:12px}',
       '.graph-head{display:flex;justify-content:space-between;align-items:baseline;gap:10px;padding-bottom:8px;border-bottom:1px solid rgba(236,114,90,.12)}',
       '.graph-title{font-family:"JetBrains Mono",monospace;font-size:8.5px;letter-spacing:1.8px;color:var(--txt3);text-transform:uppercase}',
@@ -250,6 +278,14 @@
         '<div class="tgl-row">Compare Trails<div class="tgl on" id="tCompareTrail"></div></div>',
         '<button class="btn btn-d" id="clearImpactsBtn">Clear Markers</button>',
         '<div class="measure-kbd">Ruler tracks launch to body in-scene.</div>',
+        '</div></details>',
+        '<details><summary>Playback</summary><div class="sec-body">',
+        '<div class="ctl"><div class="ctl-row"><span class="ctl-lbl">Recorded Timeline</span><span class="ctl-val" id="playbackFrameStat">0 / 0</span></div><input type="range" id="playbackScrub" min="0" max="0" value="0" step="1"></div>',
+        '<div class="mini-note" id="playbackInfo">No recorded frames yet. Run the simulation to build a timeline.</div>',
+        '<div class="scenario-row"><button class="btn btn-d" id="playbackEnterBtn">Enter</button><button class="btn btn-d" id="playbackExitBtn">Exit</button></div>',
+        '<div class="scenario-row"><button class="btn btn-d" id="playbackPrevBtn">Prev</button><button class="btn btn-d" id="playbackPlayBtn">Play</button></div>',
+        '<div class="scenario-row"><button class="btn btn-d" id="playbackNextBtn">Next</button><button class="btn btn-d" id="playbackLatestBtn">Latest</button></div>',
+        '<div class="measure-kbd">Arrow Left / Right step frames. Escape exits playback.</div>',
         '</div></details>',
         '<details><summary>Workspace</summary><div class="sec-body">',
         '<button class="btn btn-d" id="resetLayoutBtn">Reset Layout</button>',
@@ -527,11 +563,11 @@
   }
 
   function updateDynamicPanels(app) {
-    const body = app.state.body;
+    const body = displayBody(app);
     const def = activeSolver(app).resolveObjectDef(app.cfg.objKey, app.cfg);
-    const speed = body.vel.length();
-    const accel = body.acc.length();
-    const spinRps = body.omegaBody.length() / D.TAU;
+    const speed = vecLength(body.vel);
+    const accel = vecLength(body.acc);
+    const spinRps = vecLength(body.omegaBody) / D.TAU;
     const rhoPct = body.metrics.rho / D.RHO0 * 100;
     const energyTrans = 0.5 * def.mass * speed * speed;
     const energyRot = 0.5 * (
@@ -540,7 +576,7 @@
       def.inertia[2] * body.omegaBody.z * body.omegaBody.z
     );
     const energyPot = def.mass * D.GRAV * Math.max(0, body.pos.y - body.supportY);
-    const energyState = app.state.energy || { aeroWork: 0, contactLoss: 0 };
+    const energyState = displayEnergy(app) || { aeroWork: 0, contactLoss: 0 };
 
     $('hSpd').textContent = speed.toFixed(2) + ' m/s';
     $('hDrag').textContent = body.metrics.drag.toFixed(3) + ' N';
@@ -554,7 +590,7 @@
     $('hSpin').textContent = spinRps.toFixed(2) + ' r/s';
     $('hHead').textContent = P.headingSummary(app.cfg.wind.azim);
     $('hRho').textContent = body.metrics.rho.toFixed(3) + ' kg/m^3';
-    $('hT').textContent = app.state.time.toFixed(2) + ' s';
+    $('hT').textContent = displayTime(app).toFixed(2) + ' s';
 
     $('eKet').textContent = energyTrans.toFixed(3) + ' J';
     $('eKer').textContent = energyRot.toFixed(3) + ' J';
@@ -598,7 +634,7 @@
     const ctx = sized.ctx;
     const width = sized.width;
     const height = sized.height;
-    const history = app.state.forceHistory;
+    const history = displayForceHistory(app);
     const padX = 34;
     const padY = 16;
     const plotWidth = Math.max(24, width - padX - 12);
@@ -682,6 +718,44 @@
     if (!visible) return;
     el.style.left = x.toFixed(1) + 'px';
     el.style.top = y.toFixed(1) + 'px';
+  }
+
+  function syncPlaybackControls(app) {
+    const playback = app.state.playback;
+    const frames = playback.frames;
+    const count = frames.length;
+    const active = playback.active;
+    const index = count ? (active ? playback.frameIndex : count - 1) : 0;
+    const slider = $('playbackScrub');
+    const stat = $('playbackFrameStat');
+    const info = $('playbackInfo');
+    const enterBtn = $('playbackEnterBtn');
+    const exitBtn = $('playbackExitBtn');
+    const prevBtn = $('playbackPrevBtn');
+    const playBtn = $('playbackPlayBtn');
+    const nextBtn = $('playbackNextBtn');
+    const latestBtn = $('playbackLatestBtn');
+
+    slider.max = String(Math.max(0, count - 1));
+    slider.value = String(Math.max(0, index));
+    slider.disabled = count < 2;
+    stat.textContent = count ? (index + 1) + ' / ' + count : '0 / 0';
+
+    if (!count) {
+      info.textContent = 'No recorded frames yet. Run the simulation to build a timeline.';
+    } else {
+      const frame = frames[Math.max(0, index)];
+      const stateLabel = active ? (playback.playing ? 'Playback running' : 'Playback paused') : 'Live view at latest recorded frame';
+      info.textContent = stateLabel + ' | t ' + frame.time.toFixed(2) + ' s';
+    }
+
+    enterBtn.disabled = count === 0;
+    exitBtn.disabled = !active;
+    prevBtn.disabled = count === 0;
+    playBtn.disabled = count < 2;
+    nextBtn.disabled = count === 0;
+    latestBtn.disabled = count === 0;
+    playBtn.textContent = playback.playing ? 'Pause' : 'Play';
   }
 
   function bindEvents(app) {
@@ -820,6 +894,27 @@
       setToggle($('tMountedMode'), app.cfg.testMode === 'mounted');
       app.resetObject();
     });
+    $('playbackScrub').addEventListener('input', function (event) {
+      app.scrubPlayback(parseInt(event.target.value, 10) || 0);
+    });
+    $('playbackEnterBtn').addEventListener('click', function () {
+      app.enterPlayback();
+    });
+    $('playbackExitBtn').addEventListener('click', function () {
+      app.exitPlayback();
+    });
+    $('playbackPrevBtn').addEventListener('click', function () {
+      app.stepPlayback(-1);
+    });
+    $('playbackPlayBtn').addEventListener('click', function () {
+      app.togglePlaybackRun();
+    });
+    $('playbackNextBtn').addEventListener('click', function () {
+      app.stepPlayback(1);
+    });
+    $('playbackLatestBtn').addEventListener('click', function () {
+      app.jumpPlaybackLatest();
+    });
     $('tForceLabels').addEventListener('click', function () { app.cfg.analysis.forceLabels = !app.cfg.analysis.forceLabels; setToggle($('tForceLabels'), app.cfg.analysis.forceLabels); });
     $('tRuler').addEventListener('click', function () { app.cfg.analysis.ruler = !app.cfg.analysis.ruler; setToggle($('tRuler'), app.cfg.analysis.ruler); });
     $('tImpactMarkers').addEventListener('click', function () { app.cfg.analysis.impacts = !app.cfg.analysis.impacts; setToggle($('tImpactMarkers'), app.cfg.analysis.impacts); });
@@ -857,6 +952,7 @@
     syncScenarioControls(app);
     applyLayoutState(app, false);
     updateStaticPanels(app);
+    syncPlaybackControls(app);
   }
 
   window.WindSimUI = {
@@ -868,6 +964,7 @@
     syncGeometryControls: syncGeometryControls,
     refreshSavedScenarioSelect: refreshSavedScenarioSelect,
     drawGraph: drawGraph,
-    setOverlay: setOverlay
+    setOverlay: setOverlay,
+    syncPlaybackControls: syncPlaybackControls
   };
 }());

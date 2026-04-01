@@ -34,6 +34,7 @@
 
   const SURFACE_WORLD_TILE = 32;
   const GRID_WORLD_TILE = 40;
+  const PLAYBACK_MAX_FRAMES = 6000;
 
   function rgbFromHex(hexValue) {
     return {
@@ -53,6 +54,14 @@
 
   function rgba(rgb, alpha) {
     return 'rgba(' + rgb.r + ',' + rgb.g + ',' + rgb.b + ',' + alpha + ')';
+  }
+
+  function copyVec3(target, source) {
+    return target.set(source.x, source.y, source.z);
+  }
+
+  function lengthVec3(source) {
+    return Math.hypot(source.x, source.y, source.z);
   }
 
   const SIM_COLORS = {
@@ -178,7 +187,15 @@
       currentTrail: [],
       comparisonTrail: [],
       validation: null,
-      body: null
+      body: null,
+      playback: {
+        frames: [],
+        active: false,
+        playing: false,
+        frameIndex: -1,
+        cursorTime: 0,
+        lastCaptureTime: -1
+      }
     },
     render: {
       mainEl: $('main'),
@@ -245,6 +262,192 @@
     app.solver = solver;
     if (app.cfg) app.cfg.solverKey = solver.key;
     return solver;
+  }
+
+  function resetPlaybackState() {
+    app.state.playback.frames = [];
+    app.state.playback.active = false;
+    app.state.playback.playing = false;
+    app.state.playback.frameIndex = -1;
+    app.state.playback.cursorTime = 0;
+    app.state.playback.lastCaptureTime = -1;
+  }
+
+  function snapshotVec3(source) {
+    return { x: source.x, y: source.y, z: source.z };
+  }
+
+  function snapshotQuat(source) {
+    return { x: source.x, y: source.y, z: source.z, w: source.w };
+  }
+
+  function snapshotBody(body) {
+    return {
+      pos: snapshotVec3(body.pos),
+      vel: snapshotVec3(body.vel),
+      q: snapshotQuat(body.q),
+      omegaBody: snapshotVec3(body.omegaBody),
+      omegaWorld: snapshotVec3(body.omegaWorld),
+      acc: snapshotVec3(body.acc),
+      launchPos: snapshotVec3(body.launchPos),
+      supportY: body.supportY,
+      metrics: Object.assign({}, body.metrics),
+      forces: {
+        drag: snapshotVec3(body.forces.drag),
+        lift: snapshotVec3(body.forces.lift),
+        side: snapshotVec3(body.forces.side),
+        magnus: snapshotVec3(body.forces.magnus),
+        gravity: snapshotVec3(body.forces.gravity),
+        net: snapshotVec3(body.forces.net)
+      }
+    };
+  }
+
+  function capturePlaybackFrame(force) {
+    const playback = app.state.playback;
+    const body = app.state.body;
+    if (!body) return;
+    if (!force && playback.lastCaptureTime >= 0 && app.state.time - playback.lastCaptureTime < 1 / D.TRATE) return;
+
+    const frame = {
+      time: app.state.time,
+      body: snapshotBody(body),
+      energy: Object.assign({}, app.state.energy || { aeroWork: 0, contactLoss: 0 }),
+      graph: {
+        time: app.state.time,
+        drag: body.metrics.drag,
+        lift: body.metrics.lift,
+        net: body.metrics.net,
+        aoa: body.metrics.aoa
+      }
+    };
+
+    playback.frames.push(frame);
+    playback.lastCaptureTime = app.state.time;
+
+    if (playback.frames.length > PLAYBACK_MAX_FRAMES) {
+      playback.frames.shift();
+      if (playback.active && playback.frameIndex > 0) playback.frameIndex -= 1;
+    }
+
+    if (!playback.active) {
+      playback.frameIndex = playback.frames.length - 1;
+      playback.cursorTime = frame.time;
+    }
+  }
+
+  function currentPlaybackFrame() {
+    const playback = app.state.playback;
+    if (!playback.active || playback.frameIndex < 0 || playback.frameIndex >= playback.frames.length) return null;
+    return playback.frames[playback.frameIndex];
+  }
+
+  function displayBody() {
+    const frame = currentPlaybackFrame();
+    return frame ? frame.body : app.state.body;
+  }
+
+  function displayEnergy() {
+    const frame = currentPlaybackFrame();
+    return frame ? frame.energy : app.state.energy;
+  }
+
+  function displayTime() {
+    const frame = currentPlaybackFrame();
+    return frame ? frame.time : app.state.time;
+  }
+
+  function displayForceHistory() {
+    const playback = app.state.playback;
+    if (!playback.active) return app.state.forceHistory;
+    return playback.frames.slice(0, playback.frameIndex + 1).map(function (frame) {
+      return frame.graph;
+    });
+  }
+
+  function displayImpacts() {
+    const frame = currentPlaybackFrame();
+    if (!frame) return app.state.impacts;
+    return app.state.impacts.filter(function (impact) {
+      return impact.time <= frame.time;
+    });
+  }
+
+  function setPlaybackFrameIndex(index) {
+    const playback = app.state.playback;
+    if (!playback.frames.length) {
+      playback.frameIndex = -1;
+      playback.cursorTime = 0;
+      return;
+    }
+    playback.frameIndex = clamp(index, 0, playback.frames.length - 1);
+    playback.cursorTime = playback.frames[playback.frameIndex].time;
+  }
+
+  function enterPlayback(index) {
+    const playback = app.state.playback;
+    if (!playback.frames.length) return;
+    app.state.paused = true;
+    playback.active = true;
+    playback.playing = false;
+    setPlaybackFrameIndex(index == null ? playback.frames.length - 1 : index);
+  }
+
+  function exitPlayback() {
+    const playback = app.state.playback;
+    playback.active = false;
+    playback.playing = false;
+    if (playback.frames.length) {
+      playback.frameIndex = playback.frames.length - 1;
+      playback.cursorTime = playback.frames[playback.frameIndex].time;
+    } else {
+      playback.frameIndex = -1;
+      playback.cursorTime = 0;
+    }
+  }
+
+  function scrubPlayback(index) {
+    if (!app.state.playback.frames.length) return;
+    if (!app.state.playback.active) enterPlayback(index);
+    else setPlaybackFrameIndex(index);
+  }
+
+  function stepPlayback(delta) {
+    if (!app.state.playback.frames.length) return;
+    if (!app.state.playback.active) enterPlayback(app.state.playback.frames.length - 1);
+    app.state.playback.playing = false;
+    setPlaybackFrameIndex(app.state.playback.frameIndex + delta);
+  }
+
+  function jumpPlaybackLatest() {
+    if (!app.state.playback.frames.length) return;
+    if (!app.state.playback.active) enterPlayback(app.state.playback.frames.length - 1);
+    app.state.playback.playing = false;
+    setPlaybackFrameIndex(app.state.playback.frames.length - 1);
+  }
+
+  function togglePlaybackRun() {
+    const playback = app.state.playback;
+    if (!playback.frames.length) return;
+    if (!playback.active) {
+      enterPlayback(playback.frameIndex >= 0 ? playback.frameIndex : 0);
+    }
+    if (playback.frameIndex >= playback.frames.length - 1) setPlaybackFrameIndex(0);
+    playback.playing = !playback.playing;
+  }
+
+  function updatePlayback(dt) {
+    const playback = app.state.playback;
+    if (!playback.active || !playback.playing || playback.frames.length < 2) return;
+    playback.cursorTime += dt;
+    while (playback.frameIndex < playback.frames.length - 1 && playback.frames[playback.frameIndex + 1].time <= playback.cursorTime) {
+      playback.frameIndex += 1;
+    }
+    if (playback.frameIndex >= playback.frames.length - 1) {
+      playback.frameIndex = playback.frames.length - 1;
+      playback.cursorTime = playback.frames[playback.frameIndex].time;
+      playback.playing = false;
+    }
   }
 
   function currentDef() {
@@ -902,7 +1105,7 @@
   }
 
   function updateGround() {
-    const body = app.state.body;
+    const body = displayBody();
     if (!body) return;
     const gx = Math.round(body.pos.x / D.FLOOR_STEP) * D.FLOOR_STEP;
     const gz = Math.round(body.pos.z / D.FLOOR_STEP) * D.FLOOR_STEP;
@@ -1141,7 +1344,8 @@
   function syncTrails() {
     const def = currentDef();
     const color = new THREE.Color(def.col);
-    const current = app.state.currentTrail;
+    const playback = app.state.playback;
+    const current = playback.active ? playback.frames.slice(0, playback.frameIndex + 1).map(function (frame) { return frame.body.pos; }) : app.state.currentTrail;
     const currentCount = Math.min(current.length, D.TRAIL_MAX);
     if (!app.cfg.env.trail || currentCount < 2) {
       app.render.trailLine.visible = false;
@@ -1184,7 +1388,7 @@
   }
 
   function syncRuler() {
-    const body = app.state.body;
+    const body = displayBody();
     const visible = !!app.cfg.analysis.ruler;
     app.render.rulerLine.visible = visible;
     app.render.heightLine.visible = visible;
@@ -1211,12 +1415,12 @@
     projectPoint(tmpA, screen);
     app.ui.rulerLabel.style.color = SIM_COLOR_HEX.ruler;
     app.ui.rulerLabel.style.borderColor = 'rgba(116,211,255,0.26)';
-    app.ui.rulerLabel.textContent = 'Range ' + body.pos.distanceTo(body.launchPos).toFixed(1) + ' m | Y ' + Math.max(0, body.pos.y).toFixed(1) + ' m';
+    app.ui.rulerLabel.textContent = 'Range ' + Math.hypot(body.pos.x - body.launchPos.x, body.pos.y - body.launchPos.y, body.pos.z - body.launchPos.z).toFixed(1) + ' m | Y ' + Math.max(0, body.pos.y).toFixed(1) + ' m';
     UI.setOverlay(app.ui.rulerLabel, screen.x, screen.y, screen.visible);
   }
 
   function syncImpactMarkers() {
-    const impacts = app.cfg.analysis.impacts ? app.state.impacts : [];
+    const impacts = app.cfg.analysis.impacts ? displayImpacts() : [];
     const stamp = impacts.length ? impacts.length + ':' + impacts[impacts.length - 1].time.toFixed(3) : '0';
     if (stamp === app.render.lastImpactStamp) {
       app.render.impactGroup.visible = !!app.cfg.analysis.impacts;
@@ -1245,6 +1449,12 @@
   }
 
   function syncStatus() {
+    if (app.state.playback.active) {
+      $('pauseBtn').textContent = 'Resume Live';
+      $('sTxt').textContent = 'PLAYBACK';
+      $('sTxt').className = 'sp';
+      return;
+    }
     $('pauseBtn').textContent = app.state.paused ? 'Resume' : 'Pause';
     if (app.state.validation && !app.state.validation.result && !app.state.paused) {
       $('sTxt').textContent = 'VALIDATING';
@@ -1270,7 +1480,7 @@
     if (!validation.result) {
       app.ui.validationPill.textContent = 'VALIDATION RUNNING';
       app.ui.validationPill.style.color = 'var(--amber)';
-      app.ui.validationReport.textContent = validation.label + '\n' + 'time: ' + app.state.time.toFixed(2) + ' / ' + validation.endTime.toFixed(2) + ' s';
+      app.ui.validationReport.textContent = validation.label + '\n' + 'time: ' + displayTime().toFixed(2) + ' / ' + validation.endTime.toFixed(2) + ' s';
       return;
     }
     const pass = validation.result.passed === validation.result.total;
@@ -1320,7 +1530,7 @@
   }
 
   function positionCamera() {
-    const body = app.state.body;
+    const body = displayBody();
     if (!body) return;
     app.render.target.set(
       (app.cfg.camera.follow ? body.pos.x : 0) + app.render.pan.x,
@@ -1339,10 +1549,10 @@
   }
 
   function updateLighting() {
-    const body = app.state.body;
+    const body = displayBody();
     if (!body) return;
     const windBlend = clamp(app.render.bodyWind.length() / 60, 0, 1);
-    const speedBlend = clamp(body.vel.length() / 26, 0, 1);
+    const speedBlend = clamp(lengthVec3(body.vel) / 26, 0, 1);
     app.render.lights.dir.intensity = 1.10 + windBlend * 0.28;
     app.render.lights.hemi.intensity = 0.56 + windBlend * 0.12;
     app.render.lights.rim.intensity = 0.60 + speedBlend * 0.28;
@@ -1354,19 +1564,19 @@
   }
 
   function refreshScene() {
-    const body = app.state.body;
+    const body = displayBody();
     const def = currentDef();
     if (!body) return;
     updateGround();
-    app.render.objectPivot.position.copy(body.pos);
-    app.render.objectPivot.quaternion.copy(body.q);
+    app.render.objectPivot.position.set(body.pos.x, body.pos.y, body.pos.z);
+    app.render.objectPivot.quaternion.set(body.q.x, body.q.y, body.q.z, body.q.w);
     app.render.bodyWind.copy(app.solver.sampleWindAt(app, body.pos));
     tmpA.copy(app.render.bodyWind).sub(body.vel);
     if (app.cfg.env.force && tmpA.lengthSq() > 1e-4 && body.metrics.drag > 1e-5) setArrow('drag', body.pos, tmpA, Math.min(body.metrics.drag / def.mass * 1.25, 10)); else app.render.arrowState.drag.visible = app.render.arrows.drag.visible = false;
     if (app.cfg.env.force && app.cfg.env.grav) setArrow('grav', body.pos, tmpB.set(0, -1, 0), Math.min(D.GRAV * 0.3, 5)); else app.render.arrowState.grav.visible = app.render.arrows.grav.visible = false;
-    if (app.cfg.env.force && body.vel.lengthSq() > 0.0025) setArrow('vel', body.pos, body.vel, Math.min(body.vel.length() * 0.5, 8)); else app.render.arrowState.vel.visible = app.render.arrows.vel.visible = false;
-    if (app.cfg.env.force && app.cfg.env.magnus && body.forces.magnus.lengthSq() > 1e-8) setArrow('magnus', body.pos, body.forces.magnus, Math.min(body.forces.magnus.length() / def.mass * 1.2, 8)); else app.render.arrowState.magnus.visible = app.render.arrows.magnus.visible = false;
-    if (app.cfg.env.spinViz && app.cfg.env.rotation && body.omegaWorld.lengthSq() > 0.1225) setArrow('spin', body.pos, body.omegaWorld, Math.min(body.omegaWorld.length() / D.TAU * 1.35, 7)); else app.render.arrowState.spin.visible = app.render.arrows.spin.visible = false;
+    if (app.cfg.env.force && (body.vel.x * body.vel.x + body.vel.y * body.vel.y + body.vel.z * body.vel.z) > 0.0025) setArrow('vel', body.pos, body.vel, Math.min(lengthVec3(body.vel) * 0.5, 8)); else app.render.arrowState.vel.visible = app.render.arrows.vel.visible = false;
+    if (app.cfg.env.force && app.cfg.env.magnus && (body.forces.magnus.x * body.forces.magnus.x + body.forces.magnus.y * body.forces.magnus.y + body.forces.magnus.z * body.forces.magnus.z) > 1e-8) setArrow('magnus', body.pos, body.forces.magnus, Math.min(lengthVec3(body.forces.magnus) / def.mass * 1.2, 8)); else app.render.arrowState.magnus.visible = app.render.arrows.magnus.visible = false;
+    if (app.cfg.env.spinViz && app.cfg.env.rotation && (body.omegaWorld.x * body.omegaWorld.x + body.omegaWorld.y * body.omegaWorld.y + body.omegaWorld.z * body.omegaWorld.z) > 0.1225) setArrow('spin', body.pos, body.omegaWorld, Math.min(lengthVec3(body.omegaWorld) / D.TAU * 1.35, 7)); else app.render.arrowState.spin.visible = app.render.arrows.spin.visible = false;
     syncTrails();
     syncRuler();
     syncImpactMarkers();
@@ -1399,11 +1609,13 @@
     app.cfg = normalizeScenario(source);
     bindSolver(app.cfg.solverKey);
     app.state.paused = false;
+    resetPlaybackState();
     setObjectVisual();
     refreshSurface();
     updateChamber();
     updateFov();
     app.solver.resetSimulationState(app);
+    capturePlaybackFrame(true);
     setParticleSize();
     initParticles();
     syncCameraInputs();
@@ -1421,7 +1633,9 @@
   }
 
   function resetObject() {
+    resetPlaybackState();
     app.solver.resetSimulationState(app);
+    capturePlaybackFrame(true);
     setObjectVisual();
     UI.updateStaticPanels(app);
     UI.updateDynamicPanels(app);
@@ -1456,6 +1670,12 @@
   }
 
   function togglePause() {
+    if (app.state.playback.active) {
+      exitPlayback();
+      app.state.paused = false;
+      syncStatus();
+      return;
+    }
     app.state.paused = !app.state.paused;
     syncStatus();
   }
@@ -1480,6 +1700,7 @@
     app.state.telemetry = [];
     app.state.lastTelemetry = -1;
     app.state.forceHistory = [];
+    resetPlaybackState();
     $('tcount').textContent = '0 data points recorded';
   }
 
@@ -1510,7 +1731,7 @@
       app.render.pan.set(0, 2, 0);
     }
     updateFov();
-    if (app.state.body) app.render.focus.set(app.state.body.pos.x, Math.max(1.2, app.state.body.pos.y * 0.55 + app.render.pan.y), app.state.body.pos.z);
+    if (displayBody()) app.render.focus.set(displayBody().pos.x, Math.max(1.2, displayBody().pos.y * 0.55 + app.render.pan.y), displayBody().pos.z);
     syncCameraInputs();
   }
 
@@ -1572,6 +1793,22 @@
         togglePause();
         return;
       }
+      if (app.state.playback.active && event.code === 'ArrowLeft') {
+        event.preventDefault();
+        stepPlayback(-1);
+        return;
+      }
+      if (app.state.playback.active && event.code === 'ArrowRight') {
+        event.preventDefault();
+        stepPlayback(1);
+        return;
+      }
+      if (app.state.playback.active && event.code === 'Escape') {
+        event.preventDefault();
+        exitPlayback();
+        syncStatus();
+        return;
+      }
       if (event.code === 'KeyR') {
         resetObject();
         return;
@@ -1591,7 +1828,11 @@
     updateCameraKeys(dt);
     if (!app.state.paused && dt > 0) {
       app.solver.step(app, dt);
+      capturePlaybackFrame(false);
       updateParticles(dt);
+    } else if (app.state.playback.active) {
+      updatePlayback(dt);
+      updateParticles(0);
     } else {
       updateParticles(0);
     }
@@ -1601,6 +1842,7 @@
     refreshForceLabels();
     UI.updateDynamicPanels(app);
     UI.drawGraph(app);
+    UI.syncPlaybackControls(app);
     syncValidationUi();
     syncStatus();
     app.render.renderer.render(app.render.scene, app.render.camera);
@@ -1619,6 +1861,14 @@
   app.resetCamera = resetCamera;
   app.updateObjectScale = updateObjectScale;
   app.resizeRenderer = resizeRenderer;
+  app.enterPlayback = enterPlayback;
+  app.exitPlayback = exitPlayback;
+  app.stepPlayback = stepPlayback;
+  app.scrubPlayback = scrubPlayback;
+  app.togglePlaybackRun = togglePlaybackRun;
+  app.jumpPlaybackLatest = jumpPlaybackLatest;
+  app.getDisplayFrame = currentPlaybackFrame;
+  app.getDisplayForceHistory = displayForceHistory;
 
   setupRenderer();
   initGeometryLayers();

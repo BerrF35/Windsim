@@ -80,6 +80,15 @@ These checks should pass on every meaningful change.
 - Mounted mode still shows meaningful drag / lift / net-force graph updates while the object remains fixed.
 - Force arrows remain color coded and legible.
 
+### Playback
+
+- Recorded timeline accumulates after a run starts.
+- Playback slider scrubs through recorded frames.
+- Prev / Next frame stepping works.
+- Playback play / pause runs through recorded frames without resuming live simulation.
+- Exit playback returns to the latest live state.
+- Graph and HUD values follow the playback frame instead of the latest live state while playback is active.
+
 ### Persistence
 
 - Scenario save works.

@@ -358,8 +358,9 @@ Current status:
   - reduced-order physics audit added
   - explicit sandbox solver registry and app-bound solver contract added
   - mounted wind-tunnel test mode added to the sandbox solver path
+  - recorded playback timeline with scrubbing and frame stepping added
 - Next milestone:
-  - add timeline scrubbing / playback and then begin controlled experiment tooling on top of the mounted solver workflow
+  - build controlled experiment tooling on top of mounted mode and playback, starting with repeatable sweep runs and comparison workflows
 
 When work advances, this section must be updated with:
 
