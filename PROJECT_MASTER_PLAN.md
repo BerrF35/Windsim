@@ -359,8 +359,9 @@ Current status:
   - explicit sandbox solver registry and app-bound solver contract added
   - mounted wind-tunnel test mode added to the sandbox solver path
   - recorded playback timeline with scrubbing and frame stepping added
+  - mounted sweep experiment panel added for repeatable reduced-order comparisons
 - Next milestone:
-  - build controlled experiment tooling on top of mounted mode and playback, starting with repeatable sweep runs and comparison workflows
+  - extend experiment tooling into comparison workflows and more structured result management before moving toward field-visualization work
 
 When work advances, this section must be updated with:
 

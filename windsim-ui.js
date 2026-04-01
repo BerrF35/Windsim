@@ -39,6 +39,14 @@
     return Math.hypot(source.x, source.y, source.z);
   }
 
+  const EXPERIMENT_FIELDS = [
+    { value: 'wind_speed', label: 'Wind Speed' },
+    { value: 'wind_heading', label: 'Wind Heading' },
+    { value: 'wind_elevation', label: 'Wind Elevation' },
+    { value: 'altitude', label: 'Altitude' },
+    { value: 'mode_strength', label: 'Mode Strength' }
+  ];
+
   function setToggle(el, on) {
     if (!el) return;
     el.classList.toggle('on', !!on);
@@ -287,6 +295,14 @@
         '<div class="scenario-row"><button class="btn btn-d" id="playbackNextBtn">Next</button><button class="btn btn-d" id="playbackLatestBtn">Latest</button></div>',
         '<div class="measure-kbd">Arrow Left / Right step frames. Escape exits playback.</div>',
         '</div></details>',
+        '<details><summary>Experiment</summary><div class="sec-body">',
+        '<div class="ctl"><div class="ctl-row"><span class="ctl-lbl">Sweep Variable</span></div><select id="sweepVarSelect"></select></div>',
+        '<div class="scenario-row"><div class="ctl"><div class="ctl-row"><span class="ctl-lbl">Start</span></div><input class="num-input" id="sweepStartInput" type="number" value="0" step="0.1"></div><div class="ctl"><div class="ctl-row"><span class="ctl-lbl">End</span></div><input class="num-input" id="sweepEndInput" type="number" value="40" step="0.1"></div></div>',
+        '<div class="ctl"><div class="ctl-row"><span class="ctl-lbl">Steps</span></div><input class="num-input" id="sweepStepsInput" type="number" value="9" min="1" max="41" step="1"></div>',
+        '<div class="scenario-row"><button class="btn btn-g" id="runSweepBtn">Run Sweep</button><button class="btn btn-d" id="exportSweepBtn">Export Sweep</button></div>',
+        '<div class="report-box" id="experimentReport">No sweep run.</div>',
+        '<div class="mini-note">Sweep uses instantaneous mounted reduced-order samples with the object fixed. This is not CFD and not a time-averaged tunnel solution.</div>',
+        '</div></details>',
         '<details><summary>Workspace</summary><div class="sec-body">',
         '<button class="btn btn-d" id="resetLayoutBtn">Reset Layout</button>',
         '<div class="mini-note">Use the highlighted center divider, the telemetry grip above the bottom strip, and the panel corners to resize the workspace.</div>',
@@ -363,6 +379,7 @@
     populateSelect($('windModeSelect'), Object.keys(D.WIND_MODES).map(function (key) {
       return { value: key, label: D.WIND_MODES[key].label };
     }));
+    populateSelect($('sweepVarSelect'), EXPERIMENT_FIELDS);
     populateSelect($('validationSelect'), [{ value: '', label: 'Select Validation Case' }].concat(Object.keys(D.VALIDATION_CASES).map(function (key) {
       return { value: key, label: D.VALIDATION_CASES[key].label };
     })));
@@ -458,6 +475,33 @@
     setToggle($('tGraph'), cfg.analysis.graph);
     setToggle($('tCompareTrail'), cfg.analysis.compare);
     syncGeometryControls(app);
+  }
+
+  function syncExperimentPanel(app) {
+    const experiment = app.state.experiment;
+    const report = $('experimentReport');
+    function formatCoeff(value) {
+      return Number.isFinite(value) ? value.toFixed(3) : 'n/a';
+    }
+    $('sweepVarSelect').value = experiment.variable;
+    $('sweepStartInput').value = String(experiment.start);
+    $('sweepEndInput').value = String(experiment.end);
+    $('sweepStepsInput').value = String(experiment.steps);
+    $('exportSweepBtn').disabled = !experiment.rows.length;
+
+    if (!experiment.rows.length) {
+      report.textContent = 'No sweep run.';
+      return;
+    }
+
+    const lines = experiment.rows.map(function (row) {
+      return row.sweep_value.toFixed(2) + ' ' + row.sweep_unit +
+        ' | drag ' + row.drag_N.toFixed(3) +
+        ' N | lift ' + row.lift_N.toFixed(3) +
+        ' N | Cd ' + formatCoeff(row.cd_current) +
+        ' | Re ' + (row.reynolds > 1e6 ? (row.reynolds / 1e6).toFixed(2) + 'M' : (row.reynolds > 1e3 ? (row.reynolds / 1e3).toFixed(1) + 'k' : row.reynolds.toFixed(0)));
+    });
+    report.textContent = 'Mounted sweep: ' + experiment.variable + '\n' + 'rows: ' + experiment.rows.length + '\n\n' + lines.join('\n');
   }
 
   function syncGeometryControls(app) {
@@ -915,6 +959,29 @@
     $('playbackLatestBtn').addEventListener('click', function () {
       app.jumpPlaybackLatest();
     });
+    $('sweepVarSelect').addEventListener('change', function () {
+      app.state.experiment.variable = $('sweepVarSelect').value;
+    });
+    $('sweepStartInput').addEventListener('change', function () {
+      app.state.experiment.start = parseFloat($('sweepStartInput').value) || 0;
+    });
+    $('sweepEndInput').addEventListener('change', function () {
+      app.state.experiment.end = parseFloat($('sweepEndInput').value) || 0;
+    });
+    $('sweepStepsInput').addEventListener('change', function () {
+      app.state.experiment.steps = Math.max(1, Math.min(41, parseInt($('sweepStepsInput').value, 10) || 1));
+    });
+    $('runSweepBtn').addEventListener('click', function () {
+      app.runMountedSweep({
+        variable: $('sweepVarSelect').value,
+        start: parseFloat($('sweepStartInput').value) || 0,
+        end: parseFloat($('sweepEndInput').value) || 0,
+        steps: parseInt($('sweepStepsInput').value, 10) || 1
+      });
+    });
+    $('exportSweepBtn').addEventListener('click', function () {
+      app.exportMountedSweepCSV();
+    });
     $('tForceLabels').addEventListener('click', function () { app.cfg.analysis.forceLabels = !app.cfg.analysis.forceLabels; setToggle($('tForceLabels'), app.cfg.analysis.forceLabels); });
     $('tRuler').addEventListener('click', function () { app.cfg.analysis.ruler = !app.cfg.analysis.ruler; setToggle($('tRuler'), app.cfg.analysis.ruler); });
     $('tImpactMarkers').addEventListener('click', function () { app.cfg.analysis.impacts = !app.cfg.analysis.impacts; setToggle($('tImpactMarkers'), app.cfg.analysis.impacts); });
@@ -953,6 +1020,7 @@
     applyLayoutState(app, false);
     updateStaticPanels(app);
     syncPlaybackControls(app);
+    syncExperimentPanel(app);
   }
 
   window.WindSimUI = {
@@ -965,6 +1033,7 @@
     refreshSavedScenarioSelect: refreshSavedScenarioSelect,
     drawGraph: drawGraph,
     setOverlay: setOverlay,
-    syncPlaybackControls: syncPlaybackControls
+    syncPlaybackControls: syncPlaybackControls,
+    syncExperimentPanel: syncExperimentPanel
   };
 }());

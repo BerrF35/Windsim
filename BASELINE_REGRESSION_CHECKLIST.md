@@ -89,6 +89,14 @@ These checks should pass on every meaningful change.
 - Exit playback returns to the latest live state.
 - Graph and HUD values follow the playback frame instead of the latest live state while playback is active.
 
+### Experiment
+
+- Sweep panel renders.
+- Sweep runs produce rows in the report box.
+- Sweep export produces CSV when rows exist.
+- Sweep results reflect the selected variable range and step count.
+- Sweep remains labeled as mounted reduced-order sampling rather than CFD output.
+
 ### Persistence
 
 - Scenario save works.

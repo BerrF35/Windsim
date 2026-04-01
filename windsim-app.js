@@ -35,6 +35,38 @@
   const SURFACE_WORLD_TILE = 32;
   const GRID_WORLD_TILE = 40;
   const PLAYBACK_MAX_FRAMES = 6000;
+  const SWEEP_FIELDS = {
+    wind_speed: {
+      label: 'Wind Speed',
+      unit: 'm/s',
+      read: function (cfg) { return cfg.wind.speed; },
+      write: function (cfg, value) { cfg.wind.speed = value; }
+    },
+    wind_heading: {
+      label: 'Wind Heading',
+      unit: 'deg',
+      read: function (cfg) { return cfg.wind.azim; },
+      write: function (cfg, value) { cfg.wind.azim = P.wrap360(value); }
+    },
+    wind_elevation: {
+      label: 'Wind Elevation',
+      unit: 'deg',
+      read: function (cfg) { return cfg.wind.elev; },
+      write: function (cfg, value) { cfg.wind.elev = value; }
+    },
+    altitude: {
+      label: 'Altitude',
+      unit: 'm',
+      read: function (cfg) { return cfg.altitude; },
+      write: function (cfg, value) { cfg.altitude = value; }
+    },
+    mode_strength: {
+      label: 'Mode Strength',
+      unit: '%',
+      read: function (cfg) { return cfg.wind.modeStrength; },
+      write: function (cfg, value) { cfg.wind.modeStrength = value; }
+    }
+  };
 
   function rgbFromHex(hexValue) {
     return {
@@ -188,6 +220,13 @@
       comparisonTrail: [],
       validation: null,
       body: null,
+      experiment: {
+        variable: 'wind_speed',
+        start: 0,
+        end: 40,
+        steps: 9,
+        rows: []
+      },
       playback: {
         frames: [],
         active: false,
@@ -452,6 +491,10 @@
 
   function currentDef() {
     return app.solver.resolveObjectDef(app.cfg.objKey, app.cfg);
+  }
+
+  function sweepField(key) {
+    return SWEEP_FIELDS[key] || SWEEP_FIELDS.wind_speed;
   }
 
   function makeCanvasTexture(cache, key, painter) {
@@ -1704,6 +1747,57 @@
     $('tcount').textContent = '0 data points recorded';
   }
 
+  function runMountedSweep(options) {
+    const variable = options && SWEEP_FIELDS[options.variable] ? options.variable : app.state.experiment.variable;
+    const field = sweepField(variable);
+    const start = Number.isFinite(options && options.start) ? options.start : app.state.experiment.start;
+    const end = Number.isFinite(options && options.end) ? options.end : app.state.experiment.end;
+    const steps = clamp(Math.round(Number.isFinite(options && options.steps) ? options.steps : app.state.experiment.steps), 1, 41);
+    const rows = [];
+
+    for (let i = 0; i < steps; i += 1) {
+      const t = steps === 1 ? 0 : i / (steps - 1);
+      const value = steps === 1 ? start : THREE.MathUtils.lerp(start, end, t);
+      const cfg = deepClone(app.cfg);
+      cfg.solverKey = app.solver.key;
+      cfg.testMode = 'mounted';
+      field.write(cfg, value);
+      const sample = app.solver.sampleMountedLoads(cfg);
+      rows.push(Object.assign({
+        sweep_variable: variable,
+        sweep_label: field.label,
+        sweep_unit: field.unit,
+        sweep_value: value,
+        object: currentDef().label,
+        wind_mode: cfg.wind.mode
+      }, sample));
+    }
+
+    app.state.experiment.variable = variable;
+    app.state.experiment.start = start;
+    app.state.experiment.end = end;
+    app.state.experiment.steps = steps;
+    app.state.experiment.rows = rows;
+    if (UI.syncExperimentPanel) UI.syncExperimentPanel(app);
+  }
+
+  function exportMountedSweepCSV() {
+    const rows = app.state.experiment.rows;
+    if (!rows.length) {
+      window.alert('Run a sweep first.');
+      return;
+    }
+    const header = Object.keys(rows[0]).join(',');
+    const body = rows.map(function (row) { return Object.values(row).join(','); }).join('\n');
+    const blob = new Blob(['# WindSim Mounted Sweep\n# ' + new Date().toISOString() + '\n# Instantaneous mounted reduced-order samples\n' + header + '\n' + body], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'windsim_sweep_' + app.cfg.objKey + '_' + Date.now() + '.csv';
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
   function downloadCSV() {
     if (!app.state.telemetry.length) {
       window.alert('Run the simulation first to record data.');
@@ -1869,6 +1963,8 @@
   app.jumpPlaybackLatest = jumpPlaybackLatest;
   app.getDisplayFrame = currentPlaybackFrame;
   app.getDisplayForceHistory = displayForceHistory;
+  app.runMountedSweep = runMountedSweep;
+  app.exportMountedSweepCSV = exportMountedSweepCSV;
 
   setupRenderer();
   initGeometryLayers();

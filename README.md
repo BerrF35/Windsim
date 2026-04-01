@@ -23,6 +23,7 @@ The current build includes a full 3D scene, a large continuous test space, objec
 - Visual overlays for velocity, drag, gravity, Magnus force, trails, particles, and spin axis
 - Mounted wind-tunnel mode for fixed-position force inspection inside the reduced-order solver
 - Recorded playback timeline with scrubbing and frame stepping for run inspection
+- Mounted sweep tool for repeatable reduced-order comparisons across wind and environment ranges
 - Free camera movement with orbit, pan, zoom, follow mode, and adjustable cinematic response
 - Preset scenarios for quick comparisons between calm tests, crosswinds, storms, high-altitude runs, spin-heavy launches, and cargo drops
 - CSV telemetry export for analysis outside the app

@@ -957,6 +957,39 @@
     updateValidation(app);
   }
 
+  function sampleMountedLoads(config) {
+    const cfg = deepClone(config);
+    cfg.testMode = 'mounted';
+    const def = resolveObjectDef(cfg.objKey, cfg);
+    const tempApp = {
+      cfg: cfg,
+      state: {
+        time: 0,
+        body: createBody(def, cfg),
+        energy: { aeroWork: 0, contactLoss: 0 },
+        impacts: [],
+        forceHistory: [],
+        currentTrail: [],
+        comparisonTrail: [],
+        validation: null
+      }
+    };
+    aerodynamicStep(tempApp, 1 / D.TRATE);
+    const metrics = tempApp.state.body.metrics;
+    const hasDefinedCoefficients = metrics.Re > 1;
+    return {
+      drag_N: metrics.drag,
+      lift_N: metrics.lift,
+      net_force_N: metrics.net,
+      cd_current: hasDefinedCoefficients ? metrics.Cd : null,
+      cl_current: hasDefinedCoefficients ? metrics.Cl : null,
+      cm_current: hasDefinedCoefficients ? metrics.Cm : null,
+      aoa_deg: hasDefinedCoefficients ? metrics.aoa : null,
+      reynolds: metrics.Re,
+      rho_kgm3: metrics.rho
+    };
+  }
+
   window.WindSimPhysics = {
     wrap360: wrap360,
     headingSummary: headingSummary,
@@ -967,6 +1000,7 @@
     defaultScenarioSnapshot: defaultScenarioSnapshot,
     resetSimulationState: resetSimulationState,
     step: step,
+    sampleMountedLoads: sampleMountedLoads,
     sampleWindAt: sampleWindAt,
     supportExtentAlong: supportExtentAlong,
     projectedArea: projectedArea,

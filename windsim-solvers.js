@@ -34,6 +34,9 @@
       },
       step: function (app, dt) {
         return P.step(app, dt);
+      },
+      sampleMountedLoads: function (cfg) {
+        return P.sampleMountedLoads(cfg);
       }
     });
   }
