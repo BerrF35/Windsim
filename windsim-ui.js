@@ -238,6 +238,10 @@
         '<div class="tgl-row">Wall Collision<div class="tgl on" id="tWallCollision"></div></div>',
         '<div class="mini-note">Chamber collisions now include side walls, corners, floor, and ceiling.</div>',
         '</div></details>',
+        '<details><summary>Test Mode</summary><div class="sec-body">',
+        '<div class="tgl-row">Wind Tunnel Mount<div class="tgl" id="tMountedMode"></div></div>',
+        '<div class="mini-note" id="testModeNote">Mounted mode holds the object fixed at launch height and rest attitude. Launch velocity and spin inputs are ignored while aerodynamic loads are still computed.</div>',
+        '</div></details>',
         '<details><summary>Measurements</summary><div class="sec-body">',
         '<div class="tgl-row">Force Labels<div class="tgl on" id="tForceLabels"></div></div>',
         '<div class="tgl-row">Ruler<div class="tgl on" id="tRuler"></div></div>',
@@ -411,6 +415,7 @@
     setToggle($('tReCd'), cfg.env.reCd);
     setToggle($('tSpinViz'), cfg.env.spinViz);
     setToggle($('tWallCollision'), cfg.world.collision);
+    setToggle($('tMountedMode'), cfg.testMode === 'mounted');
     setToggle($('tForceLabels'), cfg.analysis.forceLabels);
     setToggle($('tRuler'), cfg.analysis.ruler);
     setToggle($('tImpactMarkers'), cfg.analysis.impacts);
@@ -810,6 +815,11 @@
     });
 
     $('tWallCollision').addEventListener('click', function () { app.cfg.world.collision = !app.cfg.world.collision; setToggle($('tWallCollision'), app.cfg.world.collision); });
+    $('tMountedMode').addEventListener('click', function () {
+      app.cfg.testMode = app.cfg.testMode === 'mounted' ? 'free' : 'mounted';
+      setToggle($('tMountedMode'), app.cfg.testMode === 'mounted');
+      app.resetObject();
+    });
     $('tForceLabels').addEventListener('click', function () { app.cfg.analysis.forceLabels = !app.cfg.analysis.forceLabels; setToggle($('tForceLabels'), app.cfg.analysis.forceLabels); });
     $('tRuler').addEventListener('click', function () { app.cfg.analysis.ruler = !app.cfg.analysis.ruler; setToggle($('tRuler'), app.cfg.analysis.ruler); });
     $('tImpactMarkers').addEventListener('click', function () { app.cfg.analysis.impacts = !app.cfg.analysis.impacts; setToggle($('tImpactMarkers'), app.cfg.analysis.impacts); });

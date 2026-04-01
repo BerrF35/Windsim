@@ -357,8 +357,9 @@ Current status:
   - baseline regression checklist added
   - reduced-order physics audit added
   - explicit sandbox solver registry and app-bound solver contract added
+  - mounted wind-tunnel test mode added to the sandbox solver path
 - Next milestone:
-  - continue decoupling app/runtime behavior from raw physics helpers and begin research-workflow foundations on top of the solver contract
+  - add timeline scrubbing / playback and then begin controlled experiment tooling on top of the mounted solver workflow
 
 When work advances, this section must be updated with:
 

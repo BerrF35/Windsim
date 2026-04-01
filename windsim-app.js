@@ -100,6 +100,7 @@
     const src = source || {};
 
     cfg.solverKey = src.solverKey || src.solver || cfg.solverKey;
+    if (src.testMode === 'mounted' || src.testMode === 'free') cfg.testMode = src.testMode;
     cfg.objKey = src.objKey || src.obj || cfg.objKey;
     cfg.surfKey = src.surfKey || src.surf || cfg.surfKey;
     cfg.altitude = num(src.altitude, cfg.altitude);
@@ -1247,6 +1248,11 @@
     $('pauseBtn').textContent = app.state.paused ? 'Resume' : 'Pause';
     if (app.state.validation && !app.state.validation.result && !app.state.paused) {
       $('sTxt').textContent = 'VALIDATING';
+      $('sTxt').className = 'sr';
+      return;
+    }
+    if (app.cfg.testMode === 'mounted' && !app.state.paused) {
+      $('sTxt').textContent = 'MOUNTED';
       $('sTxt').className = 'sr';
       return;
     }

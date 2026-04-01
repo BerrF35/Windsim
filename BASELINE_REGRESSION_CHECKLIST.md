@@ -64,6 +64,7 @@ These checks should pass on every meaningful change.
 - Wind sliders update live values.
 - Object selection resets and relaunches cleanly.
 - Surface changes update the environment.
+- Mounted wind-tunnel mode toggles cleanly and resets the body into fixed-position operation.
 - Chamber dimension changes update visible bounds.
 - Particle count and particle size controls work.
 - Simulation rate affects playback speed without freezing.
@@ -76,6 +77,7 @@ These checks should pass on every meaningful change.
 - Impact markers toggle works.
 - Graph toggle works.
 - Compare trail toggle works.
+- Mounted mode still shows meaningful drag / lift / net-force graph updates while the object remains fixed.
 - Force arrows remain color coded and legible.
 
 ### Persistence

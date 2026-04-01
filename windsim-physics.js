@@ -140,15 +140,23 @@
     return new Q4();
   }
 
+  function mountedMode(cfg) {
+    return cfg && cfg.testMode === 'mounted';
+  }
+
   function createBody(def, cfg) {
     const q = getRestQuaternion(def);
     const support = supportExtentAlong(def, q, AX_Y);
     const pos = new V3(0, Math.max(cfg.launch.h0, support), 0);
+    const mounted = mountedMode(cfg);
     return {
       pos: pos.clone(),
-      vel: new V3(cfg.launch.vx, cfg.launch.vy, cfg.launch.vz),
       q: q,
-      omegaBody: new V3(cfg.launch.omx * D.TAU, cfg.launch.omy * D.TAU, cfg.launch.omz * D.TAU),
+      mountPos: pos.clone(),
+      mountQuat: q.clone(),
+      mounted: mounted,
+      vel: mounted ? new V3() : new V3(cfg.launch.vx, cfg.launch.vy, cfg.launch.vz),
+      omegaBody: mounted ? new V3() : new V3(cfg.launch.omx * D.TAU, cfg.launch.omy * D.TAU, cfg.launch.omz * D.TAU),
       omegaWorld: new V3(),
       acc: new V3(),
       launchPos: pos.clone(),
@@ -190,6 +198,7 @@
     const source = preset || D.PRESETS.baseline;
     const cfg = {
       solverKey: source.solverKey || source.solver || 'sandbox',
+      testMode: source.testMode === 'mounted' ? 'mounted' : 'free',
       objKey: source.obj,
       surfKey: source.surf,
       altitude: source.altitude,
@@ -237,6 +246,7 @@
     return {
       version: 2,
       solver: app.cfg.solverKey || 'sandbox',
+      testMode: app.cfg.testMode || 'free',
       obj: app.cfg.objKey,
       surf: app.cfg.surfKey,
       altitude: app.cfg.altitude,
@@ -732,18 +742,28 @@
     body.metrics.aeroPower = tempH.copy(body.forces.drag).add(body.forces.lift).add(body.forces.side).add(body.forces.magnus).dot(body.vel);
     if (app.state.energy) app.state.energy.aeroWork += body.metrics.aeroPower * dt;
 
-    body.acc.copy(body.forces.net).multiplyScalar(1 / def.mass);
-    body.vel.addScaledVector(body.acc, dt);
-    body.pos.addScaledVector(body.vel, dt);
-
-    if (app.cfg.env.rotation) integrateAngular(body, body.torques.net, def, dt);
-    else {
+    if (mountedMode(app.cfg)) {
+      body.supportY = supportExtentAlong(def, body.mountQuat, AX_Y);
+      body.acc.set(0, 0, 0);
+      body.vel.set(0, 0, 0);
+      body.pos.copy(body.mountPos);
+      body.q.copy(body.mountQuat);
       body.omegaBody.set(0, 0, 0);
       body.omegaWorld.set(0, 0, 0);
-    }
+    } else {
+      body.acc.copy(body.forces.net).multiplyScalar(1 / def.mass);
+      body.vel.addScaledVector(body.acc, dt);
+      body.pos.addScaledVector(body.vel, dt);
 
-    applyWallContact(app, def);
-    applyGroundContact(app, def, dt);
+      if (app.cfg.env.rotation) integrateAngular(body, body.torques.net, def, dt);
+      else {
+        body.omegaBody.set(0, 0, 0);
+        body.omegaWorld.set(0, 0, 0);
+      }
+
+      applyWallContact(app, def);
+      applyGroundContact(app, def, dt);
+    }
 
     body.metrics.drag = body.forces.drag.length();
     body.metrics.lift = body.forces.lift.length();
@@ -790,6 +810,7 @@
       solver_key: app.cfg.solverKey,
       solver_label: solver.label,
       solver_class: solver.classification,
+      test_mode: app.cfg.testMode || 'free',
       field_model: solver.fieldModel,
       coupling_model: solver.couplingModel,
       integrator_model: solver.integrator,
@@ -927,8 +948,11 @@
     app.state.time += simDt;
     const subDt = simDt / D.SUB;
     for (let i = 0; i < D.SUB; i += 1) aerodynamicStep(app, subDt);
-    app.state.currentTrail.push(app.state.body.pos.clone());
-    if (app.state.currentTrail.length > app.cfg.visuals.trailMax) app.state.currentTrail.shift();
+    if (mountedMode(app.cfg)) app.state.currentTrail = [];
+    else {
+      app.state.currentTrail.push(app.state.body.pos.clone());
+      if (app.state.currentTrail.length > app.cfg.visuals.trailMax) app.state.currentTrail.shift();
+    }
     recordTelemetry(app);
     updateValidation(app);
   }
