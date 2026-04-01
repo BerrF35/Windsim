@@ -1,8 +1,10 @@
 # WindSim
 
+See [PROJECT_MASTER_PLAN.md](./PROJECT_MASTER_PLAN.md) for the persistent execution plan and long-term architecture roadmap.
+
 WindSim is a browser-based 3D aerodynamic sandbox for testing how different objects behave inside a controllable wind field. It combines a stylized real-time simulation space with adjustable airflow, altitude, turbulence, spin, bounce, and telemetry so you can watch motion, compare scenarios, and stress-test different launch conditions.
 
-Built as a single-file web project with plain HTML, CSS, and JavaScript, WindSim focuses on immediacy: change a parameter, relaunch an object, and read the result instantly.
+Built as a modular browser project with plain HTML, CSS, and JavaScript, WindSim focuses on immediacy: change a parameter, relaunch an object, and read the result instantly.
 
 ## Overview
 
@@ -68,7 +70,7 @@ The project is built to make the simulation legible while it is running. The cur
 
 ## Preset Scenarios
 
-The current build ships with six presets:
+The current build ships with eight presets:
 
 - Baseline Field Test
 - Crosswind Sports Test
@@ -76,6 +78,8 @@ The current build ships with six presets:
 - High Altitude Thin Air
 - Spin Lab
 - Heavy Cargo Drop
+- Vortex Lab
+- Wake Test
 
 These presets are intended as quick scenario snapshots rather than fixed game levels, making it easy to compare how object type, atmosphere, spin, and wind direction interact.
 
@@ -98,7 +102,7 @@ This makes the project useful not just as a visual sandbox, but also as a lightw
 
 - Frontend: HTML, CSS, JavaScript
 - Rendering: Three.js
-- Architecture: single-file browser app
+- Architecture: modular browser app split across `index.html`, `windsim-data.js`, `windsim-physics.js`, `windsim-ui.js`, and `windsim-app.js`
 - Visual assets: procedural canvas-generated textures
 - Data output: in-browser CSV export
 
