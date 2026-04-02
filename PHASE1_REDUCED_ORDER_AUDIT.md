@@ -169,6 +169,56 @@ Right now the app architecture is modular, but the solver itself is still a conc
 Required action:
 - extract a formal solver contract before starting any CFD-path implementation
 
+### F. Legacy inline archive still exists in `index.html`
+
+The modular app is now the active path, but `index.html` still contains a large disabled inline JavaScript archive from the pre-modular build.
+
+Interpretation:
+- it is not active runtime logic
+- it is still repo noise and a maintenance trap
+
+Required action:
+- remove the legacy inline archive after a final dependency check confirms nothing still references it
+
+### G. Repeatability is only partially closed
+
+The app already exposes a simulation seed and the reduced-order wind field uses seeded analytic functions.
+
+Current state:
+- scenarios and presets already carry `seed`
+- wind field turbulence / gust structure is seeded in `windsim-physics.js`
+- some renderer-side visuals still use `Math.random()` directly, especially particles
+- saved sweep IDs also still use `Math.random()`
+
+Interpretation:
+- deterministic research workflow is partly implemented, but full repeatability is not yet guaranteed across all layers
+
+Required action:
+- audit remaining random paths
+- move visual randomness that affects interpretation onto deterministic seeded streams where appropriate
+- keep purely cosmetic nondeterminism clearly separate if it remains
+
+### H. Boundary-layer realism is still simplified
+
+The app already has a `shear` wind mode, but that is not the same as a near-ground logarithmic wind profile / no-slip style boundary-layer model.
+
+Required action:
+- treat logarithmic wind profile as a separate realism feature, not as already solved by the current shear mode
+
+### I. Research comparison UX is still mostly single-viewport
+
+The app now supports sweep comparison and saved run comparison, but there is no active dual-sim split-screen view yet.
+
+Required action:
+- keep dual-sim / side-by-side comparison as a dedicated future workflow item rather than assuming current sweep tools fully cover it
+
+### J. Workspace resizing exists, detachment does not
+
+Panels and strips are resizable today, but they are not yet freely draggable or detachable into separate windows.
+
+Required action:
+- distinguish completed resize behavior from future draggable / detachable lab-workspace behavior
+
 ## 7. Immediate Engineering Priorities
 
 The next physics-facing priorities should be:
@@ -187,6 +237,9 @@ The first implementation tasks should be:
 3. define a `SandboxSolver` boundary from the existing physics implementation
 4. decide the intended fate of reserved `side` and `wall` channels
 5. expand validation beyond the current four object-specific checks
+6. remove the legacy inline archive from `index.html`
+7. close the remaining repeatability gaps
+8. strengthen reduced-order labeling for particles and probe-style field views
 
 ## 9. Bottom Line
 

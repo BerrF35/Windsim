@@ -368,6 +368,27 @@ Current status:
 - Next milestone:
   - add reduced-order streamline seeding from the sampled field without overstating solver fidelity
 
+Carry-forward notes from latest review:
+
+- Cleanup / integrity:
+  - remove the disabled legacy inline JavaScript archive from `index.html` once the modular path is confirmed fully independent
+  - decide the fate of `forces.side` and `forces.wall` / `torques.wall`: either implement them properly or keep them explicitly documented as unused / impulse-like sandbox pathways
+  - keep wall contact truthfully described as impulse-style sandbox contact until a more formal contact model exists
+  - expand validation with geometry-resize stress cases and long-run chamber endurance / bounce cases
+  - strengthen UI wording so flow probes and particles read as reduced-order analytic projections, not solved CFD output
+
+- Important calibration:
+  - deterministic simulation already exists in part through `seed` support and seeded wind-field behavior, but full repeatability still needs an audit because some renderer-side paths still use `Math.random()`
+  - the current `shear` mode is not the same thing as a logarithmic near-ground wind profile
+  - panel resizing is already implemented; draggable / detachable lab panels are still future work
+
+- Future workflow / UX requests to preserve:
+  - active dual-sim split-screen comparison
+  - non-dimensional telemetry surfacing such as spin ratio and aspect ratio
+  - contextual explanatory tooltips for engineering terms and formulas
+  - logarithmic wind-profile toggle for more realistic near-ground behavior
+  - draggable / detachable panel workspace for multi-monitor use
+
 When work advances, this section must be updated with:
 
 - completed phase items
