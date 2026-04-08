@@ -12,7 +12,7 @@ It is not a CFD solver today.
 
 What is already working in the repo:
 
-- modular browser app split across `index.html`, `windsim-data.js`, `windsim-physics.js`, `windsim-solvers.js`, `windsim-ui.js`, and `windsim-app.js`
+- modular browser app split across `index.html`, `windsim-data.js`, `windsim-physics.js`, `windsim-solvers.js`, `windsim-ui.js`, `windsim-workflows.js`, and `windsim-app.js`
 - object library with object-specific dimensions, mass assumptions, aero tuning, and contact behavior
 - configurable wind speed, heading, elevation, turbulence, gusts, altitude, chamber size, and launch state
 - reduced-order rigid-body motion with drag, lift, Magnus force, rotation, ground contact, wall contact, and telemetry
@@ -38,8 +38,10 @@ What is still true about the codebase:
   Solver registry and solver-facing app contract.
 - `windsim-ui.js`
   DOM controls, panels, graph drawing, layout resizing, and UI synchronization.
+- `windsim-workflows.js`
+  Playback capture, timeline scrubbing, mounted sweep workflows, and saved experiment comparison.
 - `windsim-app.js`
-  Main app bootstrap, rendering, scene updates, playback wiring, experiment flow, and frame loop.
+  Main app bootstrap, rendering, scene updates, scene sync, and frame loop.
 
 ## What The Project Is Not Yet
 
