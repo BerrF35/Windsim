@@ -171,23 +171,19 @@
         aoa: 0,
         drag: 0,
         lift: 0,
-        side: 0,
         net: 0,
         aeroPower: 0
       },
       forces: {
         drag: new V3(),
         lift: new V3(),
-        side: new V3(),
         magnus: new V3(),
         gravity: new V3(),
-        wall: new V3(),
         net: new V3()
       },
       torques: {
         aero: new V3(),
         ground: new V3(),
-        wall: new V3(),
         net: new V3()
       }
     };
@@ -612,6 +608,7 @@
     const body = app.state.body;
     if (!app.cfg.world.collision) return;
     const kineticBefore = 0.5 * def.mass * body.vel.lengthSq();
+    // Chamber contact is resolved as an impulse-style velocity correction in the sandbox solver.
 
     const ex = supportExtentAlong(def, body.q, AX_X);
     const ey = supportExtentAlong(def, body.q, AX_Y);
@@ -710,12 +707,10 @@
 
     body.forces.drag.set(0, 0, 0);
     body.forces.lift.set(0, 0, 0);
-    body.forces.side.set(0, 0, 0);
     body.forces.magnus.set(0, 0, 0);
     body.forces.gravity.set(0, app.cfg.env.grav ? -def.mass * D.GRAV : 0, 0);
     body.torques.aero.set(0, 0, 0);
     body.torques.ground.set(0, 0, 0);
-    body.torques.wall.set(0, 0, 0);
 
     if (relSpeed > 1e-5) {
       body.forces.drag.copy(flowDir).multiplyScalar(qdyn * areaEff * coeff.Cd);
@@ -737,9 +732,10 @@
       body.torques.aero.addScaledVector(omegaWorld, -0.03 * qdyn * def.aero.chord * def.aero.chord);
     }
 
-    body.forces.net.copy(body.forces.drag).add(body.forces.lift).add(body.forces.side).add(body.forces.magnus).add(body.forces.gravity).add(body.forces.wall);
-    body.torques.net.copy(body.torques.aero).add(body.torques.ground).add(body.torques.wall);
-    body.metrics.aeroPower = tempH.copy(body.forces.drag).add(body.forces.lift).add(body.forces.side).add(body.forces.magnus).dot(body.vel);
+    // Net force excludes wall impulses because chamber contact is not modeled as a continuous force field.
+    body.forces.net.copy(body.forces.drag).add(body.forces.lift).add(body.forces.magnus).add(body.forces.gravity);
+    body.torques.net.copy(body.torques.aero).add(body.torques.ground);
+    body.metrics.aeroPower = tempH.copy(body.forces.drag).add(body.forces.lift).add(body.forces.magnus).dot(body.vel);
     if (app.state.energy) app.state.energy.aeroWork += body.metrics.aeroPower * dt;
 
     if (mountedMode(app.cfg)) {
@@ -767,7 +763,6 @@
 
     body.metrics.drag = body.forces.drag.length();
     body.metrics.lift = body.forces.lift.length();
-    body.metrics.side = body.forces.side.length();
     body.metrics.net = body.forces.net.length();
   }
 

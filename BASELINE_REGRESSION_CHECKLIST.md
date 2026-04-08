@@ -35,6 +35,7 @@ Run these first after changes:
 3. Confirm the current product labels remain truthful:
    - no CFD terminology is introduced for reduced-order outputs
    - no solved pressure / vorticity claims are shown unless they are actually computed
+   - no placeholder side-force or wall-force channels are presented as active solved force models
 
 ## 3. Core Smoke Tests
 

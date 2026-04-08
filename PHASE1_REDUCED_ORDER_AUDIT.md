@@ -105,31 +105,29 @@ This is a good baseline to preserve.
 
 These are specific implementation gaps visible in the current codebase.
 
-### A. Reserved but not yet meaningful side-force channel
+### A. Side-force placeholders removed until there is a real model
 
-The body schema includes `forces.side` and `metrics.side`, and the net-force assembly includes that channel.
+The active body schema no longer carries a `forces.side` or `metrics.side` channel.
 
 Current state:
-- the channel is initialized
-- it is reset each aero step
-- it is included in totals
-- it is never actually populated with a modeled side force
+- the sandbox solver computes drag, lift, Magnus, gravity, and contact behavior
+- there is no dedicated continuous side-force model in the active reduced-order loop
+- the previous placeholder side channel has been removed so totals only include modeled forces
 
 Interpretation:
-- this is a reserved pathway, not a completed feature
+- this removes a misleading force bucket until a real side-force model exists
 
 Required action:
-- either implement a real side-force model where appropriate or keep the channel explicitly documented as unused in the current baseline
+- if a side-force channel is reintroduced later, it must arrive with an actual model and validation coverage
 
-### B. Reserved wall-force / wall-torque channels
+### B. Wall contact is explicit impulse-style contact, not wall force
 
-The body schema includes `forces.wall` and `torques.wall`, and net assembly includes them.
+The active body schema no longer carries `forces.wall` or `torques.wall` as continuous solved channels.
 
 Current state:
-- `torques.wall` is reset every aero step
-- `forces.wall` is carried in the state shape
-- wall contact currently mutates velocity directly in `applyWallContact(...)`
-- there is no developed wall-force model in the active reduced-order loop
+- wall contact mutates velocity directly in `applyWallContact(...)`
+- chamber contact loss is still tracked in the energy bookkeeping
+- net force and torque totals now exclude wall pseudo-channels
 
 Interpretation:
 - chamber contact is impulse-like and state-mutating today, not expressed as a physically modeled continuous wall force

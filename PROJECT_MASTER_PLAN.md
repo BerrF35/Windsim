@@ -371,16 +371,16 @@ Current status:
   - playback and experiment workflows split out of `windsim-app.js` into `windsim-workflows.js`
   - particle cues moved off direct `Math.random()` and onto seed-driven reduced-order visual behavior
   - particle UI wording tightened so flow cues are not mistaken for solved CFD streamlines
+  - reserved side-force and wall-force placeholder channels removed so only modeled force paths remain in the active sandbox solver
 - Deferred product requirement:
   - dedicated landing / home entry flow so users choose an experience before entering the simulator
 - Next milestone:
-  - decide the fate of reserved `forces.side`, `forces.wall`, and `torques.wall`, then expand validation coverage for geometry scaling and chamber endurance
+  - expand validation coverage for geometry scaling, long-run chamber endurance, and the cleaned solver truthfulness assumptions
 
 Carry-forward notes from latest review:
 
 - Cleanup / integrity:
   - remove the disabled legacy inline JavaScript archive from `index.html` once the modular path is confirmed fully independent
-  - decide the fate of `forces.side` and `forces.wall` / `torques.wall`: either implement them properly or keep them explicitly documented as unused / impulse-like sandbox pathways
   - keep wall contact truthfully described as impulse-style sandbox contact until a more formal contact model exists
   - expand validation with geometry-resize stress cases and long-run chamber endurance / bounce cases
   - strengthen UI wording so flow probes and particles read as reduced-order analytic projections, not solved CFD output

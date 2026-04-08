@@ -26,7 +26,6 @@
       forces: {
         drag: snapshotVec3(body.forces.drag),
         lift: snapshotVec3(body.forces.lift),
-        side: snapshotVec3(body.forces.side),
         magnus: snapshotVec3(body.forces.magnus),
         gravity: snapshotVec3(body.forces.gravity),
         net: snapshotVec3(body.forces.net)
