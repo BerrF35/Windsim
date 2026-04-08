@@ -372,10 +372,11 @@ Current status:
   - particle cues moved off direct `Math.random()` and onto seed-driven reduced-order visual behavior
   - particle UI wording tightened so flow cues are not mistaken for solved CFD streamlines
   - reserved side-force and wall-force placeholder channels removed so only modeled force paths remain in the active sandbox solver
+  - validation coverage expanded with resized-geometry stress and chamber-endurance cases, plus new validation metrics for invalid-state detection, impact totals, and speed bounds
 - Deferred product requirement:
   - dedicated landing / home entry flow so users choose an experience before entering the simulator
 - Next milestone:
-  - expand validation coverage for geometry scaling, long-run chamber endurance, and the cleaned solver truthfulness assumptions
+  - continue breaking down `windsim-app.js` and harden the remaining reduced-order validation / reporting path
 
 Carry-forward notes from latest review:
 

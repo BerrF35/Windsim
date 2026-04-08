@@ -425,6 +425,49 @@
         { metric: 'rollAngle', min: 0, max: 22, label: 'resting roll angle' },
         { metric: 'travel', min: 0.5, max: 8.0, label: 'skid distance' }
       ]
+    },
+    crate_resize_stress: {
+      label: 'Crate Resize Stress',
+      duration: 5.0,
+      preset: {
+        obj: 'crate',
+        surf: 'concrete',
+        wind: { speed: 18, azim: 110, elev: 4, turb: 12, gust: 10, mode: 'uniform', modeStrength: 20 },
+        launch: { h0: 4.0, vx: 6.0, vy: 2.0, vz: -3.0, omx: 0, omy: 1.0, omz: 0.5 },
+        altitude: 0,
+        world: { ceiling: 70, halfWidth: 60, halfDepth: 60 },
+        visuals: { pCount: 80, pSize: 0.10, trailLen: 500 },
+        simRate: 1.00,
+        seed: 3031,
+        objectScale: { x: 3.5, y: 0.65, z: 1.8 }
+      },
+      checks: [
+        { metric: 'invalidState', min: 0, max: 0, label: 'finite resized-body state' },
+        { metric: 'meanCd', min: 0.90, max: 1.20, label: 'resized crate Cd band' },
+        { metric: 'travel', min: 40.0, max: 60.0, label: 'resized crate travel distance' },
+        { metric: 'impactCount', min: 40, max: 90, label: 'resized crate contact count' }
+      ]
+    },
+    basketball_tunnel_endurance: {
+      label: 'Basketball Tunnel Endurance',
+      duration: 4.0,
+      preset: {
+        obj: 'basketball',
+        surf: 'hardwood',
+        wind: { speed: 28, azim: 90, elev: 0, turb: 0, gust: 0, mode: 'tunnel', modeStrength: 80 },
+        launch: { h0: 3.0, vx: 12.0, vy: 10.0, vz: 9.0, omx: 0, omy: 0, omz: 0 },
+        altitude: 0,
+        world: { ceiling: 7, halfWidth: 4, halfDepth: 4 },
+        visuals: { pCount: 80, pSize: 0.10, trailLen: 500 },
+        simRate: 1.00,
+        seed: 4041
+      },
+      checks: [
+        { metric: 'invalidState', min: 0, max: 0, label: 'finite chamber-endurance state' },
+        { metric: 'impactCount', min: 1200, max: 2200, label: 'repeated chamber wall impacts' },
+        { metric: 'maxSpeed', min: 15.0, max: 21.0, label: 'endurance peak speed band' },
+        { metric: 'finalSpeed', min: 0.05, max: 0.35, label: 'post-endurance residual speed' }
+      ]
     }
   };
 

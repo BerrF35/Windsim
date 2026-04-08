@@ -207,6 +207,8 @@ The following validation cases must still run and produce a result in the UI:
 - `frisbee_glide`
 - `shuttlecock_stability`
 - `brick_settle`
+- `crate_resize_stress`
+- `basketball_tunnel_endurance`
 
 Validation pass criteria for the baseline:
 
@@ -222,7 +224,7 @@ Validation pass criteria for the baseline:
 
 Rerun:
 - all eight presets
-- all four validation cases
+- all six validation cases
 - telemetry export sanity
 - force graph sanity
 

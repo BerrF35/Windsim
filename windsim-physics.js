@@ -525,6 +525,7 @@
       energy: energy
     });
     if (app.state.impacts.length > 40) app.state.impacts.shift();
+    if (app.state.validation && !app.state.validation.result) app.state.validation.totalImpacts += 1;
   }
 
   function applyGroundContact(app, def, dt) {
@@ -883,6 +884,10 @@
       launchY: app.state.body.pos.y,
       minY: app.state.body.pos.y,
       rollAngle: 0,
+      maxSpeed: 0,
+      finalSpeed: 0,
+      totalImpacts: 0,
+      invalidState: 0,
       result: null
     };
     app.state.paused = false;
@@ -894,6 +899,13 @@
     if (!validation || validation.result) return;
 
     const body = app.state.body;
+    const speed = body.vel.length();
+    if (!Number.isFinite(body.pos.x) || !Number.isFinite(body.pos.y) || !Number.isFinite(body.pos.z) ||
+      !Number.isFinite(body.vel.x) || !Number.isFinite(body.vel.y) || !Number.isFinite(body.vel.z) ||
+      !Number.isFinite(body.q.x) || !Number.isFinite(body.q.y) || !Number.isFinite(body.q.z) || !Number.isFinite(body.q.w) ||
+      !Number.isFinite(body.metrics.Cd) || !Number.isFinite(body.metrics.Cl) || !Number.isFinite(body.metrics.Re)) {
+      validation.invalidState = 1;
+    }
     validation.samples += 1;
     validation.minCd = Math.min(validation.minCd, body.metrics.Cd);
     validation.maxRe = Math.max(validation.maxRe, body.metrics.Re);
@@ -904,6 +916,8 @@
     validation.maxZ = Math.max(validation.maxZ, Math.abs(body.pos.z - body.launchPos.z));
     validation.minY = Math.min(validation.minY, body.pos.y);
     validation.rollAngle = radToDeg(Math.acos(clamp(Math.abs(tempA.copy(AX_Y).applyQuaternion(body.q).dot(AX_Y)), -1, 1)));
+    validation.maxSpeed = Math.max(validation.maxSpeed, speed);
+    validation.finalSpeed = speed;
 
     if (app.state.time < validation.endTime) return;
 
@@ -916,7 +930,11 @@
       finalAoA: validation.finalAoA,
       glideRatio: validation.maxX / glideDrop,
       rollAngle: validation.rollAngle,
-      travel: Math.sqrt(validation.maxX * validation.maxX + validation.maxZ * validation.maxZ)
+      travel: Math.sqrt(validation.maxX * validation.maxX + validation.maxZ * validation.maxZ),
+      maxSpeed: validation.maxSpeed,
+      finalSpeed: validation.finalSpeed,
+      impactCount: validation.totalImpacts,
+      invalidState: validation.invalidState
     };
 
     const lines = [];
