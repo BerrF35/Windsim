@@ -336,18 +336,23 @@ A feature is only done when:
 
 The next implementation sequence is:
 
-1. Lock this plan into the repo.
-2. Align repo documentation with the actual modular architecture.
-3. Build a regression and validation discipline around the current reduced-order simulator.
-4. Extract and formalize the solver boundary.
-5. Begin the research workflow features before full CFD work.
+1. Keep repo documentation and UI wording behind the real codebase, not ahead of it.
+2. Remove dead or misleading structure such as the disabled legacy inline archive.
+3. Break down the largest god-file responsibilities in `windsim-app.js` before adding major new systems.
+4. Close truthfulness gaps in the reduced-order path:
+   - reserved but unused force channels
+   - deterministic vs non-deterministic behavior
+   - incomplete reduced-order labeling
+5. Expand validation so geometry scaling, chamber endurance, and solver regressions are covered.
+6. Continue reduced-order workflow and visualization work only after the base is cleaner.
+7. Add deeper solver diversity only when the abstraction is strong enough to support it honestly.
 
 ## 11. Living Status Ledger
 
 Current status:
 
 - Phase 0: in progress
-- Active focus: baseline protection, regression discipline, and reduced-order audit
+- Active focus: truthfulness, structural cleanup, and reduced-order baseline protection
 - Current product classification: advanced reduced-order aerodynamic sandbox
 - Research-grade CFD status: not yet implemented
 - Completed in current phase:
@@ -366,7 +371,7 @@ Current status:
 - Deferred product requirement:
   - dedicated landing / home entry flow so users choose an experience before entering the simulator
 - Next milestone:
-  - add reduced-order streamline seeding from the sampled field without overstating solver fidelity
+  - remove the disabled legacy inline archive, reduce README overstatement, and lock the repo docs back to the actual structure before continuing feature growth
 
 Carry-forward notes from latest review:
 

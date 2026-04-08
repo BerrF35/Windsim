@@ -1,120 +1,59 @@
 # WindSim
 
-See [PROJECT_MASTER_PLAN.md](./PROJECT_MASTER_PLAN.md) for the persistent execution plan and long-term architecture roadmap.
+See [PROJECT_MASTER_PLAN.md](./PROJECT_MASTER_PLAN.md) for the long-term execution plan and the non-negotiable truthfulness rules.
 
-WindSim is a browser-based 3D aerodynamic sandbox for testing how different objects behave inside a controllable wind field. It combines a stylized real-time simulation space with adjustable airflow, altitude, turbulence, spin, bounce, and telemetry so you can watch motion, compare scenarios, and stress-test different launch conditions.
+## What This Repo Is
 
-Built as a modular browser project with plain HTML, CSS, and JavaScript, WindSim focuses on immediacy: change a parameter, relaunch an object, and read the result instantly.
+WindSim is a browser-based 3D aerodynamic sandbox. The current build is a reduced-order simulator with live visualization, experiment controls, and telemetry. It is meant to make motion and airflow assumptions inspectable in real time.
 
-## Overview
+It is not a CFD solver today.
 
-WindSim simulates projectile and free-flight behavior across a wide range of objects, from sports balls to lightweight debris and heavy cargo. The project sits somewhere between a physics toy, a visualization lab, and an interaction-heavy prototype. It is designed to make aerodynamic behavior readable, not hidden.
+## Current State
 
-The current build includes a full 3D scene, a large continuous test space, object-specific visuals, configurable environmental response, and live instrumentation for forces, energy, and motion.
+What is already working in the repo:
 
-## Highlights
+- modular browser app split across `index.html`, `windsim-data.js`, `windsim-physics.js`, `windsim-solvers.js`, `windsim-ui.js`, and `windsim-app.js`
+- object library with object-specific dimensions, mass assumptions, aero tuning, and contact behavior
+- configurable wind speed, heading, elevation, turbulence, gusts, altitude, chamber size, and launch state
+- reduced-order rigid-body motion with drag, lift, Magnus force, rotation, ground contact, wall contact, and telemetry
+- mounted wind-tunnel mode, playback scrubbing, saved sweeps, run comparison, and flow-probe slices
+- CSV telemetry export and a small validation suite
 
-- Full 3D aerodynamic simulation with live object flight, bounce, drag, and spin behavior
-- Wind controls with full `0-359` degree heading, vertical elevation, turbulence, and gust intensity
-- Altitude-based air density using a standard-atmosphere style model
-- Object library covering sports equipment, lightweight materials, and heavy bodies
-- Procedural textures and non-uniform geometry for objects that should not all look like spheres
-- Large continuous ground plane and adjustable ceiling for longer and taller test runs
-- Visual overlays for velocity, drag, gravity, Magnus force, trails, particles, and spin axis
-- Mounted wind-tunnel mode for fixed-position force inspection inside the reduced-order solver
-- Recorded playback timeline with scrubbing and frame stepping for run inspection
-- Mounted sweep tool for repeatable reduced-order comparisons across wind and environment ranges
-- Saved sweep library with restore and current-vs-saved comparison workflow
-- Multi-plane reduced-order flow probe slices for inspecting the active analytic wind field around the test area
-- Free camera movement with orbit, pan, zoom, follow mode, and adjustable cinematic response
-- Preset scenarios for quick comparisons between calm tests, crosswinds, storms, high-altitude runs, spin-heavy launches, and cargo drops
-- CSV telemetry export for analysis outside the app
+What is still true about the codebase:
 
-## Simulation Systems
+- `windsim-app.js` is still too large and owns too many responsibilities
+- `windsim-solvers.js` currently wraps one real solver path, not multiple mature backends
+- several models are heuristic or tuned for reduced-order behavior rather than derived from a solved flow field
+- validation coverage is useful but still limited
 
-- Aerodynamic drag based on relative wind speed
-- Reynolds-number-aware drag behavior for supported objects
-- Magnus force for spinning bodies
-- Rotational damping and visible angular motion
-- Gravity, bounce response, rolling resistance, and surface friction
-- Altitude-driven density changes that affect lift and drag response
-- Time scaling, telemetry recording, and real-time HUD feedback
+## Repo Layout
 
-## Object Library
+- `index.html`
+  Browser shell and script loading.
+- `windsim-data.js`
+  Static definitions: objects, surfaces, presets, validation cases, solver metadata.
+- `windsim-physics.js`
+  Reduced-order physics, wind sampling, contact handling, telemetry generation.
+- `windsim-solvers.js`
+  Solver registry and solver-facing app contract.
+- `windsim-ui.js`
+  DOM controls, panels, graph drawing, layout resizing, and UI synchronization.
+- `windsim-app.js`
+  Main app bootstrap, rendering, scene updates, playback wiring, experiment flow, and frame loop.
 
-The current object set spans multiple categories:
+## What The Project Is Not Yet
 
-- Sports balls: soccer, tennis, basketball, cricket, baseball, ping pong, golf, volleyball, rugby
-- Specialty flight objects: shuttlecock, frisbee
-- Lightweight / unstable bodies: autumn leaf, feather, paper ball, umbrella
-- Heavy objects: cannonball, wooden crate, brick
+- not a chamber-wide pressure solver
+- not a two-way coupled CFD system
+- not a multi-solver research platform yet
+- not fully decomposed internally, even though the repo is modular at file level
 
-Each object carries its own mass, effective area, radius, drag profile, restitution behavior, and visual treatment.
+## Development Direction
 
-## Environment And Control Surface
+The current priority is to make the reduced-order baseline more honest and easier to maintain before adding more headline features. That means:
 
-WindSim exposes nearly every major part of the simulation through the interface:
-
-- Wind speed, heading, elevation, turbulence, and gust strength
-- Launch height and initial velocity on all three axes
-- Independent spin values across all three rotational axes
-- Surface material selection: grass, concrete, hardwood, sand, ice, water
-- Altitude, ceiling height, particle density, particle size, trail length, and simulation rate
-- Toggleable systems including gravity, particles, trails, bounce, force vectors, Magnus effect, rotational dynamics, Reynolds-based drag, and spin-axis visualization
-- Camera controls for follow, distance, yaw, pitch, field of view, and follow lag
-
-## Visualization Layer
-
-The project is built to make the simulation legible while it is running. The current scene includes:
-
-- A live HUD for speed, drag, acceleration, height, Reynolds number, drag coefficient, spin, heading, air density, and sim time
-- An energy panel showing translational energy, rotational energy, gravitational potential, wind work, and losses
-- Force arrows for drag, gravity, velocity, Magnus force, and angular spin axis
-- Wind particles and trajectory trails for reading flow direction and path history
-- Procedurally generated textures for both surfaces and objects
-
-## Preset Scenarios
-
-The current build ships with eight presets:
-
-- Baseline Field Test
-- Crosswind Sports Test
-- Storm Tunnel
-- High Altitude Thin Air
-- Spin Lab
-- Heavy Cargo Drop
-- Vortex Lab
-- Wake Test
-
-These presets are intended as quick scenario snapshots rather than fixed game levels, making it easy to compare how object type, atmosphere, spin, and wind direction interact.
-
-## Telemetry
-
-WindSim can export recorded simulation data as CSV, including:
-
-- Position and velocity
-- Acceleration and net force
-- Drag and Magnus force
-- Reynolds number and active drag coefficient
-- Spin rates
-- Wind state and air density
-- Translational, rotational, and potential energy values
-- Friction and collision loss estimates
-
-This makes the project useful not just as a visual sandbox, but also as a lightweight data-producing experiment tool.
-
-## Technical Profile
-
-- Frontend: HTML, CSS, JavaScript
-- Rendering: Three.js
-- Architecture: modular browser app split across `index.html`, `windsim-data.js`, `windsim-physics.js`, `windsim-solvers.js`, `windsim-ui.js`, and `windsim-app.js`
-- Visual assets: procedural canvas-generated textures
-- Data output: in-browser CSV export
-
-## Project Character
-
-WindSim is not framed as a perfect engineering simulator. It is a high-control interactive sandbox built to explore motion, airflow, and readability in a fast, hands-on way. The emphasis is on experimentation, feedback, and making the physics feel inspectable.
-
-## Status
-
-The project is actively oriented around the 3D simulation build and its control-rich interface. Current strengths are breadth of controls, object variety, readable telemetry, and a stronger visual identity than the original prototype direction.
+- reducing documentation overstatement
+- removing dead legacy structure
+- splitting `windsim-app.js` into cleaner ownership boundaries
+- closing truthfulness gaps in labeling and deterministic behavior
+- expanding validation before deeper solver work
