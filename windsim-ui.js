@@ -287,7 +287,7 @@
         '<div class="ctl"><div class="ctl-row"><span class="ctl-lbl">Field Mode</span></div><select id="windModeSelect"></select></div>',
         '<div class="ctl"><div class="ctl-row"><span class="ctl-lbl">Mode Strength</span><span class="ctl-val" id="vModeStrength">35%</span></div><input type="range" id="sModeStrength" min="0" max="100" value="35"></div>',
         '<div class="ctl"><div class="ctl-row"><span class="ctl-lbl">Seed</span></div><input class="num-input" id="seedInput" type="number" value="1337" step="1"></div>',
-        '<div class="mini-note">Seeded flow makes turbulence, wake modes, and validation reproducible.</div>',
+      '<div class="mini-note">Seeded flow makes turbulence, wake modes, validation, and particle cues reproducible.</div>',
         '</div></details>',
         '<details><summary>Chamber</summary><div class="sec-body">',
         '<div class="ctl"><div class="ctl-row"><span class="ctl-lbl">Width</span><span class="ctl-val" id="vChamberW">240 m</span></div><input type="range" id="sChamberW" min="40" max="320" value="240" step="5"></div>',
@@ -955,7 +955,11 @@
     bindRange('sGust', function (value) { app.cfg.wind.gust = value; $('vGust').textContent = value.toFixed(0) + '%'; });
     bindRange('sModeStrength', function (value) { app.cfg.wind.modeStrength = value; $('vModeStrength').textContent = value.toFixed(0) + '%'; });
     $('windModeSelect').addEventListener('change', function () { app.cfg.wind.mode = $('windModeSelect').value; if (app.markExperimentDirty) app.markExperimentDirty(); });
-    $('seedInput').addEventListener('change', function () { app.cfg.seed = parseInt($('seedInput').value, 10) || 0; if (app.markExperimentDirty) app.markExperimentDirty(); });
+    $('seedInput').addEventListener('change', function () {
+      app.cfg.seed = parseInt($('seedInput').value, 10) || 0;
+      if (app.markExperimentDirty) app.markExperimentDirty();
+      if (app.initParticles) app.initParticles();
+    });
 
     bindRange('sH0', function (value) { app.cfg.launch.h0 = value; $('vH0').textContent = value.toFixed(1) + ' m'; });
     bindRange('sVX', function (value) { app.cfg.launch.vx = value; $('vVX').textContent = value.toFixed(0) + ' m/s'; });

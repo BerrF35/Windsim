@@ -187,16 +187,15 @@ The app already exposes a simulation seed and the reduced-order wind field uses 
 Current state:
 - scenarios and presets already carry `seed`
 - wind field turbulence / gust structure is seeded in `windsim-physics.js`
-- some renderer-side visuals still use `Math.random()` directly, especially particles
-- saved sweep IDs also still use `Math.random()`
+- particle spawning and particle cue oscillation now derive from seed-aware deterministic parameters
+- saved sweep IDs now use monotonic local IDs instead of `Math.random()`
 
 Interpretation:
-- deterministic research workflow is partly implemented, but full repeatability is not yet guaranteed across all layers
+- deterministic research workflow is materially stronger now, but visual cues still depend on render-timed stepping and must not be treated as measured solver output
 
 Required action:
-- audit remaining random paths
-- move visual randomness that affects interpretation onto deterministic seeded streams where appropriate
-- keep purely cosmetic nondeterminism clearly separate if it remains
+- audit any new random paths before they spread into physics or analysis layers
+- keep seeded visual cues explicitly labeled as reduced-order visuals rather than measured field output
 
 ### H. Boundary-layer realism is still simplified
 

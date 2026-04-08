@@ -42,6 +42,7 @@
     const applyScenario = options.applyScenario;
     const playbackMaxFrames = options.playbackMaxFrames || 6000;
     const syncExperimentPanel = options.syncExperimentPanel || function () {};
+    let nextSweepOrdinal = 1;
 
     function resetPlaybackState() {
       app.state.playback.frames = [];
@@ -250,7 +251,9 @@
     }
 
     function createSweepId() {
-      return 'sweep-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 7);
+      const id = 'sweep-' + String(nextSweepOrdinal).padStart(4, '0');
+      nextSweepOrdinal += 1;
+      return id;
     }
 
     function findSavedSweep(runId) {

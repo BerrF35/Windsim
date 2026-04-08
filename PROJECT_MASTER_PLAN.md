@@ -368,10 +368,13 @@ Current status:
   - saved sweep result management and current-vs-saved comparison workflow added
   - reduced-order flow probe slice added for live wind-field inspection without pretending CFD
   - multi-plane flow probe slices added, with vertical sections explicitly shown as in-plane reduced-order projections
+  - playback and experiment workflows split out of `windsim-app.js` into `windsim-workflows.js`
+  - particle cues moved off direct `Math.random()` and onto seed-driven reduced-order visual behavior
+  - particle UI wording tightened so flow cues are not mistaken for solved CFD streamlines
 - Deferred product requirement:
   - dedicated landing / home entry flow so users choose an experience before entering the simulator
 - Next milestone:
-  - remove the disabled legacy inline archive, reduce README overstatement, and lock the repo docs back to the actual structure before continuing feature growth
+  - decide the fate of reserved `forces.side`, `forces.wall`, and `torques.wall`, then expand validation coverage for geometry scaling and chamber endurance
 
 Carry-forward notes from latest review:
 
@@ -383,7 +386,7 @@ Carry-forward notes from latest review:
   - strengthen UI wording so flow probes and particles read as reduced-order analytic projections, not solved CFD output
 
 - Important calibration:
-  - deterministic simulation already exists in part through `seed` support and seeded wind-field behavior, but full repeatability still needs an audit because some renderer-side paths still use `Math.random()`
+  - deterministic simulation already exists through seeded wind-field behavior and seeded particle cues, but visual replay still depends on render-timed stepping and is not solver data
   - the current `shear` mode is not the same thing as a logarithmic near-ground wind profile
   - panel resizing is already implemented; draggable / detachable lab panels are still future work
 

@@ -1131,15 +1131,31 @@
     return app.render.anchor;
   }
 
-  function spawnParticle() {
+  function particleOscillation(phase, freq, time, offset) {
+    return (
+      Math.sin(time * freq + phase + offset) * 0.64 +
+      Math.sin(time * (freq * 1.73) + phase * 0.61 + offset * 1.4) * 0.36
+    );
+  }
+
+  function spawnParticle(index, generation) {
     const anchor = particleAnchor();
     const span = particleSpan();
+    const gen = Number.isFinite(generation) ? generation : 0;
+    const rng = makeRng(seedFromText('particle:' + app.cfg.seed + ':' + index + ':' + gen));
     return {
-      x: anchor.x + (Math.random() - 0.5) * span.x,
-      y: clamp(anchor.y - span.y * 0.35 + Math.random() * span.y, 0.3, app.cfg.world.ceiling * 0.82),
-      z: anchor.z + (Math.random() - 0.5) * span.z,
-      life: Math.random(),
-      maxLife: 2.2 + Math.random() * 2.8
+      x: anchor.x + (rng() - 0.5) * span.x,
+      y: clamp(anchor.y - span.y * 0.35 + rng() * span.y, 0.3, app.cfg.world.ceiling * 0.82),
+      z: anchor.z + (rng() - 0.5) * span.z,
+      life: rng(),
+      maxLife: 2.2 + rng() * 2.8,
+      generation: gen,
+      phaseX: rng() * D.TAU,
+      phaseY: rng() * D.TAU,
+      phaseZ: rng() * D.TAU,
+      freqX: 0.45 + rng() * 1.15,
+      freqY: 0.55 + rng() * 0.95,
+      freqZ: 0.50 + rng() * 1.05
     };
   }
 
@@ -1217,7 +1233,7 @@
   function initParticles() {
     const count = Math.min(app.cfg.visuals.particleCount, D.PART_MAX);
     app.render.particles = [];
-    for (let i = 0; i < count; i += 1) app.render.particles.push(spawnParticle());
+    for (let i = 0; i < count; i += 1) app.render.particles.push(spawnParticle(i, 0));
     app.render.particleGeo.setDrawRange(0, count);
   }
 
@@ -1363,17 +1379,18 @@
     const anchor = particleAnchor();
     const span = particleSpan();
     const jitter = Math.max(0.4, app.cfg.wind.speed * 0.2) * (app.cfg.wind.turb / 100);
+    const time = app.state.time;
     for (let i = 0; i < count; i += 1) {
       let particle = app.render.particles[i];
-      if (!particle) particle = app.render.particles[i] = spawnParticle();
+      if (!particle) particle = app.render.particles[i] = spawnParticle(i, 0);
       tmpA.set(particle.x, particle.y, particle.z);
       const wind = app.solver.sampleWindAt(app, tmpA);
-      particle.x += (wind.x + (Math.random() - 0.5) * jitter) * dt;
-      particle.y += (wind.y + (Math.random() - 0.5) * jitter * 0.18) * dt;
-      particle.z += (wind.z + (Math.random() - 0.5) * jitter) * dt;
+      particle.x += (wind.x + particleOscillation(particle.phaseX, particle.freqX, time, 0.11) * jitter) * dt;
+      particle.y += (wind.y + particleOscillation(particle.phaseY, particle.freqY, time, 1.47) * jitter * 0.18) * dt;
+      particle.z += (wind.z + particleOscillation(particle.phaseZ, particle.freqZ, time, 2.63) * jitter) * dt;
       particle.life += dt / particle.maxLife;
       if (particle.life >= 1 || Math.abs(particle.x - anchor.x) > span.x * 0.65 || Math.abs(particle.z - anchor.z) > span.z * 0.65 || particle.y < 0.05 || particle.y > app.cfg.world.ceiling * 0.86 || Math.abs(particle.y - anchor.y) > span.y * 0.72) {
-        particle = app.render.particles[i] = spawnParticle();
+        particle = app.render.particles[i] = spawnParticle(i, particle.generation + 1);
       }
       app.render.particlePositions[i * 3] = particle.x;
       app.render.particlePositions[i * 3 + 1] = particle.y;

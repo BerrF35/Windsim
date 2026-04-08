@@ -67,6 +67,7 @@ These checks should pass on every meaningful change.
 - Mounted wind-tunnel mode toggles cleanly and resets the body into fixed-position operation.
 - Chamber dimension changes update visible bounds.
 - Particle count and particle size controls work.
+- Particle cues remain seeded from the scenario seed and are still labeled as reduced-order visuals, not CFD streamlines.
 - Simulation rate affects playback speed without freezing.
 - Box-like object scaling controls update dimensions and mass properties cleanly.
 
