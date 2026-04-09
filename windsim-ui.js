@@ -630,6 +630,47 @@
       ' | z ' + stats.anchorZ.toFixed(1) + ' m';
   }
 
+  function syncStatus(app) {
+    if (app.state.playback.active) {
+      $('pauseBtn').textContent = 'Resume Live';
+      $('sTxt').textContent = 'PLAYBACK';
+      $('sTxt').className = 'sp';
+      return;
+    }
+    $('pauseBtn').textContent = app.state.paused ? 'Resume' : 'Pause';
+    if (app.state.validation && !app.state.validation.result && !app.state.paused) {
+      $('sTxt').textContent = 'VALIDATING';
+      $('sTxt').className = 'sr';
+      return;
+    }
+    if (app.cfg.testMode === 'mounted' && !app.state.paused) {
+      $('sTxt').textContent = 'MOUNTED';
+      $('sTxt').className = 'sr';
+      return;
+    }
+    $('sTxt').textContent = app.state.paused ? 'PAUSED' : 'RUNNING';
+    $('sTxt').className = app.state.paused ? 'sp' : 'sr';
+  }
+
+  function syncValidationUi(app, displayTime) {
+    const validation = app.state.validation;
+    if (!validation) {
+      app.ui.validationPill.style.display = 'none';
+      return;
+    }
+    app.ui.validationPill.style.display = 'block';
+    if (!validation.result) {
+      app.ui.validationPill.textContent = 'VALIDATION RUNNING';
+      app.ui.validationPill.style.color = 'var(--amber)';
+      app.ui.validationReport.textContent = validation.label + '\n' + 'time: ' + displayTime.toFixed(2) + ' / ' + validation.endTime.toFixed(2) + ' s';
+      return;
+    }
+    const pass = validation.result.passed === validation.result.total;
+    app.ui.validationPill.textContent = pass ? 'VALIDATION PASS' : 'VALIDATION WARN';
+    app.ui.validationPill.style.color = pass ? 'var(--green)' : 'var(--amber)';
+    app.ui.validationReport.textContent = validation.label + '\n' + 'checks: ' + validation.result.passed + ' / ' + validation.result.total + '\n\n' + validation.result.text;
+  }
+
   function syncGeometryControls(app) {
     if (!$('objectGeometryPanel')) return;
     const panel = $('objectGeometryPanel');
@@ -1214,6 +1255,8 @@
     setOverlay: setOverlay,
     syncPlaybackControls: syncPlaybackControls,
     syncExperimentPanel: syncExperimentPanel,
-    syncFlowProbeInfo: syncFlowProbeInfo
+    syncFlowProbeInfo: syncFlowProbeInfo,
+    syncStatus: syncStatus,
+    syncValidationUi: syncValidationUi
   };
 }());

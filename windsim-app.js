@@ -1534,47 +1534,6 @@
     app.render.impactGroup.visible = !!app.cfg.analysis.impacts;
   }
 
-  function syncStatus() {
-    if (app.state.playback.active) {
-      $('pauseBtn').textContent = 'Resume Live';
-      $('sTxt').textContent = 'PLAYBACK';
-      $('sTxt').className = 'sp';
-      return;
-    }
-    $('pauseBtn').textContent = app.state.paused ? 'Resume' : 'Pause';
-    if (app.state.validation && !app.state.validation.result && !app.state.paused) {
-      $('sTxt').textContent = 'VALIDATING';
-      $('sTxt').className = 'sr';
-      return;
-    }
-    if (app.cfg.testMode === 'mounted' && !app.state.paused) {
-      $('sTxt').textContent = 'MOUNTED';
-      $('sTxt').className = 'sr';
-      return;
-    }
-    $('sTxt').textContent = app.state.paused ? 'PAUSED' : 'RUNNING';
-    $('sTxt').className = app.state.paused ? 'sp' : 'sr';
-  }
-
-  function syncValidationUi() {
-    const validation = app.state.validation;
-    if (!validation) {
-      app.ui.validationPill.style.display = 'none';
-      return;
-    }
-    app.ui.validationPill.style.display = 'block';
-    if (!validation.result) {
-      app.ui.validationPill.textContent = 'VALIDATION RUNNING';
-      app.ui.validationPill.style.color = 'var(--amber)';
-      app.ui.validationReport.textContent = validation.label + '\n' + 'time: ' + displayTime().toFixed(2) + ' / ' + validation.endTime.toFixed(2) + ' s';
-      return;
-    }
-    const pass = validation.result.passed === validation.result.total;
-    app.ui.validationPill.textContent = pass ? 'VALIDATION PASS' : 'VALIDATION WARN';
-    app.ui.validationPill.style.color = pass ? 'var(--green)' : 'var(--amber)';
-    app.ui.validationReport.textContent = validation.label + '\n' + 'checks: ' + validation.result.passed + ' / ' + validation.result.total + '\n\n' + validation.result.text;
-  }
-
   function syncCameraInputs() {
     $('sCamDist').value = app.cfg.camera.distance.toFixed(1);
     $('sCamYaw').value = THREE.MathUtils.radToDeg(app.cfg.camera.yaw).toFixed(0);
@@ -1710,7 +1669,7 @@
     UI.syncScenarioControls(app);
     UI.updateStaticPanels(app);
     UI.updateDynamicPanels(app);
-    syncStatus();
+    UI.syncStatus(app);
   }
 
   function applyPreset(name) {
@@ -1728,7 +1687,7 @@
     setObjectVisual();
     UI.updateStaticPanels(app);
     UI.updateDynamicPanels(app);
-    syncStatus();
+    UI.syncStatus(app);
   }
 
   function updateObjectScale() {
@@ -1756,19 +1715,19 @@
     UI.syncScenarioControls(app);
     UI.updateStaticPanels(app);
     UI.updateDynamicPanels(app);
-    syncStatus();
-    syncValidationUi();
+    UI.syncStatus(app);
+    UI.syncValidationUi(app, displayTime());
   }
 
   function togglePause() {
     if (app.state.playback.active) {
       app.exitPlayback();
       app.state.paused = false;
-      syncStatus();
+      UI.syncStatus(app);
       return;
     }
     app.state.paused = !app.state.paused;
-    syncStatus();
+    UI.syncStatus(app);
   }
 
   function toggleCamFollow() {
@@ -1898,7 +1857,7 @@
       if (app.state.playback.active && event.code === 'Escape') {
         event.preventDefault();
         app.exitPlayback();
-        syncStatus();
+        UI.syncStatus(app);
         return;
       }
       if (event.code === 'KeyR') {
@@ -1936,8 +1895,8 @@
     UI.drawGraph(app);
     UI.syncPlaybackControls(app);
     if (UI.syncFlowProbeInfo) UI.syncFlowProbeInfo(app);
-    syncValidationUi();
-    syncStatus();
+    UI.syncValidationUi(app, displayTime());
+    UI.syncStatus(app);
     app.render.renderer.render(app.render.scene, app.render.camera);
     requestAnimationFrame(loop);
   }
@@ -1962,7 +1921,7 @@
 
   function setPausedState(paused) {
     app.state.paused = !!paused;
-    syncStatus();
+    UI.syncStatus(app);
   }
 
   W.attach(app, {

@@ -374,6 +374,7 @@ Current status:
   - reserved side-force and wall-force placeholder channels removed so only modeled force paths remain in the active sandbox solver
   - validation coverage expanded with resized-geometry stress and chamber-endurance cases, plus new validation metrics for invalid-state detection, impact totals, and speed bounds
   - dedicated landing / home entry flow added, with cinematic first load, mode routing, returning-user fast track, and seamless simulator handoff
+  - status-pill and validation-pill UI sync moved out of `windsim-app.js` and into `windsim-ui.js`
 - Next milestone:
   - continue breaking down `windsim-app.js` and harden the remaining reduced-order validation / reporting path
 
