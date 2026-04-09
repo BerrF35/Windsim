@@ -373,8 +373,7 @@ Current status:
   - particle UI wording tightened so flow cues are not mistaken for solved CFD streamlines
   - reserved side-force and wall-force placeholder channels removed so only modeled force paths remain in the active sandbox solver
   - validation coverage expanded with resized-geometry stress and chamber-endurance cases, plus new validation metrics for invalid-state detection, impact totals, and speed bounds
-- Deferred product requirement:
-  - dedicated landing / home entry flow so users choose an experience before entering the simulator
+  - dedicated landing / home entry flow added, with cinematic first load, mode routing, returning-user fast track, and seamless simulator handoff
 - Next milestone:
   - continue breaking down `windsim-app.js` and harden the remaining reduced-order validation / reporting path
 

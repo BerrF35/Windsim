@@ -1942,6 +1942,29 @@
     requestAnimationFrame(loop);
   }
 
+  function getScenarioSnapshot() {
+    return app.solver.defaultScenarioSnapshot(app);
+  }
+
+  function getSavedScenarioList() {
+    return deepClone(app.savedScenarios || []);
+  }
+
+  function loadSavedScenario(name) {
+    const entry = (app.savedScenarios || []).find(function (item) {
+      return item && item.name === name && item.scenario;
+    });
+    if (!entry) return false;
+    app.currentPresetName = '';
+    applyScenario(entry.scenario);
+    return true;
+  }
+
+  function setPausedState(paused) {
+    app.state.paused = !!paused;
+    syncStatus();
+  }
+
   W.attach(app, {
     clamp: clamp,
     deepClone: deepClone,
@@ -1967,6 +1990,10 @@
   app.resetCamera = resetCamera;
   app.updateObjectScale = updateObjectScale;
   app.resizeRenderer = resizeRenderer;
+  app.getScenarioSnapshot = getScenarioSnapshot;
+  app.getSavedScenarioList = getSavedScenarioList;
+  app.loadSavedScenario = loadSavedScenario;
+  app.setPausedState = setPausedState;
 
   setupRenderer();
   initGeometryLayers();

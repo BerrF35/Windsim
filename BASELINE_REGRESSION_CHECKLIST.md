@@ -25,6 +25,9 @@ Run these first after changes:
    - `windsim-app.js`
 
 2. Load the app in a browser and confirm:
+   - the entry / landing flow renders on first load
+   - mode cards render and can route into the simulator
+   - returning-user skip preference still works
    - the page renders
    - the 3D scene initializes
    - the sidebar renders
@@ -44,6 +47,9 @@ These checks should pass on every meaningful change.
 ### Startup
 
 - App boots without syntax errors.
+- Entry overlay appears on first load and keeps the simulator visible underneath.
+- Quick Start routes into the simulator without a hard page refresh.
+- Guided / Sandbox / Advanced / Load entry paths remain wired to real simulator states.
 - Default preset loads.
 - Object appears in the chamber.
 - Camera controls work.
@@ -109,6 +115,8 @@ These checks should pass on every meaningful change.
 
 ### Persistence
 
+- Entry preference persists and can fast-track returning users to the mode section.
+- Recent run list persists and restores exact scenario snapshots.
 - Scenario save works.
 - Scenario load works.
 - Scenario export produces JSON.

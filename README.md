@@ -12,11 +12,12 @@ It is not a CFD solver today.
 
 What is already working in the repo:
 
-- modular browser app split across `index.html`, `windsim-data.js`, `windsim-physics.js`, `windsim-solvers.js`, `windsim-ui.js`, `windsim-workflows.js`, and `windsim-app.js`
+- modular browser app split across `index.html`, `windsim-entry.css`, `windsim-entry.js`, `windsim-data.js`, `windsim-physics.js`, `windsim-solvers.js`, `windsim-ui.js`, `windsim-workflows.js`, and `windsim-app.js`
 - object library with object-specific dimensions, mass assumptions, aero tuning, and contact behavior
 - configurable wind speed, heading, elevation, turbulence, gusts, altitude, chamber size, and launch state
 - reduced-order rigid-body motion with drag, lift, Magnus force, rotation, ground contact, wall contact, and telemetry
 - mounted wind-tunnel mode, playback scrubbing, saved sweeps, run comparison, and flow-probe slices
+- cinematic first-load landing flow with mode routing, recent-run restore, saved entry preferences, and seamless handoff into the live simulator
 - CSV telemetry export and a small validation suite
 
 What is still true about the codebase:
@@ -29,7 +30,11 @@ What is still true about the codebase:
 ## Repo Layout
 
 - `index.html`
-  Browser shell and script loading.
+  Browser shell, import map, simulator mount points, and script loading.
+- `windsim-entry.css`
+  Landing / entry visual system, transition styling, and responsive entry layout.
+- `windsim-entry.js`
+  React-based landing flow, motion system, mode routing, persisted entry preferences, and simulator handoff.
 - `windsim-data.js`
   Static definitions: objects, surfaces, presets, validation cases, solver metadata.
 - `windsim-physics.js`
@@ -59,3 +64,5 @@ The current priority is to make the reduced-order baseline more honest and easie
 - splitting `windsim-app.js` into cleaner ownership boundaries
 - closing truthfulness gaps in labeling and deterministic behavior
 - expanding validation before deeper solver work
+
+The new entry flow is part of that same direction: it improves first-load UX and routing without pretending the simulator underneath is more complete than it is.
