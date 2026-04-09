@@ -541,15 +541,29 @@ function LoadingShell(props) {
             <div className="entry-shell">
               <section className="entry-section entry-hero">
                 <div className="entry-hero-copy">
-                  <div className="entry-kicker"><span className="entry-kicker-dot"></span>${props.error ? 'Entry system error' : 'Preparing chamber'}</div>
-                  <h1 className="entry-hero-title">${props.error ? 'WindSim could not finish booting.' : 'Preparing the chamber.'}</h1>
-                  <p className="entry-hero-lead">${props.error ? props.error : 'The simulator is initializing underneath the entry flow. This stays in one app and yields directly into the live chamber.'}</p>
+                  <div className="entry-kicker"><span className="entry-kicker-dot"></span>${props.error ? 'Entry system error' : (props.ready ? 'Boot complete' : 'Initializing simulator')}</div>
+                  <h1 className="entry-hero-title">${props.error ? 'WindSim could not finish booting.' : (props.ready ? 'Handing off to the entry experience.' : 'Preparing the chamber.')}</h1>
+                  <p className="entry-hero-lead">${props.error ? props.error : (props.ready ? 'Core systems are up. Finalizing the first-load experience before opening the lab.' : 'Loading the simulator, renderer, saved state, and entry routing before the front door opens.')}</p>
+                  <div className="entry-boot-row">
+                    <div className="entry-boot-label">${props.error ? 'status' : (props.ready ? 'stage' : 'boot')}</div>
+                    <div className="entry-boot-track"><div className=${props.error ? 'entry-boot-fill is-error' : (props.ready ? 'entry-boot-fill is-ready' : 'entry-boot-fill')}></div></div>
+                  </div>
                 </div>
                 <div className="entry-preview">
                   <div className="entry-preview-grid"></div>
                   <div className="entry-preview-head">
-                    <div className="entry-panel-tag">WindSim / initializing</div>
-                    <div className="entry-preview-note">${props.error ? 'Refresh once if the module graph was interrupted.' : 'Loading the live simulator surface, routing state, and entry motion stack.'}</div>
+                    <div className="entry-panel-tag">WindSim / boot</div>
+                    <div className="entry-preview-note">${props.error ? 'Refresh once if the module graph was interrupted.' : (props.ready ? 'Simulator live. Opening the entry flow next.' : 'Waiting for the live simulator surface, module graph, and launch routing to settle.')}</div>
+                  </div>
+                  <div className="entry-stage">
+                    <div className="entry-boot-grid" aria-hidden="true"></div>
+                    <div className="entry-boot-pulse"></div>
+                    <div className="entry-stage-hud">
+                      <div className="entry-stage-hud-card"><div className="entry-stage-hud-label">renderer</div><div className="entry-stage-hud-value">${props.error ? 'halted' : (props.ready ? 'ready' : 'syncing')}</div></div>
+                      <div className="entry-stage-hud-card"><div className="entry-stage-hud-label">routing</div><div className="entry-stage-hud-value">${props.error ? 'check' : (props.ready ? 'armed' : 'mounting')}</div></div>
+                      <div className="entry-stage-hud-card"><div className="entry-stage-hud-label">handoff</div><div className="entry-stage-hud-value">${props.error ? 'retry' : (props.ready ? 'opening' : 'holding')}</div></div>
+                      <div className="entry-stage-hud-card"><div className="entry-stage-hud-label">destination</div><div className="entry-stage-hud-value">entry</div></div>
+                    </div>
                   </div>
                 </div>
               </section>
@@ -1221,6 +1235,7 @@ function EntryApp(props) {
 function EntryRoot() {
   const [simulator, setSimulator] = React.useState(null);
   const [error, setError] = React.useState('');
+  const [bootReady, setBootReady] = React.useState(false);
   const [overlayOpen, setOverlayOpen] = React.useState(true);
   const [catalogVersion, setCatalogVersion] = React.useState(0);
   const [isTransitioning, setIsTransitioning] = React.useState(false);
@@ -1228,13 +1243,17 @@ function EntryRoot() {
   const [sessionToast, setSessionToast] = React.useState(null);
   const primedRef = React.useRef(false);
   const toastTimerRef = React.useRef(0);
+  const bootTimerRef = React.useRef(0);
 
   React.useEffect(function () {
     waitForSimulator(10000)
       .then(function (app) {
         setSimulator(app);
         document.body.classList.add('entry-active');
-        window.history.replaceState({ windsimView: 'entry' }, '', '#entry');
+        bootTimerRef.current = window.setTimeout(function () {
+          setBootReady(true);
+          window.history.replaceState({ windsimView: 'entry' }, '', '#entry');
+        }, 850);
       })
       .catch(function (err) {
         setError(err && err.message ? err.message : 'Simulator bootstrap failed.');
@@ -1258,6 +1277,7 @@ function EntryRoot() {
   React.useEffect(function () {
     return function () {
       if (toastTimerRef.current) window.clearTimeout(toastTimerRef.current);
+      if (bootTimerRef.current) window.clearTimeout(bootTimerRef.current);
     };
   }, []);
 
@@ -1287,8 +1307,8 @@ function EntryRoot() {
     window.history.replaceState({ windsimView: 'entry' }, '', '#entry');
   }
 
-  if (!simulator) {
-    return html`<${LoadingShell} error=${error} />`;
+  if (!simulator || !bootReady) {
+    return html`<${LoadingShell} error=${error} ready=${!!simulator && !error} />`;
   }
 
   return html`

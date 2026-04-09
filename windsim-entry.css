@@ -502,6 +502,81 @@ body.entry-entering #main canvas{
   background:linear-gradient(90deg, rgba(236,114,90,.72), rgba(245,238,231,.10));
 }
 
+.entry-boot-row{
+  display:grid;
+  gap:10px;
+  max-width:360px;
+  margin-top:26px;
+}
+
+.entry-boot-label{
+  font-family:'JetBrains Mono',monospace;
+  font-size:10px;
+  letter-spacing:.18em;
+  text-transform:uppercase;
+  color:var(--entry-ink-soft);
+}
+
+.entry-boot-track{
+  height:10px;
+  border-radius:999px;
+  border:1px solid rgba(245,238,231,.10);
+  background:rgba(255,255,255,.03);
+  overflow:hidden;
+}
+
+.entry-boot-fill{
+  width:68%;
+  height:100%;
+  border-radius:inherit;
+  background:linear-gradient(90deg, rgba(236,114,90,.96), rgba(245,238,231,.72));
+  animation:entryBootPulse 1.6s var(--entry-ease) infinite;
+  transform-origin:left center;
+}
+
+.entry-boot-fill.is-ready{
+  width:100%;
+  animation:none;
+}
+
+.entry-boot-fill.is-error{
+  width:100%;
+  animation:none;
+  background:linear-gradient(90deg, rgba(255,138,76,.95), rgba(236,114,90,.75));
+}
+
+.entry-boot-grid{
+  position:absolute;
+  inset:0;
+  background:
+    linear-gradient(rgba(245,238,231,.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(245,238,231,.03) 1px, transparent 1px);
+  background-size:34px 34px;
+  mask-image:radial-gradient(circle at center, rgba(0,0,0,.9), transparent 78%);
+  opacity:.30;
+}
+
+.entry-boot-pulse{
+  position:absolute;
+  inset:18% 16%;
+  border-radius:32px;
+  border:1px solid rgba(236,114,90,.14);
+  background:
+    radial-gradient(circle at center, rgba(236,114,90,.24), transparent 36%),
+    radial-gradient(circle at center, rgba(245,238,231,.10), transparent 62%);
+  animation:entryBootDrift 4.2s ease-in-out infinite;
+}
+
+@keyframes entryBootPulse{
+  0%,100%{transform:scaleX(.58);opacity:.82}
+  50%{transform:scaleX(.94);opacity:1}
+}
+
+@keyframes entryBootDrift{
+  0%,100%{transform:scale(.96);opacity:.72}
+  50%{transform:scale(1.03);opacity:1}
+}
+
 .entry-story{
   padding:14vh 0 14vh;
 }
@@ -1118,7 +1193,10 @@ body.entry-entering #main canvas{
   .entry-ghost-btn,
   .entry-primary-btn,
   .entry-toggle-track,
-  .entry-toggle-track::after{
+  .entry-toggle-track::after,
+  .entry-boot-fill,
+  .entry-boot-pulse{
     transition:none;
+    animation:none;
   }
 }
