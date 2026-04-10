@@ -74,6 +74,9 @@ const MODE_LIBRARY = [
     kicker: 'Fast Entry',
     title: 'Quick Start',
     copy: 'Open the chamber with minimal friction. If you have a recent run, it comes back first. Otherwise the baseline preset is loaded immediately.',
+    signature: 'baseline recovery',
+    cadence: 'instant',
+    focus: 'momentum',
     meta: [
       ['routing', 'recent or baseline'],
       ['pace', 'fastest path'],
@@ -87,6 +90,9 @@ const MODE_LIBRARY = [
     kicker: 'Curated Path',
     title: 'Guided Experiment',
     copy: 'Launch into a readable aero case with graphing, labels, and measurement aids already turned on so the first run teaches while it moves.',
+    signature: 'spinlab read',
+    cadence: 'measured',
+    focus: 'first analysis',
     meta: [
       ['routing', 'spinlab-based'],
       ['pace', 'guided'],
@@ -100,6 +106,9 @@ const MODE_LIBRARY = [
     kicker: 'Open Lab',
     title: 'Sandbox Mode',
     copy: 'Start from a clean baseline and shape the chamber from scratch. This keeps the simulator feeling direct for people who already know where they want to go.',
+    signature: 'open chamber',
+    cadence: 'freeform',
+    focus: 'experimentation',
     meta: [
       ['routing', 'baseline preset'],
       ['pace', 'open-ended'],
@@ -113,6 +122,9 @@ const MODE_LIBRARY = [
     kicker: 'Mounted Study',
     title: 'Advanced Mode',
     copy: 'Drop into a mounted tunnel-style setup with field slice and analysis aids active. This is the shortest path to a more instrument-like workflow.',
+    signature: 'mounted tunnel',
+    cadence: 'instrument',
+    focus: 'force study',
     meta: [
       ['routing', 'mounted tunnel'],
       ['pace', 'focused'],
@@ -126,6 +138,9 @@ const MODE_LIBRARY = [
     kicker: 'Library',
     title: 'Load Preset / Recent Run',
     copy: 'Open the preset library, saved scenarios, or your recent launch history. This keeps the landing useful instead of decorative.',
+    signature: 'state library',
+    cadence: 'selective',
+    focus: 'specific setup',
     meta: [
       ['routing', 'presets + saves'],
       ['pace', 'selective'],
@@ -577,28 +592,62 @@ function LoadingShell(props) {
 
 function PreviewStage(props) {
   const active = props.active || STORY_CHAPTERS[0];
+  const mode = props.mode || MODE_LIBRARY[0];
+  const [pointer, setPointer] = React.useState({ x: 0, y: 0 });
+
+  function handlePointerMove(event) {
+    if (props.reducedMotion) return;
+    const rect = event.currentTarget.getBoundingClientRect();
+    const normalizedX = ((event.clientX - rect.left) / rect.width - 0.5) * 2;
+    const normalizedY = ((event.clientY - rect.top) / rect.height - 0.5) * 2;
+    setPointer({
+      x: clamp(normalizedX, -1, 1),
+      y: clamp(normalizedY, -1, 1)
+    });
+  }
+
+  function handlePointerLeave() {
+    setPointer({ x: 0, y: 0 });
+  }
+
   return html`
     <div className="entry-preview">
       <div className="entry-preview-grid"></div>
       <div className="entry-preview-head">
-        <div className="entry-panel-tag">Live chamber / entry surface</div>
-        <div className="entry-preview-note">${active.body}</div>
+        <div className="entry-panel-tag">Live chamber / ${mode.signature}</div>
+        <div className="entry-preview-note">${mode.kicker} / ${mode.focus} / ${mode.cadence}</div>
       </div>
-      <div className="entry-stage">
-        <svg className="entry-stage-svg" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
-          ${PREVIEW_PATHS.map(function (path, index) {
-            return html`<path key=${'path-' + index} className=${path.accent ? 'entry-stage-line is-accent' : 'entry-stage-line'} d=${path.d}></path>`;
+      <div className="entry-stage" onPointerMove=${handlePointerMove} onPointerLeave=${handlePointerLeave}>
+        <motion.div className="entry-stage-glow" animate=${props.reducedMotion ? { x: 0, y: 0 } : { x: pointer.x * 36, y: pointer.y * 24 }} transition=${{ type: 'spring', stiffness: 110, damping: 18 }}></motion.div>
+        <motion.div className="entry-stage-grid-sweep" animate=${props.reducedMotion ? { x: 0 } : { x: pointer.x * 20 }} transition=${{ type: 'spring', stiffness: 80, damping: 18 }}></motion.div>
+        <motion.div className="entry-stage-field" animate=${props.reducedMotion ? { x: 0, y: 0 } : { x: pointer.x * -14, y: pointer.y * -10 }} transition=${{ type: 'spring', stiffness: 90, damping: 18 }}>
+          <svg className="entry-stage-svg" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
+            ${PREVIEW_PATHS.map(function (path, index) {
+              return html`<path key=${'path-' + index} className=${path.accent ? 'entry-stage-line is-accent' : 'entry-stage-line'} d=${path.d}></path>`;
+            })}
+            <path className="entry-stage-trace" d="M 14 74 C 28 62, 40 54, 54 48 S 76 36, 88 28"></path>
+            ${PREVIEW_DOTS.map(function (dot, index) {
+              return html`<circle key=${'dot-' + index} className=${dot.accent ? 'entry-stage-dot is-accent' : 'entry-stage-dot'} cx=${dot.x} cy=${dot.y} r=${dot.accent ? 1.45 : 1.05}></circle>`;
+            })}
+          </svg>
+        </motion.div>
+        <motion.div className="entry-stage-object-shell" animate=${props.reducedMotion ? { x: 0, y: 0, rotate: 0 } : { x: pointer.x * 16, y: pointer.y * 12, rotate: pointer.x * 5 }} transition=${{ type: 'spring', stiffness: 120, damping: 20 }}>
+          <div className="entry-stage-object">
+            <div className="entry-stage-object-core"></div>
+            <div className="entry-stage-object-axis is-x"></div>
+            <div className="entry-stage-object-axis is-y"></div>
+          </div>
+        </motion.div>
+        <div className="entry-stage-mode-band">
+          ${MODE_LIBRARY.map(function (entry) {
+            return html`<div key=${entry.id} className=${entry.id === mode.id ? 'entry-stage-mode-chip is-active' : 'entry-stage-mode-chip'}>${entry.title}</div>`;
           })}
-          <path className="entry-stage-trace" d="M 14 74 C 28 62, 40 54, 54 48 S 76 36, 88 28"></path>
-          ${PREVIEW_DOTS.map(function (dot, index) {
-            return html`<circle key=${'dot-' + index} className=${dot.accent ? 'entry-stage-dot is-accent' : 'entry-stage-dot'} cx=${dot.x} cy=${dot.y} r=${dot.accent ? 1.45 : 1.05}></circle>`;
-          })}
-          <g transform="translate(51 47) rotate(-22)">
-            <rect x="-4.8" y="-3.2" width="9.6" height="6.4" rx="1.5" fill="rgba(245,238,231,.22)" stroke="rgba(245,238,231,.55)"></rect>
-            <line x1="-9" y1="0" x2="9" y2="0" stroke="rgba(236,114,90,.55)" strokeWidth="0.7"></line>
-            <line x1="0" y1="-8.5" x2="0" y2="8.5" stroke="rgba(245,238,231,.28)" strokeWidth="0.55"></line>
-          </g>
-        </svg>
+        </div>
+        <div className="entry-stage-callout">
+          <div className="entry-stage-callout-kicker">${mode.kicker}</div>
+          <div className="entry-stage-callout-title">${mode.title}</div>
+          <div className="entry-stage-callout-copy">${active.body}</div>
+        </div>
         <div className="entry-stage-hud">
           ${props.metrics.map(function (metric) {
             return html`
@@ -610,6 +659,96 @@ function PreviewStage(props) {
           })}
         </div>
       </div>
+    </div>
+  `;
+}
+
+function circularOffset(index, activeIndex, length) {
+  let offset = index - activeIndex;
+  if (offset > length / 2) offset -= length;
+  if (offset < -length / 2) offset += length;
+  return offset;
+}
+
+function ModeTheater(props) {
+  const activeMode = props.activeMode;
+  const count = MODE_LIBRARY.length;
+  return html`
+    <div className="entry-mode-theater">
+      <div className="entry-mode-orbit">
+        ${MODE_LIBRARY.map(function (mode, index) {
+          const offset = circularOffset(index, props.activeIndex, count);
+          const distance = Math.abs(offset);
+          const visible = distance <= 1;
+          const x = offset * (props.isMobile ? 172 : 320);
+          const y = distance === 0 ? 0 : 34;
+          const scale = distance === 0 ? 1 : 0.84;
+          return html`
+            <motion.button
+              key=${mode.id}
+              className=${activeMode.id === mode.id ? 'entry-mode-orbit-card is-active' : 'entry-mode-orbit-card'}
+              initial=${false}
+              animate=${{
+                x: x,
+                y: y,
+                scale: props.reducedMotion ? 1 : scale,
+                opacity: visible ? (distance === 0 ? 1 : 0.34) : 0,
+                filter: distance === 0 ? 'blur(0px)' : 'blur(1.2px)'
+              }}
+              transition=${{ duration: props.reducedMotion ? 0.12 : 0.48, ease: [0.22, 1, 0.36, 1] }}
+              style=${{ zIndex: 10 - distance, pointerEvents: visible ? 'auto' : 'none' }}
+              onMouseEnter=${function () { props.onSelect(mode.id); }}
+              onFocus=${function () { props.onSelect(mode.id); }}
+              onClick=${function () { props.onSelect(mode.id); }}
+            >
+              <div className="entry-mode-orbit-index">${String(index + 1).padStart(2, '0')}</div>
+              <div className="entry-mode-orbit-title">${distance === 0 ? mode.title : mode.kicker}</div>
+              <div className="entry-mode-orbit-copy">${distance === 0 ? mode.signature : mode.focus}</div>
+            </motion.button>
+          `;
+        })}
+      </div>
+
+      <motion.div
+        key=${activeMode.id}
+        className="entry-mode-focus"
+        initial=${{ opacity: 0, y: 10 }}
+        animate=${{ opacity: 1, y: 0 }}
+        transition=${{ duration: props.reducedMotion ? 0.12 : 0.34, ease: [0.22, 1, 0.36, 1] }}
+      >
+        <div className="entry-mode-focus-head">
+          <div>
+            <div className="entry-mode-focus-kicker">${activeMode.kicker}</div>
+            <div className="entry-mode-focus-title">${activeMode.title}</div>
+            <div className="entry-mode-focus-copy">${activeMode.copy}</div>
+          </div>
+          <div className="entry-mode-nav">
+            <button className="entry-chip-btn" onClick=${function () { props.onShift(-1); }}>Prev</button>
+            <button className="entry-chip-btn" onClick=${function () { props.onShift(1); }}>Next</button>
+          </div>
+        </div>
+        <div className="entry-mode-focus-grid">
+          <div className="entry-mode-focus-stack">
+            ${activeMode.meta.map(function (row) {
+              return html`
+                <div key=${activeMode.id + '-' + row[0]} className="entry-mode-focus-row">
+                  <span>${row[0]}</span>
+                  <strong>${row[1]}</strong>
+                </div>
+              `;
+            })}
+          </div>
+          <div className="entry-mode-focus-stack">
+            <div className="entry-mode-focus-row"><span>signature</span><strong>${activeMode.signature}</strong></div>
+            <div className="entry-mode-focus-row"><span>cadence</span><strong>${activeMode.cadence}</strong></div>
+            <div className="entry-mode-focus-row"><span>focus</span><strong>${activeMode.focus}</strong></div>
+          </div>
+        </div>
+        <div className="entry-mode-focus-actions">
+          <button className="entry-primary-btn" onClick=${function () { props.onLaunch(activeMode.id); }}>${activeMode.launchLabel}</button>
+          <button className="entry-ghost-btn" onClick=${function () { props.onPreview(activeMode.id); }}>${activeMode.previewLabel}</button>
+        </div>
+      </motion.div>
     </div>
   `;
 }
@@ -899,6 +1038,11 @@ function EntryApp(props) {
     });
   }
 
+  function inspectMode(modeId) {
+    setActiveInspector(modeId);
+    if (modeId !== 'load') setDrawerView(null);
+  }
+
   function previewSelection(modeId) {
     setActiveInspector(modeId);
     if (modeId === 'load') {
@@ -971,6 +1115,12 @@ function EntryApp(props) {
     if (selection) launchSelection(selection);
   }
 
+  function shiftInspector(step) {
+    const currentIndex = MODE_LIBRARY.findIndex(function (mode) { return mode.id === activeInspector; });
+    const nextIndex = (currentIndex + step + MODE_LIBRARY.length) % MODE_LIBRARY.length;
+    inspectMode(MODE_LIBRARY[nextIndex].id);
+  }
+
   function resumeCurrentRun() {
     if (!props.simulator) return;
     const nextPrefs = Object.assign({}, prefs, { hasVisited: true });
@@ -989,11 +1139,12 @@ function EntryApp(props) {
 
   const activeStory = STORY_CHAPTERS[clamp(activeChapter, 0, STORY_CHAPTERS.length - 1)];
   const inspectorMode = MODE_LIBRARY.find(function (mode) { return mode.id === activeInspector; }) || MODE_LIBRARY[0];
-  const previewCopy = activeInspector === 'load'
-    ? {
-        body: 'Built-in presets, saved scenarios, and recent runs all route back through the same simulator APIs. The entry is a front door, not a second app.'
-      }
-    : activeStory;
+  const activeModeIndex = MODE_LIBRARY.findIndex(function (mode) { return mode.id === inspectorMode.id; });
+  const previewCopy = {
+    body: activeInspector === 'load'
+      ? 'Built-in presets, saved scenarios, and recent runs all route through the same simulator APIs. The entry stays operational instead of ornamental.'
+      : inspectorMode.copy
+  };
   const heroMetrics = [
     {
       label: 'presets',
@@ -1012,10 +1163,10 @@ function EntryApp(props) {
     }
   ];
   const stageMetrics = [
-    { label: 'focus', value: activeStory.id === 'lab' ? 'mode routing' : activeStory.id === 'body' ? 'body + telemetry' : 'field structure' },
+    { label: 'focus', value: inspectorMode.focus },
     { label: 'motion', value: reducedMotion ? 'reduced' : 'layered' },
     { label: 'entry mode', value: inspectorMode.title.toLowerCase() },
-    { label: 'handoff', value: 'same chamber' }
+    { label: 'cadence', value: inspectorMode.cadence }
   ];
 
   return html`
@@ -1069,7 +1220,7 @@ function EntryApp(props) {
                         </div>
                         <div className="entry-scroll-hint"><span className="entry-scroll-line"></span>Scroll for the short lab narrative</div>
                       </div>
-                      <${PreviewStage} active=${previewCopy} metrics=${stageMetrics} />
+                      <${PreviewStage} active=${previewCopy} mode=${inspectorMode} metrics=${stageMetrics} reducedMotion=${!!reducedMotion} />
                     </section>
 
                     <section className="entry-section entry-story" ref=${storyRef}>
@@ -1141,20 +1292,16 @@ function EntryApp(props) {
                         </div>
                       </div>
 
-                      <div className="entry-mode-grid">
-                        ${MODE_LIBRARY.map(function (mode) {
-                          return html`
-                            <${ModeCard}
-                              key=${mode.id}
-                              mode=${mode}
-                              reducedMotion=${!!reducedMotion}
-                              onInspect=${setActiveInspector}
-                              onLaunch=${launchMode}
-                              onPreview=${previewSelection}
-                            />
-                          `;
-                        })}
-                      </div>
+                      <${ModeTheater}
+                        activeMode=${inspectorMode}
+                        activeIndex=${activeModeIndex}
+                        reducedMotion=${!!reducedMotion}
+                        isMobile=${window.innerWidth < 821}
+                        onSelect=${inspectMode}
+                        onShift=${shiftInspector}
+                        onLaunch=${launchMode}
+                        onPreview=${previewSelection}
+                      />
 
                       <AnimatePresence initial=${false}>
                         ${drawerView && html`
