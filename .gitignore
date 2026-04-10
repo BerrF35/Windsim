@@ -3,3 +3,6 @@
 .chrome-headless*
 _verify*.png
 _dump*.html
+.tmp-entry*
+playwright-report/
+test-results/

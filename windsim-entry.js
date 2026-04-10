@@ -430,6 +430,386 @@ function buildPreviewPaths() {
 
 const PREVIEW_PATHS = buildPreviewPaths();
 
+const TEXT_PRESETS = {
+  blur: {
+    hidden: { opacity: 0, filter: 'blur(14px)', y: 22 },
+    visible: { opacity: 1, filter: 'blur(0px)', y: 0 }
+  },
+  slide: {
+    hidden: { opacity: 0, y: 28 },
+    visible: { opacity: 1, y: 0 }
+  },
+  fade: {
+    hidden: { opacity: 0 },
+    visible: { opacity: 1 }
+  },
+  scale: {
+    hidden: { opacity: 0, scale: 0.86 },
+    visible: { opacity: 1, scale: 1 }
+  }
+};
+
+function splitTextSegments(text, per) {
+  if (per === 'line') return String(text || '').split('\n');
+  if (per === 'char') return Array.from(String(text || ''));
+  return String(text || '').split(/(\s+)/).filter(function (segment) { return segment.length; });
+}
+
+function TextEffect(props) {
+  const per = props.per || 'word';
+  const as = props.as || 'div';
+  const segments = React.useMemo(function () {
+    return splitTextSegments(props.children || '', per);
+  }, [props.children, per]);
+  const MotionTag = motion[as] || motion.div;
+  const preset = TEXT_PRESETS[props.preset || 'slide'] || TEXT_PRESETS.slide;
+  const stagger = per === 'char' ? 0.024 : (per === 'line' ? 0.12 : 0.055);
+
+  return html`
+    <${MotionTag}
+      className=${props.className || ''}
+      initial="hidden"
+      animate=${props.trigger === false ? 'hidden' : 'visible'}
+      variants=${{
+        hidden: { opacity: 0 },
+        visible: {
+          opacity: 1,
+          transition: {
+            delayChildren: props.delay || 0,
+            staggerChildren: stagger
+          }
+        }
+      }}
+    >
+      ${segments.map(function (segment, index) {
+        return html`
+          <motion.span
+            key=${per + '-' + index + '-' + segment}
+            variants=${preset}
+            className=${per === 'line' ? 'entry-text-line' : 'entry-text-segment'}
+            transition=${{ duration: props.reducedMotion ? 0.01 : 0.72, ease: [0.22, 1, 0.36, 1] }}
+            style=${{
+              display: per === 'line' ? 'block' : 'inline-block',
+              whiteSpace: per === 'char' ? 'pre' : 'inherit'
+            }}
+          >
+            ${segment}
+          </motion.span>
+        `;
+      })}
+    </${MotionTag}>
+  `;
+}
+
+function ShaderAnimation(props) {
+  const containerRef = React.useRef(null);
+  const frameRef = React.useRef(0);
+  const sceneRef = React.useRef(null);
+
+  React.useEffect(function () {
+    const container = containerRef.current;
+    const THREE = window.THREE;
+    if (!container || !THREE) return undefined;
+
+    const camera = new THREE.Camera();
+    camera.position.z = 1;
+
+    const scene = new THREE.Scene();
+    const geometry = new THREE.PlaneGeometry(2, 2);
+    const uniforms = {
+      time: { value: 1.0 },
+      resolution: { value: new THREE.Vector2() },
+      accent: { value: new THREE.Color(0xec725a) },
+      glow: { value: new THREE.Color(0xf5eee7) },
+      density: { value: props.variant === 'boot' ? 1.08 : 0.82 }
+    };
+
+    const material = new THREE.ShaderMaterial({
+      uniforms: uniforms,
+      transparent: true,
+      vertexShader: `
+        void main() {
+          gl_Position = vec4(position, 1.0);
+        }
+      `,
+      fragmentShader: `
+        #define PI 3.14159265359
+        precision highp float;
+
+        uniform vec2 resolution;
+        uniform float time;
+        uniform vec3 accent;
+        uniform vec3 glow;
+        uniform float density;
+
+        void main(void) {
+          vec2 uv = (gl_FragCoord.xy * 2.0 - resolution.xy) / min(resolution.x, resolution.y);
+          float t = time * 0.035;
+          float radius = length(uv * vec2(1.0, 1.18));
+          vec3 color = vec3(0.0);
+
+          for (int j = 0; j < 3; j++) {
+            for (int i = 0; i < 5; i++) {
+              float phase = fract(t - 0.012 * float(j) + float(i) * 0.018) * 4.0;
+              float band = abs(phase - radius + mod(uv.x * 0.72 + uv.y * 0.46, 0.18));
+              vec3 tint = mix(accent, glow, float(j) * 0.45);
+              color += tint * (0.0013 + 0.00055 * float(i * i)) / max(band, 0.022);
+            }
+          }
+
+          float lattice = 0.025 / (0.06 + abs(fract((uv.x - uv.y * 0.35) * 7.0 + t) - 0.5));
+          color += accent * lattice * 0.05 * density;
+
+          float vignette = smoothstep(1.42, 0.16, radius);
+          float haze = smoothstep(0.92, 0.18, abs(uv.y + 0.16));
+          gl_FragColor = vec4(color * vignette * haze, clamp(vignette * 0.92, 0.0, 1.0));
+        }
+      `
+    });
+
+    const mesh = new THREE.Mesh(geometry, material);
+    scene.add(mesh);
+
+    const renderer = new THREE.WebGLRenderer({
+      antialias: true,
+      alpha: true,
+      powerPreference: 'high-performance'
+    });
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.6));
+    renderer.setClearColor(0x000000, 0);
+    container.appendChild(renderer.domElement);
+
+    function resize() {
+      const width = container.clientWidth;
+      const height = container.clientHeight;
+      if (!width || !height) return;
+      renderer.setSize(width, height, false);
+      uniforms.resolution.value.x = renderer.domElement.width;
+      uniforms.resolution.value.y = renderer.domElement.height;
+      renderer.render(scene, camera);
+    }
+
+    function renderFrame() {
+      uniforms.time.value += props.reducedMotion ? 0.015 : 0.05;
+      renderer.render(scene, camera);
+      if (!props.reducedMotion) {
+        frameRef.current = window.requestAnimationFrame(renderFrame);
+      }
+    }
+
+    sceneRef.current = { renderer: renderer, geometry: geometry, material: material };
+    resize();
+    if (!props.reducedMotion) {
+      frameRef.current = window.requestAnimationFrame(renderFrame);
+    }
+    window.addEventListener('resize', resize);
+
+    return function () {
+      window.removeEventListener('resize', resize);
+      if (frameRef.current) window.cancelAnimationFrame(frameRef.current);
+      if (container.contains(renderer.domElement)) container.removeChild(renderer.domElement);
+      renderer.dispose();
+      renderer.forceContextLoss();
+      geometry.dispose();
+      material.dispose();
+      sceneRef.current = null;
+    };
+  }, [props.reducedMotion, props.variant]);
+
+  return html`<div ref=${containerRef} className=${props.className || 'entry-shader-surface'} aria-hidden="true"></div>`;
+}
+
+function buildFloatingPath(index, direction) {
+  return `M-${380 - index * 6 * direction} -${188 + index * 7}C-${380 - index * 6 * direction} -${188 + index * 7} -${312 - index * 5 * direction} ${214 - index * 5} ${152 - index * 6 * direction} ${340 - index * 5}C${616 - index * 4 * direction} ${468 - index * 5} ${684 - index * 4 * direction} ${876 - index * 6} ${684 - index * 4 * direction} ${876 - index * 6}`;
+}
+
+function FloatingPaths(props) {
+  const paths = React.useMemo(function () {
+    return Array.from({ length: props.count || 18 }, function (_, index) {
+      return {
+        id: (props.direction || 1) + '-' + index,
+        d: buildFloatingPath(index, props.direction || 1),
+        opacity: 0.05 + index * 0.018,
+        width: 0.55 + index * 0.036,
+        duration: 16 + index * 0.55
+      };
+    });
+  }, [props.count, props.direction]);
+
+  return html`
+    <div className=${props.className || 'entry-floating-paths'} aria-hidden="true">
+      <svg className="entry-floating-svg" viewBox="0 0 696 316" fill="none">
+        ${paths.map(function (path) {
+          return html`
+            <motion.path
+              key=${path.id}
+              d=${path.d}
+              className="entry-floating-path"
+              strokeWidth=${path.width}
+              strokeOpacity=${path.opacity}
+              initial=${{ pathLength: 0.3, opacity: path.opacity * 0.65 }}
+              animate=${props.reducedMotion ? { pathLength: 1, opacity: path.opacity * 0.85 } : {
+                pathLength: 1,
+                opacity: [path.opacity * 0.45, path.opacity, path.opacity * 0.45],
+                pathOffset: [0, 1, 0]
+              }}
+              transition=${{
+                duration: props.reducedMotion ? 0.01 : path.duration,
+                repeat: props.reducedMotion ? 0 : Infinity,
+                ease: 'linear'
+              }}
+            ></motion.path>
+          `;
+        })}
+      </svg>
+    </div>
+  `;
+}
+
+function BackgroundPaths(props) {
+  return html`
+    <div className=${props.className || 'entry-background-paths'} aria-hidden="true">
+      <${FloatingPaths} direction=${1} reducedMotion=${props.reducedMotion} />
+      <${FloatingPaths} direction=${-1} reducedMotion=${props.reducedMotion} />
+    </div>
+  `;
+}
+
+function Waves(props) {
+  const containerRef = React.useRef(null);
+  const svgRef = React.useRef(null);
+  const pathsRef = React.useRef([]);
+  const pointerRef = React.useRef({ x: 0.5, y: 0.5, active: false });
+  const frameRef = React.useRef(0);
+  const sizeRef = React.useRef({ width: 0, height: 0 });
+
+  React.useEffect(function () {
+    const container = containerRef.current;
+    const svg = svgRef.current;
+    if (!container || !svg) return undefined;
+
+    function createPaths() {
+      const rect = container.getBoundingClientRect();
+      sizeRef.current = { width: rect.width, height: rect.height };
+      while (svg.firstChild) svg.removeChild(svg.firstChild);
+      pathsRef.current = [];
+      const lineCount = Math.max(10, Math.min(18, Math.round(rect.width / 74)));
+      for (let index = 0; index < lineCount; index += 1) {
+        const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+        path.setAttribute('fill', 'none');
+        path.setAttribute('stroke', props.strokeColor || 'rgba(245,238,231,0.54)');
+        path.setAttribute('stroke-width', index % 3 === 0 ? '1.2' : '0.9');
+        path.setAttribute('stroke-linecap', 'round');
+        path.setAttribute('stroke-opacity', (0.18 + index * 0.028).toFixed(3));
+        svg.appendChild(path);
+        pathsRef.current.push(path);
+      }
+      container.style.setProperty('--entry-wave-x', '50%');
+      container.style.setProperty('--entry-wave-y', '50%');
+    }
+
+    function updatePointer(clientX, clientY) {
+      const rect = container.getBoundingClientRect();
+      const normalizedX = clamp((clientX - rect.left) / Math.max(rect.width, 1), 0, 1);
+      const normalizedY = clamp((clientY - rect.top) / Math.max(rect.height, 1), 0, 1);
+      pointerRef.current = { x: normalizedX, y: normalizedY, active: true };
+      container.style.setProperty('--entry-wave-x', (normalizedX * 100).toFixed(2) + '%');
+      container.style.setProperty('--entry-wave-y', (normalizedY * 100).toFixed(2) + '%');
+    }
+
+    function handleMove(event) {
+      updatePointer(event.clientX, event.clientY);
+    }
+
+    function handleLeave() {
+      pointerRef.current.active = false;
+    }
+
+    function draw(time) {
+      const width = sizeRef.current.width;
+      const height = sizeRef.current.height;
+      if (!width || !height) {
+        frameRef.current = window.requestAnimationFrame(draw);
+        return;
+      }
+      pathsRef.current.forEach(function (path, index) {
+        const count = Math.max(pathsRef.current.length - 1, 1);
+        const baseX = width * (index / count);
+        let d = 'M ' + baseX.toFixed(2) + ' -24';
+        for (let step = 0; step <= 16; step += 1) {
+          const y = (height + 48) * (step / 16) - 24;
+          const phase = (time * 0.00035) + index * 0.24;
+          const oscillation = Math.sin(y * 0.014 + phase) * 16 + Math.cos(y * 0.008 - phase * 0.8) * 6;
+          const pointerDx = baseX - pointerRef.current.x * width;
+          const pointerDy = y - pointerRef.current.y * height;
+          const distance = Math.hypot(pointerDx, pointerDy);
+          const influence = pointerRef.current.active ? Math.max(0, 1 - distance / 220) : 0;
+          const displacement = oscillation + influence * 42 * Math.sign(pointerDx || 1);
+          d += ' L ' + (baseX + displacement).toFixed(2) + ' ' + y.toFixed(2);
+        }
+        path.setAttribute('d', d);
+      });
+      if (!props.reducedMotion) {
+        frameRef.current = window.requestAnimationFrame(draw);
+      }
+    }
+
+    function handleResize() {
+      createPaths();
+      if (props.reducedMotion) draw(0);
+    }
+
+    createPaths();
+    if (props.reducedMotion) draw(0);
+    else frameRef.current = window.requestAnimationFrame(draw);
+
+    window.addEventListener('resize', handleResize);
+    container.addEventListener('pointermove', handleMove);
+    container.addEventListener('pointerleave', handleLeave);
+
+    return function () {
+      window.removeEventListener('resize', handleResize);
+      container.removeEventListener('pointermove', handleMove);
+      container.removeEventListener('pointerleave', handleLeave);
+      if (frameRef.current) window.cancelAnimationFrame(frameRef.current);
+    };
+  }, [props.reducedMotion, props.strokeColor]);
+
+  return html`
+    <div ref=${containerRef} className=${props.className || 'entry-waves'} aria-hidden="true">
+      <svg ref=${svgRef} className="entry-waves-svg" xmlns="http://www.w3.org/2000/svg"></svg>
+      <div className="entry-waves-pointer"></div>
+    </div>
+  `;
+}
+
+function useHeroExpansion(options) {
+  const { wrapperRef, heroRef, previewRef, overlayOpen, reducedMotion } = options;
+
+  React.useLayoutEffect(function () {
+    if (!overlayOpen || !wrapperRef.current || !heroRef.current || !previewRef.current) return undefined;
+    const target = previewRef.current;
+    target.style.setProperty('--entry-preview-expand', '0');
+    if (reducedMotion) return undefined;
+
+    const trigger = ScrollTrigger.create({
+      trigger: heroRef.current,
+      scroller: wrapperRef.current,
+      start: 'top top',
+      end: 'bottom top',
+      scrub: 0.55,
+      onUpdate: function (self) {
+        target.style.setProperty('--entry-preview-expand', self.progress.toFixed(3));
+      }
+    });
+
+    return function () {
+      target.style.removeProperty('--entry-preview-expand');
+      trigger.kill();
+    };
+  }, [heroRef, overlayOpen, previewRef, reducedMotion, wrapperRef]);
+}
+
 function chapterFill(progress, index) {
   const scaled = progress * STORY_CHAPTERS.length - index;
   return clamp(scaled, 0, 1);
@@ -548,6 +928,7 @@ function useStoryChoreography(options) {
 }
 
 function LoadingShell(props) {
+  const prefersReducedMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   return html`
     <div className="entry-app">
       <div className="entry-overlay">
@@ -557,7 +938,15 @@ function LoadingShell(props) {
               <section className="entry-section entry-hero">
                 <div className="entry-hero-copy">
                   <div className="entry-kicker"><span className="entry-kicker-dot"></span>${props.error ? 'Entry system error' : (props.ready ? 'Boot complete' : 'Initializing simulator')}</div>
-                  <h1 className="entry-hero-title">${props.error ? 'WindSim could not finish booting.' : (props.ready ? 'Handing off to the entry experience.' : 'Preparing the chamber.')}</h1>
+                  <${TextEffect}
+                    as="h1"
+                    per="line"
+                    preset="blur"
+                    className="entry-hero-title"
+                    reducedMotion=${prefersReducedMotion}
+                  >
+                    ${props.error ? 'WindSim could not\nfinish booting.' : (props.ready ? 'Handing off to\nthe entry experience.' : 'Preparing\nthe chamber.')}
+                  </${TextEffect}>
                   <p className="entry-hero-lead">${props.error ? props.error : (props.ready ? 'Core systems are up. Finalizing the first-load experience before opening the lab.' : 'Loading the simulator, renderer, saved state, and entry routing before the front door opens.')}</p>
                   <div className="entry-boot-row">
                     <div className="entry-boot-label">${props.error ? 'status' : (props.ready ? 'stage' : 'boot')}</div>
@@ -565,6 +954,8 @@ function LoadingShell(props) {
                   </div>
                 </div>
                 <div className="entry-preview">
+                  <${ShaderAnimation} className="entry-stage-shader is-boot" variant="boot" reducedMotion=${prefersReducedMotion} />
+                  <${BackgroundPaths} className="entry-background-paths is-boot" reducedMotion=${prefersReducedMotion} />
                   <div className="entry-preview-grid"></div>
                   <div className="entry-preview-head">
                     <div className="entry-panel-tag">WindSim / boot</div>
@@ -611,15 +1002,19 @@ function PreviewStage(props) {
   }
 
   return html`
-    <div className="entry-preview">
+    <div className="entry-preview entry-preview-immersive" ref=${props.previewRef}>
+      <${ShaderAnimation} className="entry-stage-shader" variant="hero" reducedMotion=${props.reducedMotion} />
+      <${BackgroundPaths} className="entry-background-paths" reducedMotion=${props.reducedMotion} />
       <div className="entry-preview-grid"></div>
       <div className="entry-preview-head">
         <div className="entry-panel-tag">Live chamber / ${mode.signature}</div>
         <div className="entry-preview-note">${mode.kicker} / ${mode.focus} / ${mode.cadence}</div>
       </div>
       <div className="entry-stage" onPointerMove=${handlePointerMove} onPointerLeave=${handlePointerLeave}>
+        <motion.div className="entry-stage-depth" animate=${props.reducedMotion ? { rotateX: 0, rotateY: 0 } : { rotateX: pointer.y * -3, rotateY: pointer.x * 4 }} transition=${{ type: 'spring', stiffness: 110, damping: 16 }}></motion.div>
         <motion.div className="entry-stage-glow" animate=${props.reducedMotion ? { x: 0, y: 0 } : { x: pointer.x * 36, y: pointer.y * 24 }} transition=${{ type: 'spring', stiffness: 110, damping: 18 }}></motion.div>
         <motion.div className="entry-stage-grid-sweep" animate=${props.reducedMotion ? { x: 0 } : { x: pointer.x * 20 }} transition=${{ type: 'spring', stiffness: 80, damping: 18 }}></motion.div>
+        <motion.div className="entry-stage-arc" animate=${props.reducedMotion ? { rotate: 0, scale: 1 } : { rotate: pointer.x * 7, scale: 1 + Math.abs(pointer.y) * 0.02 }} transition=${{ type: 'spring', stiffness: 90, damping: 17 }}></motion.div>
         <motion.div className="entry-stage-field" animate=${props.reducedMotion ? { x: 0, y: 0 } : { x: pointer.x * -14, y: pointer.y * -10 }} transition=${{ type: 'spring', stiffness: 90, damping: 18 }}>
           <svg className="entry-stage-svg" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
             ${PREVIEW_PATHS.map(function (path, index) {
@@ -638,6 +1033,9 @@ function PreviewStage(props) {
             <div className="entry-stage-object-axis is-y"></div>
           </div>
         </motion.div>
+        <div className="entry-stage-strata">
+          <span></span><span></span><span></span>
+        </div>
         <div className="entry-stage-mode-band">
           ${MODE_LIBRARY.map(function (entry) {
             return html`<div key=${entry.id} className=${entry.id === mode.id ? 'entry-stage-mode-chip is-active' : 'entry-stage-mode-chip'}>${entry.title}</div>`;
@@ -645,7 +1043,7 @@ function PreviewStage(props) {
         </div>
         <div className="entry-stage-callout">
           <div className="entry-stage-callout-kicker">${mode.kicker}</div>
-          <div className="entry-stage-callout-title">${mode.title}</div>
+          <${TextEffect} as="div" per="word" preset="slide" className="entry-stage-callout-title" reducedMotion=${props.reducedMotion}>${mode.title}</${TextEffect}>
           <div className="entry-stage-callout-copy">${active.body}</div>
         </div>
         <div className="entry-stage-hud">
@@ -676,13 +1074,15 @@ function ModeTheater(props) {
   return html`
     <div className="entry-mode-theater">
       <div className="entry-mode-orbit">
+        <${Waves} className="entry-mode-waves" reducedMotion=${props.reducedMotion} strokeColor="rgba(245,238,231,0.46)" />
+        <div className="entry-mode-orbit-gradient"></div>
         ${MODE_LIBRARY.map(function (mode, index) {
           const offset = circularOffset(index, props.activeIndex, count);
           const distance = Math.abs(offset);
           const visible = distance <= 1;
-          const x = offset * (props.isMobile ? 172 : 320);
-          const y = distance === 0 ? 0 : 34;
-          const scale = distance === 0 ? 1 : 0.84;
+          const x = offset * (props.isMobile ? 184 : 336);
+          const y = distance === 0 ? 14 : 42;
+          const scale = distance === 0 ? 1 : 0.82;
           return html`
             <motion.button
               key=${mode.id}
@@ -704,51 +1104,55 @@ function ModeTheater(props) {
               <div className="entry-mode-orbit-index">${String(index + 1).padStart(2, '0')}</div>
               <div className="entry-mode-orbit-title">${distance === 0 ? mode.title : mode.kicker}</div>
               <div className="entry-mode-orbit-copy">${distance === 0 ? mode.signature : mode.focus}</div>
+              <div className="entry-mode-orbit-foot">${distance === 0 ? mode.cadence : 'inspect'}</div>
             </motion.button>
           `;
         })}
       </div>
 
-      <motion.div
-        key=${activeMode.id}
-        className="entry-mode-focus"
-        initial=${{ opacity: 0, y: 10 }}
-        animate=${{ opacity: 1, y: 0 }}
-        transition=${{ duration: props.reducedMotion ? 0.12 : 0.34, ease: [0.22, 1, 0.36, 1] }}
-      >
-        <div className="entry-mode-focus-head">
-          <div>
-            <div className="entry-mode-focus-kicker">${activeMode.kicker}</div>
-            <div className="entry-mode-focus-title">${activeMode.title}</div>
-            <div className="entry-mode-focus-copy">${activeMode.copy}</div>
+      <AnimatePresence mode="wait" initial=${false}>
+        <motion.div
+          key=${activeMode.id}
+          className="entry-mode-focus"
+          initial=${{ opacity: 0, y: 10 }}
+          animate=${{ opacity: 1, y: 0 }}
+          exit=${{ opacity: 0, y: -10 }}
+          transition=${{ duration: props.reducedMotion ? 0.12 : 0.34, ease: [0.22, 1, 0.36, 1] }}
+        >
+          <div className="entry-mode-focus-head">
+            <div>
+              <div className="entry-mode-focus-kicker">${activeMode.kicker}</div>
+              <${TextEffect} as="div" per="word" preset="blur" className="entry-mode-focus-title" reducedMotion=${props.reducedMotion}>${activeMode.title}</${TextEffect}>
+              <${TextEffect} as="div" per="word" preset="fade" className="entry-mode-focus-copy" reducedMotion=${props.reducedMotion}>${activeMode.copy}</${TextEffect}>
+            </div>
+            <div className="entry-mode-nav">
+              <button className="entry-chip-btn" onClick=${function () { props.onShift(-1); }}>Prev</button>
+              <button className="entry-chip-btn" onClick=${function () { props.onShift(1); }}>Next</button>
+            </div>
           </div>
-          <div className="entry-mode-nav">
-            <button className="entry-chip-btn" onClick=${function () { props.onShift(-1); }}>Prev</button>
-            <button className="entry-chip-btn" onClick=${function () { props.onShift(1); }}>Next</button>
+          <div className="entry-mode-focus-grid">
+            <div className="entry-mode-focus-stack">
+              ${activeMode.meta.map(function (row) {
+                return html`
+                  <div key=${activeMode.id + '-' + row[0]} className="entry-mode-focus-row">
+                    <span>${row[0]}</span>
+                    <strong>${row[1]}</strong>
+                  </div>
+                `;
+              })}
+            </div>
+            <div className="entry-mode-focus-stack">
+              <div className="entry-mode-focus-row"><span>signature</span><strong>${activeMode.signature}</strong></div>
+              <div className="entry-mode-focus-row"><span>cadence</span><strong>${activeMode.cadence}</strong></div>
+              <div className="entry-mode-focus-row"><span>focus</span><strong>${activeMode.focus}</strong></div>
+            </div>
           </div>
-        </div>
-        <div className="entry-mode-focus-grid">
-          <div className="entry-mode-focus-stack">
-            ${activeMode.meta.map(function (row) {
-              return html`
-                <div key=${activeMode.id + '-' + row[0]} className="entry-mode-focus-row">
-                  <span>${row[0]}</span>
-                  <strong>${row[1]}</strong>
-                </div>
-              `;
-            })}
+          <div className="entry-mode-focus-actions">
+            <button className="entry-primary-btn" onClick=${function () { props.onLaunch(activeMode.id); }}>${activeMode.launchLabel}</button>
+            <button className="entry-ghost-btn" onClick=${function () { props.onPreview(activeMode.id); }}>${activeMode.previewLabel}</button>
           </div>
-          <div className="entry-mode-focus-stack">
-            <div className="entry-mode-focus-row"><span>signature</span><strong>${activeMode.signature}</strong></div>
-            <div className="entry-mode-focus-row"><span>cadence</span><strong>${activeMode.cadence}</strong></div>
-            <div className="entry-mode-focus-row"><span>focus</span><strong>${activeMode.focus}</strong></div>
-          </div>
-        </div>
-        <div className="entry-mode-focus-actions">
-          <button className="entry-primary-btn" onClick=${function () { props.onLaunch(activeMode.id); }}>${activeMode.launchLabel}</button>
-          <button className="entry-ghost-btn" onClick=${function () { props.onPreview(activeMode.id); }}>${activeMode.previewLabel}</button>
-        </div>
-      </motion.div>
+        </motion.div>
+      </AnimatePresence>
     </div>
   `;
 }
@@ -764,7 +1168,7 @@ function StoryStep(props) {
       transition=${{ duration: 0.55, ease: [0.22, 1, 0.36, 1] }}
     >
       <div className="entry-story-step-index">${props.chapter.index}</div>
-      <h4>${props.chapter.title}</h4>
+      <${TextEffect} as="h4" per="line" preset="blur" className="" reducedMotion=${props.reducedMotion}>${props.chapter.title}</${TextEffect}>
       <p>${props.chapter.body}</p>
       <div className="entry-story-bullets">
         ${props.chapter.bullets.map(function (bullet, index) {
@@ -955,6 +1359,7 @@ function EntryApp(props) {
   const wrapperRef = React.useRef(null);
   const contentRef = React.useRef(null);
   const heroRef = React.useRef(null);
+  const previewRef = React.useRef(null);
   const storyRef = React.useRef(null);
   const modesRef = React.useRef(null);
   const storyShellRef = React.useRef(null);
@@ -964,6 +1369,9 @@ function EntryApp(props) {
   const traceRef = React.useRef(null);
   const hudRef = React.useRef(null);
   const autoSkipRef = React.useRef(false);
+  const [isMobile, setIsMobile] = React.useState(function () {
+    return window.innerWidth < 821;
+  });
 
   const [prefs, setPrefs] = React.useState(function () {
     return Object.assign({}, DEFAULT_PREFS, safeReadJson(ENTRY_PREFS_KEY, DEFAULT_PREFS));
@@ -993,6 +1401,24 @@ function EntryApp(props) {
     onProgress: setStoryProgress,
     onActiveChapter: setActiveChapter
   });
+
+  useHeroExpansion({
+    wrapperRef: wrapperRef,
+    heroRef: heroRef,
+    previewRef: previewRef,
+    overlayOpen: props.overlayOpen,
+    reducedMotion: !!reducedMotion
+  });
+
+  React.useEffect(function () {
+    function handleResize() {
+      setIsMobile(window.innerWidth < 821);
+    }
+    window.addEventListener('resize', handleResize);
+    return function () {
+      window.removeEventListener('resize', handleResize);
+    };
+  }, []);
 
   const liveSavedScenarios = props.catalogVersion >= 0 && props.simulator && typeof props.simulator.getSavedScenarioList === 'function'
     ? props.simulator.getSavedScenarioList()
@@ -1141,6 +1567,7 @@ function EntryApp(props) {
   const inspectorMode = MODE_LIBRARY.find(function (mode) { return mode.id === activeInspector; }) || MODE_LIBRARY[0];
   const activeModeIndex = MODE_LIBRARY.findIndex(function (mode) { return mode.id === inspectorMode.id; });
   const previewCopy = {
+    title: activeInspector === 'load' ? 'One front door, several real states.' : inspectorMode.title,
     body: activeInspector === 'load'
       ? 'Built-in presets, saved scenarios, and recent runs all route through the same simulator APIs. The entry stays operational instead of ornamental.'
       : inspectorMode.copy
@@ -1199,9 +1626,20 @@ function EntryApp(props) {
                     </nav>
 
                     <section className="entry-section entry-hero" ref=${heroRef}>
+                      <div className="entry-hero-atmosphere">
+                        <${BackgroundPaths} reducedMotion=${!!reducedMotion} />
+                      </div>
                       <div className="entry-hero-copy">
                         <div className="entry-kicker"><span className="entry-kicker-dot"></span>${prefs.hasVisited ? 'Return to the chamber' : 'WindSim entry system'}</div>
-                        <h1 className="entry-hero-title">${prefs.hasVisited ? 'Choose how you want to enter the lab.' : 'Aerodynamic simulation deserves a proper front door.'}</h1>
+                        <${TextEffect}
+                          as="h1"
+                          per="line"
+                          preset="blur"
+                          className="entry-hero-title"
+                          reducedMotion=${!!reducedMotion}
+                        >
+                          ${prefs.hasVisited ? 'Choose how you want\nto enter the lab.' : 'Aerodynamic simulation\nneeds a better first contact.'}
+                        </${TextEffect}>
                         <p className="entry-hero-lead">${prefs.hasVisited ? 'Your simulator is already live underneath. Jump straight to a mode, restore a recent run, or roll through the short intro again.' : 'This first-load flow frames the chamber before the controls arrive. It sets the pace, explains the modes, and yields directly into the live simulator without a hard page switch.'}</p>
                         <div className="entry-hero-actions">
                           <button className="entry-primary-btn" onClick=${function () { launchSelection(buildQuickStartSelection(recents)); }}>Quick Start</button>
@@ -1220,7 +1658,7 @@ function EntryApp(props) {
                         </div>
                         <div className="entry-scroll-hint"><span className="entry-scroll-line"></span>Scroll for the short lab narrative</div>
                       </div>
-                      <${PreviewStage} active=${previewCopy} mode=${inspectorMode} metrics=${stageMetrics} reducedMotion=${!!reducedMotion} />
+                      <${PreviewStage} active=${previewCopy} mode=${inspectorMode} metrics=${stageMetrics} reducedMotion=${!!reducedMotion} previewRef=${previewRef} />
                     </section>
 
                     <section className="entry-section entry-story" ref=${storyRef}>
@@ -1270,7 +1708,7 @@ function EntryApp(props) {
                               </div>
                             </div>
                             <div className="entry-story-visual-copy">
-                              <h3>${activeStory.title}</h3>
+                              <${TextEffect} as="h3" per="line" preset="slide" reducedMotion=${!!reducedMotion}>${activeStory.title}</${TextEffect}>
                               <p>${activeStory.body}</p>
                             </div>
                           </div>
@@ -1278,7 +1716,7 @@ function EntryApp(props) {
 
                         <div className="entry-story-steps">
                           ${STORY_CHAPTERS.map(function (chapter, index) {
-                            return html`<${StoryStep} key=${chapter.id} chapter=${chapter} setRef=${function (node) { chapterRefs.current[index] = node; }} />`;
+                            return html`<${StoryStep} key=${chapter.id} chapter=${chapter} reducedMotion=${!!reducedMotion} setRef=${function (node) { chapterRefs.current[index] = node; }} />`;
                           })}
                         </div>
                       </div>
@@ -1287,7 +1725,8 @@ function EntryApp(props) {
                     <section className="entry-section entry-modes" ref=${modesRef}>
                       <div className="entry-section-head">
                         <div>
-                          <div className="entry-section-title">Choose your path into the chamber.</div>
+                          <div className="entry-section-kicker">Routing / workflow / handoff</div>
+                          <${TextEffect} as="div" per="line" preset="blur" className="entry-section-title" reducedMotion=${!!reducedMotion}>Choose your path\ninto the chamber.</${TextEffect}>
                           <div className="entry-section-copy">Each route lands on a real simulator state. Nothing here is decorative routing. The overlay simply decides how you enter the same live app underneath.</div>
                         </div>
                       </div>
@@ -1296,7 +1735,7 @@ function EntryApp(props) {
                         activeMode=${inspectorMode}
                         activeIndex=${activeModeIndex}
                         reducedMotion=${!!reducedMotion}
-                        isMobile=${window.innerWidth < 821}
+                        isMobile=${isMobile}
                         onSelect=${inspectMode}
                         onShift=${shiftInspector}
                         onLaunch=${launchMode}
@@ -1395,12 +1834,14 @@ function EntryRoot() {
   React.useEffect(function () {
     waitForSimulator(10000)
       .then(function (app) {
+        const storedPrefs = Object.assign({}, DEFAULT_PREFS, safeReadJson(ENTRY_PREFS_KEY, DEFAULT_PREFS));
+        const bootHoldMs = storedPrefs.skipIntro ? 120 : (storedPrefs.hasVisited ? 240 : 420);
         setSimulator(app);
         document.body.classList.add('entry-active');
         bootTimerRef.current = window.setTimeout(function () {
           setBootReady(true);
           window.history.replaceState({ windsimView: 'entry' }, '', '#entry');
-        }, 850);
+        }, bootHoldMs);
       })
       .catch(function (err) {
         setError(err && err.message ? err.message : 'Simulator bootstrap failed.');
