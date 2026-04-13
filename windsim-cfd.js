@@ -206,6 +206,11 @@
           var sampV = s0 * (t0 * v[IX(x0, y0)] + t1 * v[IX(x0, y1)]) + s1 * (t0 * v[IX(x1, y0)] + t1 * v[IX(x1, y1)]);
           
           _tmpWind.set(sampU, 0, sampV);
+        } else {
+          var dir = app.cfg.wind.azim;
+          var spd = app.cfg.wind.speed;
+          _tmpWind.set(Math.cos(dir) * spd, 0, Math.sin(dir) * spd);
+        }
         return _tmpWind;
       },
 
