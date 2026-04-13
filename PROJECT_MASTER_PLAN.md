@@ -390,8 +390,16 @@ Current status:
   - replaced hard-coded `WindSimPhysics` loops with `WindSimSolvers` abstractions
   - created `Kinematic` solver profile side-by-side with `Sandbox` solver
   - added dynamic UI dropdown to hotswap the active physics engine
+- Completed in Phase 4 (Geometry & Rendering):
+  - imported `THREE.GLTFLoader` to natively support `.glb`/`.gltf` external meshes
+  - integrated `THREE.RGBELoader` to implement Image-Based Lighting (IBL) via HDRI studio maps
+  - auto-computed true Bounding Box lengths ($L_X, L_y, L_Z$) dynamically to inform physics models
+- Completed in Phase 6 (Eulerian GPU/CPU Models):
+  - built a Maker-and-Cell (MAC) 64x64 numerical grid matching Jos Stam's Stable Fluids algorithm
+  - integrated grid flow field advection, diffusion, and Poisson pressure projection in Javascript
+  - wired the grid dynamically to `sampleWindAt(pos)` to allow trajectory coupling natively into the flow
 - Next milestone:
-  - Phase 3: formalise experiment suite (stationary mount, parameter sweeps, detailed plots)
+  - Phase 3, 5, 7, 8: Formalize the frontend entry flow to split the sandbox out from the static CFD architecture, and migrate grid solvers to WebGPU.
 Carry-forward notes from latest review:
 
 - Cleanup / integrity:

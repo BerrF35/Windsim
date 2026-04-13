@@ -12,7 +12,10 @@ It is not a CFD solver today.
 
 What is already working in the repo:
 
-- modular browser app split across `index.html`, `windsim-entry.css`, `windsim-entry.js`, `windsim-data.js`, `windsim-physics.js`, `windsim-solvers.js`, `windsim-ui.js`, `windsim-workflows.js`, `windsim-textures.js`, `windsim-models.js`, `windsim-scene.js`, and `windsim-app.js`
+- **NEW**: 2D Maker-and-Cell (MAC) Eulerian Grid CPU solver seamlessly replacing ambient wind when activated
+- **NEW**: Full `THREE.GLTFLoader` importing for external meshes like `.glb` bounding-box autoscaling
+- **NEW**: PBR lighting models rendered with `THREE.RGBELoader` running Studio HDR environment maps
+- modular browser app split across `index.html`, `windsim-entry.css`, `windsim-entry.js`, `windsim-data.js`, `windsim-physics.js`, `windsim-solvers.js`, `windsim-cfd.js`, `windsim-ui.js`, `windsim-workflows.js`, `windsim-textures.js`, `windsim-models.js`, `windsim-scene.js`, and `windsim-app.js`
 - object library with object-specific dimensions, mass assumptions, aero tuning, and contact behavior
 - configurable wind speed, heading, elevation, turbulence, gusts, altitude, chamber size, and launch state
 - reduced-order rigid-body motion with drag, lift, Magnus force, rotation, ground contact, wall contact, and telemetry
@@ -22,7 +25,7 @@ What is already working in the repo:
 
 What is still true about the codebase:
 
-- `windsim-solvers.js` currently wraps one real solver path, not multiple mature backends
+- The 2D CFD grid solver provides high-end fluid slices but operates only horizontally. Full 3D Navier-Stokes projection is currently bottlenecked by Javascript single-thread CPU limits.
 - several models are heuristic or tuned for reduced-order behavior rather than derived from a solved flow field
 - validation coverage is useful but still limited
 
