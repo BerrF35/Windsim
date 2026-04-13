@@ -351,16 +351,19 @@ The next implementation sequence is:
 
 Current status:
 
-- Phase 0: in progress
-- Active focus: truthfulness, structural cleanup, and reduced-order baseline protection
+- Phase 0: complete
+- Phase 1: complete
+- Active focus: Phase 2 — solver abstraction layer
 - Current product classification: advanced reduced-order aerodynamic sandbox
 - Research-grade CFD status: not yet implemented
-- Completed in current phase:
+- Completed in Phase 0:
   - persistent master plan added
   - README aligned with the modular repo architecture
   - local tool artifacts cleaned from the workspace
   - baseline regression checklist added
   - reduced-order physics audit added
+  - CHANGELOG created for governance trail
+- Completed in Phase 1:
   - explicit sandbox solver registry and app-bound solver contract added
   - mounted wind-tunnel test mode added to the sandbox solver path
   - recorded playback timeline with scrubbing and frame stepping added
@@ -375,15 +378,19 @@ Current status:
   - validation coverage expanded with resized-geometry stress and chamber-endurance cases, plus new validation metrics for invalid-state detection, impact totals, and speed bounds
   - dedicated landing / home entry flow added, with cinematic first load, mode routing, returning-user fast track, and seamless simulator handoff
   - status-pill and validation-pill UI sync moved out of `windsim-app.js` and into `windsim-ui.js`
+  - `windsim-app.js` decomposed from 1,992 lines into four focused modules: `windsim-textures.js` (565 lines), `windsim-models.js` (124 lines), `windsim-scene.js` (678 lines), `windsim-app.js` (592 lines)
+  - legacy inline JavaScript archive removed from `index.html`
+  - CSS color system overhauled: collapsed single-hue palette restored to proper semantic differentiation matching the 3D force legend
+  - dark theme deepened to `#0C1117` for premium aerospace feel
+  - button styles differentiated by semantic role (primary/positive/destructive/secondary)
+  - meta description and favicon added for SEO
 - Next milestone:
-  - continue breaking down `windsim-app.js` and harden the remaining reduced-order validation / reporting path
+  - Phase 2: formalize the solver interface contract so a second backend can plug in cleanly
 
 Carry-forward notes from latest review:
 
 - Cleanup / integrity:
-  - remove the disabled legacy inline JavaScript archive from `index.html` once the modular path is confirmed fully independent
   - keep wall contact truthfully described as impulse-style sandbox contact until a more formal contact model exists
-  - expand validation with geometry-resize stress cases and long-run chamber endurance / bounce cases
   - strengthen UI wording so flow probes and particles read as reduced-order analytic projections, not solved CFD output
 
 - Important calibration:
@@ -397,6 +404,7 @@ Carry-forward notes from latest review:
   - contextual explanatory tooltips for engineering terms and formulas
   - logarithmic wind-profile toggle for more realistic near-ground behavior
   - draggable / detachable panel workspace for multi-monitor use
+  - real image textures to replace canvas-generated surface/object textures
 
 When work advances, this section must be updated with:
 
