@@ -84,22 +84,38 @@
 
   const SOLVER_PROFILES = {
     sandbox: {
-      label: 'Sandbox Solver',
+      label: 'Sandbox (Rigid Body + Aero Formulas)',
       classification: 'reduced-order',
-      fieldModel: 'analytic-local-wind',
-      couplingModel: 'one-way',
-      integrator: 'semi-implicit-euler-substepped'
+      capabilities: ['aero_forces', 'magnus', 'spin', 'ground_bounce', 'parametric_wind']
     },
     kinematic: {
       label: 'Kinematic (No Aero)',
-      classification: 'basic-kinematic',
-      fieldModel: 'none',
-      couplingModel: 'none',
-      integrator: 'analytic-parabola'
+      classification: 'debug',
+      capabilities: ['gravity', 'ground_bounce', 'parametric_wind']
+    },
+    grid_2d: {
+      label: 'CFD Eulerian Grid (2D Slice)',
+      classification: 'solver-backed',
+      capabilities: ['aero_forces', 'pressure_field', 'vorticity', 'wake_shedding']
     }
   };
 
   const OBJ_DEFS = {
+    helmet: {
+      label: 'Sci-Fi Helmet (GLTF)',
+      mass: 1.5,
+      r: 0.25,
+      area: 0.18, // To be overridden by Phase 4 mesh introspection
+      Cd0: 0.65,
+      crO: 0.40,
+      col: 0x909090,
+      shape: 'gltf',
+      modelFile: 'DamagedHelmet.glb',
+      dims: [1, 1, 1], // GLTF models define their own internal scaling, this is an overall multiplier
+      inertia: boxInertia(0.5, 0.5, 0.5, 1.5),
+      aero: { model: 'box', refAxis: 'y', cp: [0, -0.05, 0], chord: 0.4, spinLift: 0.05, useCurve: 'brick' },
+      ground: { mode: 'slide', muS: 0.7, muK: 0.6, muR: 0.8, bounce: 0.2, settle: 6.0, yawDamp: 4.0 }
+    },
     soccer: {
       label: 'Soccer Ball',
       mass: 0.430,

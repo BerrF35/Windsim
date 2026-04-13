@@ -144,6 +144,16 @@
       dir.shadow.camera.near = 1;
       dir.shadow.camera.far = 180;
       var hemi = new THREE.HemisphereLight(0x556879, 0x070a0d, 0.58);
+
+      // Async load HDR Environment Map for PBR
+      if (THREE.RGBELoader) {
+        new THREE.RGBELoader().load('./assets/studio_small_09_1k.hdr', function (texture) {
+          texture.mapping = THREE.EquirectangularReflectionMapping;
+          render.scene.environment = texture;
+          // Clean aerospace background
+          render.scene.background = new THREE.Color(0x0C1117);
+        });
+      }
       var rim = new THREE.DirectionalLight(0x90afc9, 0.58);
       var fill = new THREE.PointLight(0x6f93b2, 0.22, 140);
       var point = new THREE.PointLight(0x89bad8, 0.48, 56);
