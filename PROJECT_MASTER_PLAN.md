@@ -353,7 +353,8 @@ Current status:
 
 - Phase 0: complete
 - Phase 1: complete
-- Active focus: Phase 2 — solver abstraction layer
+- Phase 2: complete
+- Active focus: Phase 3 — research workflow foundations
 - Current product classification: advanced reduced-order aerodynamic sandbox
 - Research-grade CFD status: not yet implemented
 - Completed in Phase 0:
@@ -384,9 +385,13 @@ Current status:
   - dark theme deepened to `#0C1117` for premium aerospace feel
   - button styles differentiated by semantic role (primary/positive/destructive/secondary)
   - meta description and favicon added for SEO
+- Completed in Phase 2:
+  - formalised solver interface contract with validation and capability introspection
+  - replaced hard-coded `WindSimPhysics` loops with `WindSimSolvers` abstractions
+  - created `Kinematic` solver profile side-by-side with `Sandbox` solver
+  - added dynamic UI dropdown to hotswap the active physics engine
 - Next milestone:
-  - Phase 2: formalize the solver interface contract so a second backend can plug in cleanly
-
+  - Phase 3: formalise experiment suite (stationary mount, parameter sweeps, detailed plots)
 Carry-forward notes from latest review:
 
 - Cleanup / integrity:
