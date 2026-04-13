@@ -266,6 +266,14 @@
     if (app.cfg) app.cfg.solverKey = solver.key;
     return solver;
   }
+  
+  function setSolver(solverKey) {
+    bindSolver(solverKey);
+    resetSimulationState();
+    if (app.ui && app.ui.refreshSolverUi) {
+      app.ui.refreshSolverUi(); // If we ever need to hide/show UI based on capabilities
+    }
+  }
 
   function displayBody() {
     var frame = app.getDisplayFrame ? app.getDisplayFrame() : null;
@@ -625,6 +633,7 @@
   app.loadSavedScenario = loadSavedScenario;
   app.setPausedState = setPausedState;
   app.resetCamera = resetCamera;
+  app.setSolver = setSolver;
 
   /* ---- bootstrap ---- */
 

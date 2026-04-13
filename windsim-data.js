@@ -89,6 +89,13 @@
       fieldModel: 'analytic-local-wind',
       couplingModel: 'one-way',
       integrator: 'semi-implicit-euler-substepped'
+    },
+    kinematic: {
+      label: 'Kinematic (No Aero)',
+      classification: 'basic-kinematic',
+      fieldModel: 'none',
+      couplingModel: 'none',
+      integrator: 'analytic-parabola'
     }
   };
 

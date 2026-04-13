@@ -423,6 +423,9 @@
   }
 
   function populateStaticSelects(app) {
+    populateSelect($('solverSelect'), window.WindSimSolvers.listSolvers().map(function(s) {
+      return { value: s.key, label: s.label };
+    }));
     populateSelect($('presetSelect'), Object.keys(D.PRESETS).map(function (key) {
       return { value: key, label: D.PRESETS[key].label || titleizeKey(key) };
     }));
@@ -444,6 +447,7 @@
 
   function syncScenarioControls(app) {
     const cfg = app.cfg;
+    if ($('solverSelect')) $('solverSelect').value = cfg.solverKey || 'sandbox';
     $('objSelect').value = cfg.objKey;
     $('surfSelect').value = cfg.surfKey;
     $('presetSelect').value = app.currentPresetName || 'baseline';
@@ -977,6 +981,13 @@
       });
     }
 
+    $('solverSelect').addEventListener('change', function () {
+      if (app.setSolver) {
+        app.setSolver($('solverSelect').value);
+      } else {
+        app.cfg.solverKey = $('solverSelect').value;
+      }
+    });
     $('objSelect').addEventListener('change', function () {
       app.cfg.objKey = $('objSelect').value;
       app.cfg.objectScale = { x: 1, y: 1, z: 1 };

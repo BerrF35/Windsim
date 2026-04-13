@@ -78,6 +78,54 @@
     });
   }
 
+  /* ---- kinematic solver (test) ---- */
+
+  function createKinematicSolver() {
+    var profile = Object.freeze(Object.assign({ key: 'kinematic' }, D.SOLVER_PROFILES.kinematic || {}));
+    var tmpStart = new THREE.Vector3();
+    return Object.freeze({
+      key: 'kinematic',
+      getProfile: function () { return profile; },
+      makeConfigFromPreset: function (presetLike) { return P.makeConfigFromPreset(presetLike); },
+      defaultScenarioSnapshot: function (app) {
+        var s = P.defaultScenarioSnapshot(app);
+        s.solverKey = 'kinematic';
+        return s;
+      },
+      resolveObjectDef: function (objKey, cfg) { return P.resolveObjectDef(objKey, cfg); },
+      supportExtentAlong: function (def, quat, axis) { return P.supportExtentAlong(def, quat, axis); },
+      sampleWindAt: function (app, pos) { return new THREE.Vector3(); },
+      resetSimulationState: function (app) {
+        var cfg = app.cfg;
+        var r = app.render.body;
+        r.pos.set(0, cfg.launch.h0, 0);
+        r.q.set(0, 0, 0, 1);
+        r.v.set(cfg.launch.vx, cfg.launch.vy, cfg.launch.vz);
+        r.w.set(cfg.launch.oz, cfg.launch.oy, cfg.launch.ox); // swap due to old mapping
+        r.forces.drag.set(0,0,0);
+        r.forces.magnus.set(0,0,0);
+        r.forces.net.set(0,0,0);
+        app.sim.t = 0;
+        app.sim.re = 0;
+        app.sim.cd = 0;
+        app.sim.ke = 0;
+        app.telemetry.length = 0;
+      },
+      step: function (app, dt) {
+        var r = app.render.body;
+        if (r.pos.y > 0 || r.v.y > 0) {
+          r.v.y -= 9.81 * dt;
+          r.pos.addScaledVector(r.v, dt);
+          if (r.pos.y < 0) r.pos.y = 0; // stop at ground
+        }
+        r.forces.net.set(0, -9.81 * P.resolveObjectDef(app.cfg.objKey, app.cfg).mass, 0);
+        r.forces.drag.set(0,0,0);
+        r.forces.magnus.set(0,0,0);
+        app.sim.t += dt;
+      }
+    });
+  }
+
   /* ---- registry ---- */
 
   var SOLVERS = {};
@@ -118,6 +166,7 @@
   /* ---- boot: register built-in solver ---- */
 
   registerSolver(createSandboxSolver());
+  registerSolver(createKinematicSolver());
 
   /* ---- public API ---- */
 
