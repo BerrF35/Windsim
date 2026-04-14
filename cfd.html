@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>WindSim — CFD Laboratory</title>
   <meta name="description" content="Browser-native CFD laboratory powered by WebGPU. GPU-accelerated Lattice Boltzmann flow solver with real-time streamlines, pressure maps, and force coefficients." />
-  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🌊</text></svg>" />
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2322cded' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M2 12h4l2-2 4 4 4-4 2 2h4'/></svg>" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet" />
@@ -24,13 +24,13 @@
 
     <div class="cfd-tb-group">
       <button id="btn-run" class="cfd-tb-btn is-run" title="Start solver">
-        <span class="ico">▶</span> Run
+        <span class="ico"><i data-lucide="play" width="16" height="16"></i></span> Run
       </button>
       <button id="btn-pause" class="cfd-tb-btn" title="Pause/Resume solver">
-        <span class="ico">⏸</span> Pause
+        <span class="ico"><i data-lucide="pause" width="16" height="16"></i></span> Pause
       </button>
       <button id="btn-reset" class="cfd-tb-btn" title="Reset solver state">
-        <span class="ico">↺</span> Reset
+        <span class="ico"><i data-lucide="rotate-ccw" width="16" height="16"></i></span> Reset
       </button>
     </div>
 
@@ -38,10 +38,10 @@
 
     <div class="cfd-tb-group">
       <button class="cfd-tb-btn" title="Export results">
-        <span class="ico">📥</span> Export
+        <span class="ico"><i data-lucide="download" width="16" height="16"></i></span> Export
       </button>
       <button class="cfd-tb-btn" title="Screenshot viewport">
-        <span class="ico">📷</span> Screenshot
+        <span class="ico"><i data-lucide="camera" width="16" height="16"></i></span> Screenshot
       </button>
     </div>
 
@@ -69,35 +69,35 @@
           </div>
           <div class="cfd-panel-body">
             <div class="cfd-mesh-item is-active" data-mesh="sphere">
-              <div class="cfd-mesh-ico">⚪</div>
+              <div class="cfd-mesh-ico"><i data-lucide="circle"></i></div>
               <div class="cfd-mesh-info">
                 <div class="cfd-mesh-name">Sphere</div>
                 <div class="cfd-mesh-meta">r = 0.6, ~2500 faces</div>
               </div>
             </div>
             <div class="cfd-mesh-item" data-mesh="cube">
-              <div class="cfd-mesh-ico">🟦</div>
+              <div class="cfd-mesh-ico"><i data-lucide="square"></i></div>
               <div class="cfd-mesh-info">
                 <div class="cfd-mesh-name">Cube</div>
                 <div class="cfd-mesh-meta">1.0 × 1.0 × 1.0</div>
               </div>
             </div>
             <div class="cfd-mesh-item" data-mesh="cylinder">
-              <div class="cfd-mesh-ico">🔵</div>
+              <div class="cfd-mesh-ico"><i data-lucide="cylinder"></i></div>
               <div class="cfd-mesh-info">
                 <div class="cfd-mesh-name">Cylinder</div>
                 <div class="cfd-mesh-meta">r = 0.4, h = 1.2</div>
               </div>
             </div>
             <div class="cfd-mesh-item" data-mesh="airfoil">
-              <div class="cfd-mesh-ico">✈️</div>
+              <div class="cfd-mesh-ico"><i data-lucide="plane"></i></div>
               <div class="cfd-mesh-info">
                 <div class="cfd-mesh-name">NACA 0012</div>
                 <div class="cfd-mesh-meta">chord = 2.0, span = 1.0</div>
               </div>
             </div>
             <div class="cfd-mesh-item" data-mesh="car">
-              <div class="cfd-mesh-ico">🚗</div>
+              <div class="cfd-mesh-ico"><i data-lucide="car"></i></div>
               <div class="cfd-mesh-info">
                 <div class="cfd-mesh-name">Ahmed Body</div>
                 <div class="cfd-mesh-meta">simplified bluff body</div>
@@ -223,7 +223,7 @@
 
         <!-- GPU Error Overlay -->
         <div id="gpu-error-overlay" class="cfd-gpu-error" style="display:none;">
-          <div class="cfd-gpu-error-ico">⚠️</div>
+          <div class="cfd-gpu-error-ico"><i data-lucide="triangle-alert" width="48" height="48"></i></div>
           <div class="cfd-gpu-error-title">WebGPU Not Available</div>
           <div class="cfd-gpu-error-body">Your browser does not support WebGPU.</div>
           <div class="cfd-gpu-error-hint">chrome://flags → #enable-unsafe-webgpu</div>
@@ -342,6 +342,10 @@
   </div>
 
   <!-- ═══ Scripts ═══ -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <script>
+    lucide.createIcons();
+  </script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
   <script src="cfd-engine.js"></script>
 

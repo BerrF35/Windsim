@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>WindSim — Choose Your Lab</title>
   <meta name="description" content="WindSim dual-mode launcher. Enter the real-time Aerodynamic Sandbox or the Professional CFD Laboratory.">
-  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🌬️</text></svg>">
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23e8715a' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M17.7 7.7a2.5 2.5 0 1 1 1.8 4.3H2'/><path d='M9.6 4.6A2 2 0 1 1 11 8H2'/><path d='M12.6 19.4A2 2 0 1 0 14 16H2'/></svg>">
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
   <style>
     *, *::before, *::after {
@@ -661,7 +661,7 @@ telemetry.export(csv)</div>
       <div class="panel-glow"></div>
       <div class="panel-content">
         <div class="brand">
-          <div class="brand-icon">🌀</div>
+          <div class="brand-icon"><i data-lucide="wind" width="20" height="20"></i></div>
           <span class="brand-text">Module A</span>
         </div>
         <div class="kicker">
@@ -700,7 +700,7 @@ telemetry.export(csv)</div>
       <div class="panel-glow"></div>
       <div class="panel-content">
         <div class="brand">
-          <div class="brand-icon">🔬</div>
+          <div class="brand-icon"><i data-lucide="microscope" width="20" height="20"></i></div>
           <span class="brand-text">Module B</span>
         </div>
         <div class="kicker">
@@ -925,6 +925,10 @@ telemetry.export(csv)</div>
       createInteractiveGrid(document.getElementById('ig-left'), 'left');
       createInteractiveGrid(document.getElementById('ig-right'), 'right');
     })();
+  </script>
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <script>
+    lucide.createIcons();
   </script>
 </body>
 </html>

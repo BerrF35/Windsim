@@ -224,16 +224,16 @@
 
   /* ─── Mesh Library ─── */
   var MESHES = {
-    sphere: { label: 'Sphere', ico: '⚪', meta: 'r = 0.6, ~2500 faces', build: function () {
+    sphere: { label: 'Sphere', ico: '<i data-lucide="circle"></i>', meta: 'r = 0.6, ~2500 faces', build: function () {
       return new THREE.SphereGeometry(0.6, 40, 40);
     }},
-    cube: { label: 'Cube', ico: '🟦', meta: '1.0 × 1.0 × 1.0', build: function () {
+    cube: { label: 'Cube', ico: '<i data-lucide="square"></i>', meta: '1.0 × 1.0 × 1.0', build: function () {
       return new THREE.BoxGeometry(1, 1, 1, 4, 4, 4);
     }},
-    cylinder: { label: 'Cylinder', ico: '🔵', meta: 'r = 0.4, h = 1.2', build: function () {
+    cylinder: { label: 'Cylinder', ico: '<i data-lucide="cylinder"></i>', meta: 'r = 0.4, h = 1.2', build: function () {
       return new THREE.CylinderGeometry(0.4, 0.4, 1.2, 36, 1);
     }},
-    airfoil: { label: 'NACA 0012', ico: '✈️', meta: 'chord = 2.0, span = 1.0', build: function () {
+    airfoil: { label: 'NACA 0012', ico: '<i data-lucide="plane"></i>', meta: 'chord = 2.0, span = 1.0', build: function () {
       var points = [];
       var chord = 2.0;
       for (var i = 0; i <= 30; i++) {
@@ -255,7 +255,7 @@
       geo.rotateX(Math.PI / 2);
       return geo;
     }},
-    car: { label: 'Ahmed Body', ico: '🚗', meta: 'simplified bluff body', build: function () {
+    car: { label: 'Ahmed Body', ico: '<i data-lucide="car"></i>', meta: 'simplified bluff body', build: function () {
       var group = new THREE.Group();
       var bodyGeo = new THREE.BoxGeometry(2.2, 0.6, 0.8, 4, 4, 4);
       var bodyMesh = new THREE.Mesh(bodyGeo, new THREE.MeshStandardMaterial({ color: 0x3a4855, roughness: 0.6, metalness: 0.3 }));
