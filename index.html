@@ -1,517 +1,828 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>WindSim 3D - Aerodynamic Lab</title>
-<meta name="description" content="WindSim 3D — Browser-based reduced-order aerodynamic sandbox with real-time 3D visualization, experiment workflows, and physics telemetry.">
-<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🌬️</text></svg>">
-<link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="./windsim-entry.css">
-<script type="importmap">
-{
-  "imports": {
-    "react": "https://esm.sh/react@18.3.1",
-    "react-dom": "https://esm.sh/react-dom@18.3.1",
-    "react-dom/client": "https://esm.sh/react-dom@18.3.1/client",
-    "react/jsx-runtime": "https://esm.sh/react@18.3.1/jsx-runtime"
-  }
-}
-</script>
-<style>
-*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
-:root{
-  --bg:#0C1117;
-  --surf:#111920;
-  --surf2:#171F28;
-  --surf3:#1E2832;
-  --bdr:rgba(90,209,255,.14);
-  --bdr2:rgba(90,209,255,.28);
-  --cyan:#5AD1FF;
-  --green:#7AE582;
-  --amber:#FFD166;
-  --red:#FF6B6B;
-  --violet:#C78BFF;
-  --orange:#FF8A4C;
-  --accent:#5AD1FF;
-  --txt:#D4DEE8;
-  --txt2:rgba(212,222,232,.78);
-  --txt3:rgba(148,168,188,.58);
-  --sidebar-width:336px;
-  --hud-height:136px
-}
-html,body{height:100%;overflow:hidden}
-body{
-  font-family:'Barlow',sans-serif;
-  background:var(--bg);
-  color:var(--txt);
-  display:flex
-}
-::-webkit-scrollbar{width:6px;height:6px}
-::-webkit-scrollbar-track{background:var(--bg)}
-::-webkit-scrollbar-thumb{background:rgba(90,209,255,.22);border-radius:3px}
-#sidebar{
-  width:var(--sidebar-width);
-  flex:0 0 var(--sidebar-width);
-  min-width:296px;
-  max-width:min(560px,48vw);
-  background:var(--surf);
-  border-right:1px solid rgba(90,209,255,.10);
-  box-shadow:16px 0 34px rgba(0,0,0,.46),inset -1px 0 0 rgba(90,209,255,.04);
-  display:flex;
-  flex-direction:column;
-  overflow-y:auto;
-  overflow-x:hidden
-}
-#sidebar-resizer{
-  flex:0 0 16px;
-  position:relative;
-  cursor:col-resize;
-  touch-action:none;
-  background:rgba(90,209,255,.02);
-  border-right:1px solid rgba(90,209,255,.08)
-}
-#sidebar-resizer::before{
-  content:'';
-  position:absolute;
-  left:50%;
-  top:50%;
-  width:4px;
-  height:112px;
-  transform:translate(-50%,-50%);
-  border-radius:999px;
-  background:linear-gradient(180deg,rgba(90,209,255,.04),rgba(90,209,255,.50),rgba(90,209,255,.04));
-  box-shadow:0 0 0 1px rgba(0,0,0,.34)
-}
-.sb-logo{
-  padding:16px 20px 14px;
-  border-bottom:1px solid rgba(90,209,255,.10);
-  background:rgba(90,209,255,.02)
-}
-.logo-txt{font-size:22px;font-weight:700;letter-spacing:5px;line-height:1}
-.lw{color:var(--cyan)}
-.ls{color:var(--txt2)}
-.logo-ver{
-  font-family:'JetBrains Mono',monospace;
-  font-size:8px;
-  color:var(--txt3);
-  letter-spacing:2px;
-  margin-top:4px
-}
-details{
-  border-bottom:1px solid rgba(90,209,255,.08);
-  background:transparent
-}
-summary{
-  list-style:none;
-  -webkit-appearance:none;
-  font-family:'JetBrains Mono',monospace;
-  font-size:8px;
-  letter-spacing:2.4px;
-  color:var(--txt3);
-  text-transform:uppercase;
-  padding:12px 18px;
-  cursor:pointer;
-  display:flex;
-  align-items:center;
-  gap:6px;
-  user-select:none
-}
-summary::before{content:'>';flex-shrink:0;transition:transform .15s;font-size:9px}
-details[open]>summary::before{transform:rotate(90deg)}
-summary::after{content:'';flex:1;height:1px;background:rgba(90,209,255,.08)}
-summary::-webkit-details-marker{display:none}
-.sec-body{padding:0 18px 14px}
-.ctl{margin-bottom:10px}
-.ctl:last-child{margin-bottom:0}
-.ctl-row{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:4px;gap:8px}
-.ctl-lbl{font-size:11px;color:var(--txt2);font-weight:700;letter-spacing:.28px}
-.ctl-val{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--accent);font-weight:600;white-space:nowrap}
-.sub-lbl{font-family:'JetBrains Mono',monospace;font-size:8px;color:var(--txt3);margin-top:3px;line-height:1.5}
-input[type=range]{
-  width:100%;
-  height:6px;
-  appearance:none;
-  -webkit-appearance:none;
-  background:linear-gradient(90deg,rgba(90,209,255,.14),rgba(90,209,255,.36));
-  border-radius:999px;
-  outline:none;
-  cursor:pointer
-}
-input[type=range]::-webkit-slider-thumb{
-  -webkit-appearance:none;
-  width:16px;
-  height:16px;
-  border-radius:50%;
-  background:#5AD1FF;
-  border:2px solid var(--bg);
-  cursor:pointer;
-  box-shadow:0 2px 10px rgba(0,0,0,.34),0 0 8px rgba(90,209,255,.20)
-}
-select{
-  width:100%;
-  background:var(--surf2);
-  border:1px solid rgba(90,209,255,.16);
-  color:var(--txt);
-  border-radius:7px;
-  padding:7px 30px 7px 10px;
-  font-family:'Barlow',sans-serif;
-  font-size:12px;
-  font-weight:600;
-  cursor:pointer;
-  outline:none;
-  appearance:none;
-  -webkit-appearance:none;
-  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%235AD1FF'/%3E%3C/svg%3E");
-  background-repeat:no-repeat;
-  background-position:right 10px center
-}
-select:focus{border-color:var(--accent)}
-select option{background:var(--surf)}
-.obj-info-grid{
-  display:grid;
-  grid-template-columns:1fr 1fr 1fr;
-  gap:6px 12px;
-  background:rgba(90,209,255,.02);
-  border:1px solid rgba(90,209,255,.10);
-  border-radius:12px;
-  padding:10px 12px;
-  margin-top:8px;
-  font-family:'JetBrains Mono',monospace;
-  font-size:8.5px
-}
-.oi-l{color:var(--txt3)}
-.oi-v{color:var(--txt2);font-weight:600}
-.tgl-row{
-  display:flex;
-  justify-content:space-between;
-  align-items:center;
-  margin-bottom:6px;
-  font-size:11px;
-  color:var(--txt2);
-  font-weight:500
-}
-.tgl-row:last-child{margin-bottom:0}
-.tgl{
-  width:34px;
-  height:16px;
-  background:rgba(148,168,188,.16);
-  border-radius:999px;
-  position:relative;
-  cursor:pointer;
-  transition:background .18s;
-  flex-shrink:0
-}
-.tgl::after{
-  content:'';
-  position:absolute;
-  width:12px;
-  height:12px;
-  border-radius:50%;
-  background:rgba(148,168,188,.50);
-  top:2px;
-  left:2px;
-  transition:left .18s,background .18s
-}
-.tgl.on{background:rgba(90,209,255,.30)}
-.tgl.on::after{left:20px;background:#5AD1FF}
-.btn{
-  display:block;
-  width:100%;
-  padding:10px 12px;
-  border-radius:10px;
-  border:none;
-  font-family:'Barlow',sans-serif;
-  font-size:12px;
-  font-weight:700;
-  letter-spacing:.8px;
-  cursor:pointer;
-  transition:background .14s,border-color .14s,color .14s;
-  margin-bottom:6px;
-  text-transform:uppercase
-}
-.btn:last-child{margin-bottom:0}
-.btn-c{background:rgba(90,209,255,.08);color:var(--cyan);border:1px solid rgba(90,209,255,.28)}
-.btn-c:hover{background:rgba(90,209,255,.16);border-color:rgba(90,209,255,.48)}
-.btn-g{background:rgba(122,229,130,.06);color:var(--green);border:1px solid rgba(122,229,130,.24)}
-.btn-g:hover{background:rgba(122,229,130,.14);border-color:rgba(122,229,130,.42)}
-.btn-r{background:rgba(255,138,76,.06);color:var(--orange);border:1px solid rgba(255,138,76,.24)}
-.btn-r:hover{background:rgba(255,138,76,.14);border-color:rgba(255,138,76,.42)}
-.btn-d{background:rgba(148,168,188,.04);color:var(--txt2);border:1px solid rgba(148,168,188,.16)}
-.btn-d:hover{background:rgba(148,168,188,.10);border-color:rgba(148,168,188,.30)}
-.phys-box{
-  background:rgba(90,209,255,.02);
-  border:1px solid rgba(90,209,255,.10);
-  border-radius:12px;
-  padding:10px 12px;
-  font-family:'JetBrains Mono',monospace;
-  font-size:8.5px;
-  line-height:1.8
-}
-.pp-row{display:flex;justify-content:space-between;gap:8px}
-.pp-l{color:var(--txt3)}
-.pp-v{color:var(--txt2);font-weight:600}
-#tcount,.kbd{font-family:'JetBrains Mono',monospace;font-size:8px;color:var(--txt3);text-align:center}
-#tcount{margin-top:4px}
-.kbd{margin-top:5px;line-height:1.6}
-#main{
-  flex:1;
-  min-width:0;
-  position:relative;
-  overflow:hidden;
-  background:var(--bg)
-}
-#main canvas{display:block;position:absolute;inset:0;touch-action:none}
-#status-pill,#energy-panel,#legend-panel,#scale-pill,.orbit-hint{
-  backdrop-filter:blur(10px);
-  box-shadow:0 14px 28px rgba(0,0,0,.42)
-}
-#status-pill{
-  position:absolute;
-  top:14px;
-  right:14px;
-  z-index:20;
-  background:rgba(12,17,23,.92);
-  border:1px solid rgba(90,209,255,.14);
-  border-radius:999px;
-  padding:6px 13px;
-  font-family:'JetBrains Mono',monospace;
-  font-size:9px;
-  letter-spacing:2px;
-  pointer-events:none
-}
-.sr{color:var(--green)}
-.sp{color:var(--amber)}
-.orbit-hint{
-  position:absolute;
-  top:14px;
-  left:14px;
-  z-index:20;
-  background:rgba(12,17,23,.90);
-  border:1px solid rgba(90,209,255,.12);
-  border-radius:14px;
-  padding:9px 12px;
-  font-family:'JetBrains Mono',monospace;
-  font-size:7.5px;
-  color:var(--txt3);
-  letter-spacing:.8px;
-  pointer-events:none;
-  line-height:1.7
-}
-#overlay-stack{
-  position:absolute;
-  top:64px;
-  left:14px;
-  z-index:20;
-  display:flex;
-  flex-direction:column;
-  gap:12px;
-  align-items:flex-start
-}
-#energy-panel,#legend-panel{
-  position:relative;
-  background:rgba(12,17,23,.92);
-  border:1px solid rgba(90,209,255,.12);
-  border-radius:16px;
-  padding:14px 14px 16px;
-  pointer-events:auto;
-  overflow:auto
-}
-#energy-panel{
-  min-width:220px;
-  min-height:156px;
-  font-family:'JetBrains Mono',monospace;
-  font-size:8.5px
-}
-.panel-cap,.legend-title{
-  font-family:'JetBrains Mono',monospace;
-  font-size:8.5px;
-  letter-spacing:1.8px;
-  color:var(--txt3);
-  text-transform:uppercase;
-  margin-bottom:10px;
-  padding-bottom:8px;
-  border-bottom:1px solid rgba(90,209,255,.08)
-}
-.ep-row{display:flex;justify-content:space-between;gap:12px;margin-bottom:3px}
-.ep-row:last-child{margin-bottom:0}
-.ep-l{color:var(--txt3)}
-.ep-v{color:var(--accent);font-weight:600}
-#legend-panel{
-  min-width:220px;
-  min-height:180px;
-  font-family:'JetBrains Mono',monospace;
-  font-size:8.5px;
-  letter-spacing:.5px
-}
-.legend-row{display:flex;align-items:center;gap:9px;color:var(--txt2);margin-bottom:6px}
-.legend-row:last-child{margin-bottom:0}
-.legend-chip{width:16px;height:4px;border-radius:999px;flex-shrink:0}
-#scale-pill{
-  position:absolute;
-  right:14px;
-  bottom:calc(var(--hud-height) + 18px);
-  z-index:20;
-  background:rgba(12,17,23,.90);
-  border:1px solid rgba(90,209,255,.12);
-  border-radius:999px;
-  padding:7px 12px;
-  font-family:'JetBrains Mono',monospace;
-  font-size:8px;
-  letter-spacing:1px;
-  color:var(--txt2);
-  pointer-events:none
-}
-#hud-resizer{
-  position:absolute;
-  left:0;
-  right:0;
-  bottom:var(--hud-height);
-  height:20px;
-  z-index:21;
-  cursor:ns-resize;
-  touch-action:none
-}
-#hud-resizer::before{
-  content:'';
-  position:absolute;
-  left:50%;
-  top:7px;
-  width:132px;
-  height:6px;
-  transform:translate(-50%,-50%);
-  border-radius:999px;
-  background:linear-gradient(90deg,rgba(90,209,255,.10),rgba(90,209,255,.50),rgba(90,209,255,.10));
-  box-shadow:0 0 0 1px rgba(0,0,0,.26)
-}
-#hud-resizer::after{
-  content:'drag to resize telemetry';
-  position:absolute;
-  left:50%;
-  top:13px;
-  transform:translateX(-50%);
-  font-family:'JetBrains Mono',monospace;
-  font-size:7px;
-  letter-spacing:1.6px;
-  color:var(--txt3);
-  text-transform:uppercase
-}
-#hud{
-  position:absolute;
-  bottom:0;
-  left:0;
-  right:0;
-  z-index:20;
-  height:var(--hud-height);
-  background:rgba(12,17,23,.96);
-  border-top:1px solid rgba(90,209,255,.10);
-  display:grid;
-  grid-template-columns:repeat(auto-fit,minmax(132px,1fr));
-  gap:10px;
-  align-content:start;
-  padding:12px 12px 14px;
-  backdrop-filter:blur(8px);
-  overflow:auto;
-  box-shadow:0 -20px 42px rgba(0,0,0,.42)
-}
-.hi{
-  padding:10px 12px;
-  border:1px solid rgba(90,209,255,.10);
-  border-top:2px solid var(--accent);
-  border-radius:14px;
-  min-width:132px;
-  background:rgba(90,209,255,.02);
-  box-shadow:inset 0 1px 0 rgba(90,209,255,.03);
-  display:flex;
-  flex-direction:column;
-  justify-content:center
-}
-.hl{
-  font-family:'JetBrains Mono',monospace;
-  font-size:7.5px;
-  letter-spacing:1.2px;
-  color:var(--txt3);
-  text-transform:uppercase;
-  margin-bottom:4px;
-  white-space:nowrap
-}
-.hv{
-  font-family:'JetBrains Mono',monospace;
-  font-size:13px;
-  font-weight:600;
-  color:var(--accent);
-  white-space:nowrap
-}
-body.layout-dragging,body.layout-dragging *{user-select:none}
-@media (max-width:980px){
-  body{flex-direction:column}
-  #sidebar{
-    width:100%;
-    flex:0 0 auto;
-    min-width:0;
-    max-width:none;
-    max-height:48vh;
-    border-right:none;
-    border-bottom:1px solid var(--bdr)
-  }
-  #sidebar-resizer,#hud-resizer{display:none}
-  #main{min-height:52vh}
-  .orbit-hint,#overlay-stack{left:8px}
-  #status-pill,#scale-pill{right:8px}
-}
-</style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>WindSim — Choose Your Lab</title>
+  <meta name="description" content="WindSim dual-mode launcher. Enter the real-time Aerodynamic Sandbox or the Professional CFD Laboratory.">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🌬️</text></svg>">
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    :root {
+      --coral: #e8715a;
+      --coral-deep: #d4604b;
+      --coral-light: #f0917e;
+      --cream: #f5eee7;
+      --cream-dim: #e8ddd3;
+      --ink-dark: #1c1411;
+      --ink-mid: #3d3330;
+      --ink-light: #7a6e6a;
+      --ease: cubic-bezier(.22, 1, .36, 1);
+    }
+
+    html, body {
+      height: 100%;
+      overflow: hidden;
+      font-family: 'Outfit', sans-serif;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+
+    body {
+      display: flex;
+      background: var(--cream);
+      cursor: default;
+    }
+
+    /* ── Split panels ── */
+    .landing-split {
+      display: flex;
+      width: 100%;
+      height: 100%;
+    }
+
+    .panel {
+      position: relative;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      padding: clamp(32px, 5vw, 80px);
+      overflow: hidden;
+      cursor: pointer;
+      transition: flex 0.72s var(--ease);
+      text-decoration: none;
+    }
+
+    .panel:hover {
+      flex: 1.08;
+    }
+
+    .panel:not(:hover) {
+      flex: 0.92;
+    }
+
+    .panel-left {
+      background: var(--coral);
+      color: var(--cream);
+    }
+
+    .panel-right {
+      background: var(--cream);
+      color: var(--ink-dark);
+    }
+
+    /* ── Divider ── */
+    .divider {
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      left: 50%;
+      width: 1px;
+      background: rgba(0,0,0,.06);
+      z-index: 10;
+      pointer-events: none;
+      transform: translateX(-50%);
+      transition: left 0.72s var(--ease);
+    }
+
+    /* ── Floating background patterns ── */
+    .panel-bg {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      overflow: hidden;
+    }
+
+    .panel-left .panel-bg {
+      opacity: 0.06;
+    }
+
+    .panel-right .panel-bg {
+      opacity: 0.04;
+    }
+
+    .bg-grid {
+      position: absolute;
+      inset: -20%;
+      background-image:
+        linear-gradient(rgba(255,255,255,.18) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,255,255,.18) 1px, transparent 1px);
+      background-size: 80px 80px;
+      transform: rotate(-4deg);
+      animation: gridDrift 40s linear infinite;
+    }
+
+    .panel-right .bg-grid {
+      background-image:
+        linear-gradient(rgba(0,0,0,.05) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(0,0,0,.05) 1px, transparent 1px);
+    }
+
+    @keyframes gridDrift {
+      0% { transform: rotate(-4deg) translate(0, 0); }
+      100% { transform: rotate(-4deg) translate(80px, 80px); }
+    }
+
+    /* ── Floating particles (left panel) ── */
+    .particles-canvas {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+    }
+
+    /* ── Flow lines SVG (right panel) ── */
+    .flow-svg {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      opacity: 0.12;
+    }
+
+    /* ── Content ── */
+    .panel-content {
+      position: relative;
+      z-index: 2;
+      max-width: 420px;
+      text-align: left;
+    }
+
+    .panel-right .panel-content {
+      text-align: left;
+    }
+
+    /* ── Logo / brand ── */
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 36px;
+    }
+
+    .brand-icon {
+      width: 40px;
+      height: 40px;
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 20px;
+      flex-shrink: 0;
+    }
+
+    .panel-left .brand-icon {
+      background: rgba(255,255,255,.14);
+      border: 1px solid rgba(255,255,255,.18);
+    }
+
+    .panel-right .brand-icon {
+      background: rgba(232, 113, 90, .08);
+      border: 1px solid rgba(232, 113, 90, .14);
+    }
+
+    .brand-text {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.22em;
+      text-transform: uppercase;
+      opacity: 0.7;
+    }
+
+    /* ── Kicker pill ── */
+    .kicker {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 7px 14px;
+      border-radius: 999px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 10px;
+      font-weight: 500;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      margin-bottom: 22px;
+    }
+
+    .panel-left .kicker {
+      background: rgba(255,255,255,.1);
+      border: 1px solid rgba(255,255,255,.18);
+      color: rgba(255,255,255,.85);
+    }
+
+    .panel-right .kicker {
+      background: rgba(232, 113, 90, .06);
+      border: 1px solid rgba(232, 113, 90, .16);
+      color: var(--coral);
+    }
+
+    .kicker-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      animation: pulse 2s var(--ease) infinite;
+    }
+
+    .panel-left .kicker-dot {
+      background: var(--cream);
+      box-shadow: 0 0 0 4px rgba(255,255,255,.12);
+    }
+
+    .panel-right .kicker-dot {
+      background: var(--coral);
+      box-shadow: 0 0 0 4px rgba(232,113,90,.1);
+    }
+
+    @keyframes pulse {
+      0%, 100% { transform: scale(1); opacity: 1; }
+      50% { transform: scale(1.4); opacity: 0.6; }
+    }
+
+    /* ── Title ── */
+    .panel-title {
+      font-size: clamp(32px, 4.5vw, 56px);
+      font-weight: 700;
+      line-height: 1.05;
+      letter-spacing: -0.04em;
+      margin-bottom: 16px;
+    }
+
+    .title-accent {
+      position: relative;
+      display: inline;
+    }
+
+    .panel-left .title-accent {
+      color: rgba(255,255,255,.45);
+    }
+
+    .panel-right .title-accent {
+      color: var(--coral);
+      text-decoration: underline;
+      text-decoration-color: rgba(232,113,90,.28);
+      text-underline-offset: 4px;
+      text-decoration-thickness: 2px;
+    }
+
+    /* ── Body copy ── */
+    .panel-body {
+      font-size: clamp(15px, 1.6vw, 18px);
+      line-height: 1.6;
+      max-width: 380px;
+      margin-bottom: 32px;
+    }
+
+    .panel-left .panel-body {
+      color: rgba(255,255,255,.72);
+    }
+
+    .panel-right .panel-body {
+      color: var(--ink-light);
+    }
+
+    /* ── CTA Button ── */
+    .cta {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      padding: 14px 28px;
+      border-radius: 999px;
+      font-size: 13px;
+      font-weight: 700;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      transition: transform 0.28s var(--ease), box-shadow 0.28s var(--ease), background 0.28s var(--ease);
+      text-decoration: none;
+      pointer-events: none;
+    }
+
+    .panel-left .cta {
+      background: var(--cream);
+      color: var(--coral-deep);
+      box-shadow: 0 12px 32px rgba(0,0,0,.12);
+    }
+
+    .panel-right .cta {
+      background: var(--coral);
+      color: var(--cream);
+      box-shadow: 0 12px 32px rgba(232,113,90,.18);
+    }
+
+    .panel:hover .cta {
+      transform: translateY(-2px);
+    }
+
+    .panel-left:hover .cta {
+      box-shadow: 0 18px 40px rgba(0,0,0,.18);
+    }
+
+    .panel-right:hover .cta {
+      box-shadow: 0 18px 40px rgba(232,113,90,.26);
+    }
+
+    .cta-arrow {
+      display: inline-flex;
+      transition: transform 0.25s var(--ease);
+    }
+
+    .panel:hover .cta-arrow {
+      transform: translateX(4px);
+    }
+
+    /* ── Hover overlays ── */
+    .panel-glow {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity 0.6s var(--ease);
+    }
+
+    .panel:hover .panel-glow {
+      opacity: 1;
+    }
+
+    .panel-left .panel-glow {
+      background: radial-gradient(circle at 50% 50%, rgba(255,255,255,.06), transparent 60%);
+    }
+
+    .panel-right .panel-glow {
+      background: radial-gradient(circle at 50% 50%, rgba(232,113,90,.06), transparent 60%);
+    }
+
+    /* ── Floating code snippets (left) ── */
+    .float-snippets {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      overflow: hidden;
+    }
+
+    .snippet {
+      position: absolute;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 9px;
+      letter-spacing: 0.06em;
+      line-height: 1.7;
+      opacity: 0.08;
+      white-space: pre;
+      animation: snippetFloat 28s linear infinite;
+    }
+
+    .snippet:nth-child(1) { top: 12%; left: 6%; animation-delay: 0s; }
+    .snippet:nth-child(2) { top: 38%; right: 4%; animation-delay: -7s; }
+    .snippet:nth-child(3) { bottom: 18%; left: 10%; animation-delay: -14s; }
+    .snippet:nth-child(4) { top: 62%; left: 22%; animation-delay: -3s; }
+
+    @keyframes snippetFloat {
+      0%, 100% { transform: translateY(0); opacity: 0.06; }
+      50% { transform: translateY(-14px); opacity: 0.12; }
+    }
+
+    /* ── Circles decoration (right) ── */
+    .circle-deco {
+      position: absolute;
+      border-radius: 50%;
+      border: 1px solid rgba(232,113,90,.1);
+      pointer-events: none;
+      animation: circleBreath 6s var(--ease) infinite;
+    }
+
+    .circle-deco:nth-child(1) {
+      width: 260px; height: 260px;
+      top: 8%; right: -60px;
+      animation-delay: 0s;
+    }
+
+    .circle-deco:nth-child(2) {
+      width: 180px; height: 180px;
+      bottom: 14%; left: -40px;
+      animation-delay: -2s;
+    }
+
+    .circle-deco:nth-child(3) {
+      width: 100px; height: 100px;
+      top: 50%; right: 18%;
+      animation-delay: -4s;
+    }
+
+    @keyframes circleBreath {
+      0%, 100% { transform: scale(1); opacity: 0.5; }
+      50% { transform: scale(1.06); opacity: 0.8; }
+    }
+
+    /* ── Center logo ── */
+    .center-logo {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      z-index: 20;
+      width: 72px;
+      height: 72px;
+      border-radius: 50%;
+      background: var(--cream);
+      border: 3px solid rgba(232,113,90,.22);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 16px 48px rgba(0,0,0,.12), 0 0 0 12px rgba(245,238,231,.3);
+      pointer-events: none;
+      animation: logoFloat 4s var(--ease) infinite;
+    }
+
+    .center-logo-inner {
+      font-size: 11px;
+      font-weight: 800;
+      letter-spacing: 0.04em;
+      color: var(--coral);
+      font-family: 'Outfit', sans-serif;
+    }
+
+    @keyframes logoFloat {
+      0%, 100% { transform: translate(-50%, -50%) scale(1); }
+      50% { transform: translate(-50%, -52%) scale(1.03); }
+    }
+
+    /* ── Top nav bar ── */
+    .top-bar {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      z-index: 30;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 16px clamp(24px, 4vw, 48px);
+      pointer-events: none;
+    }
+
+    .top-brand {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.28em;
+      text-transform: uppercase;
+      color: rgba(255,255,255,.78);
+      pointer-events: auto;
+      text-decoration: none;
+    }
+
+    .top-nav {
+      display: flex;
+      gap: 24px;
+      align-items: center;
+    }
+
+    .top-link {
+      font-size: 12px;
+      font-weight: 500;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--ink-mid);
+      text-decoration: none;
+      opacity: 0.6;
+      transition: opacity 0.2s;
+      pointer-events: auto;
+    }
+
+    .top-link:hover { opacity: 1; }
+
+    /* ── Bottom info ── */
+    .bottom-bar {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      z-index: 30;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 18px;
+      pointer-events: none;
+    }
+
+    .bottom-hint {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 10px;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      color: var(--ink-light);
+      opacity: 0.5;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .hint-line {
+      width: 24px;
+      height: 1px;
+      background: var(--coral);
+      opacity: 0.4;
+    }
+
+    /* ── Responsive ── */
+    @media (max-width: 860px) {
+      .landing-split {
+        flex-direction: column;
+      }
+
+      .panel:hover, .panel:not(:hover) {
+        flex: 1;
+      }
+
+      .center-logo {
+        width: 56px;
+        height: 56px;
+        box-shadow: 0 10px 32px rgba(0,0,0,.1), 0 0 0 8px rgba(245,238,231,.3);
+      }
+
+      .center-logo-inner {
+        font-size: 9px;
+      }
+
+      .divider {
+        display: none;
+      }
+
+      .panel-content {
+        text-align: center;
+        align-items: center;
+      }
+
+      .panel-title {
+        font-size: clamp(28px, 6vw, 42px);
+      }
+    }
+
+    /* ── Page-load animation ── */
+    .panel-content {
+      animation: contentIn 1s var(--ease) both;
+    }
+
+    .panel-left .panel-content { animation-delay: 0.15s; }
+    .panel-right .panel-content { animation-delay: 0.35s; }
+
+    @keyframes contentIn {
+      from {
+        opacity: 0;
+        transform: translateY(30px);
+        filter: blur(8px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+        filter: blur(0);
+      }
+    }
+
+    .center-logo {
+      animation: logoIn 0.8s var(--ease) 0.5s both, logoFloat 4s var(--ease) 1.3s infinite;
+    }
+
+    @keyframes logoIn {
+      from {
+        opacity: 0;
+        transform: translate(-50%, -50%) scale(0.6);
+      }
+      to {
+        opacity: 1;
+        transform: translate(-50%, -50%) scale(1);
+      }
+    }
+  </style>
 </head>
 <body>
-<div id="sidebar">
-  <div class="sb-logo"><div class="logo-txt"><span class="lw">WIND</span><span class="ls">SIM</span></div><div class="logo-ver">3D AERODYNAMIC LAB . v2.6</div></div>
-  <details open><summary>Wind</summary><div class="sec-body">
-    <div class="ctl"><div class="ctl-row"><span class="ctl-lbl">Speed</span><span class="ctl-val" id="vSpeed">20.0 m/s</span></div><input type="range" id="sSpeed" min="0" max="60" value="20" step="0.5"><div class="sub-lbl" id="beaufort">Gale</div></div>
-    <div class="ctl"><div class="ctl-row"><span class="ctl-lbl">Heading (0 = N)</span><span class="ctl-val" id="vAzim">90 deg</span></div><input type="range" id="sAzim" min="0" max="359" value="90"><div class="sub-lbl" id="azimLbl">90 deg E</div></div>
-    <div class="ctl"><div class="ctl-row"><span class="ctl-lbl">Elevation</span><span class="ctl-val" id="vElev">0 deg</span></div><input type="range" id="sElev" min="-45" max="45" value="0"><div class="sub-lbl" id="elevLbl">Horizontal</div></div>
-    <div class="ctl"><div class="ctl-row"><span class="ctl-lbl">Turbulence</span><span class="ctl-val" id="vTurb">20%</span></div><input type="range" id="sTurb" min="0" max="100" value="20"><div class="sub-lbl">Random wind field noise</div></div>
-    <div class="ctl"><div class="ctl-row"><span class="ctl-lbl">Gust Intensity</span><span class="ctl-val" id="vGust">30%</span></div><input type="range" id="sGust" min="0" max="100" value="30"><div class="sub-lbl">Short periodic bursts in wind speed</div></div>
-  </div></details>
-  <details open><summary>Presets</summary><div class="sec-body"><div class="ctl"><select id="presetSelect"><option value="baseline">Baseline Field Test</option><option value="crosswind">Crosswind Sports Test</option><option value="storm">Storm Tunnel</option><option value="highalt">High Altitude Thin Air</option><option value="spinlab">Spin Lab</option><option value="freight">Heavy Cargo Drop</option></select></div><button class="btn btn-c" id="applyPresetBtn">Apply Preset</button></div></details>
-  <details open><summary>Object</summary><div class="sec-body"><div class="ctl"><select id="objSelect"></select></div><div class="obj-info-grid"><span class="oi-l">MASS</span><span class="oi-l">CD0</span><span class="oi-l">RADIUS</span><span class="oi-v" id="iMass">--</span><span class="oi-v" id="iCd">--</span><span class="oi-v" id="iR">--</span><span class="oi-l">AREA</span><span class="oi-l">I FACTOR</span><span class="oi-l">CD MODE</span><span class="oi-v" id="iArea">--</span><span class="oi-v" id="iI">--</span><span class="oi-v" id="iCdMode">--</span></div></div></details>
-  <details><summary>Launch Conditions</summary><div class="sec-body">
-    <div class="ctl"><div class="ctl-row"><span class="ctl-lbl">Start Height Y0</span><span class="ctl-val" id="vH0">3.0 m</span></div><input type="range" id="sH0" min="0.2" max="20" value="3" step="0.2"></div>
-    <div class="ctl"><div class="ctl-row"><span class="ctl-lbl">Init vX (East)</span><span class="ctl-val" id="vVX">0 m/s</span></div><input type="range" id="sVX" min="-30" max="30" value="0"></div>
-    <div class="ctl"><div class="ctl-row"><span class="ctl-lbl">Init vY (Up)</span><span class="ctl-val" id="vVY">0 m/s</span></div><input type="range" id="sVY" min="-40" max="40" value="0"></div>
-    <div class="ctl"><div class="ctl-row"><span class="ctl-lbl">Init vZ (North)</span><span class="ctl-val" id="vVZ">0 m/s</span></div><input type="range" id="sVZ" min="-30" max="30" value="0"></div>
-    <div class="ctl"><div class="ctl-row"><span class="ctl-lbl">Topspin wx</span><span class="ctl-val" id="vOX">0 r/s</span></div><input type="range" id="sOX" min="-60" max="60" value="0"><div class="sub-lbl">Negative = backspin, positive = topspin</div></div>
-    <div class="ctl"><div class="ctl-row"><span class="ctl-lbl">Sidespin wy</span><span class="ctl-val" id="vOY">0 r/s</span></div><input type="range" id="sOY" min="-60" max="60" value="0"><div class="sub-lbl">Negative = left curve, positive = right curve</div></div>
-    <div class="ctl"><div class="ctl-row"><span class="ctl-lbl">Roll Spin wz</span><span class="ctl-val" id="vOZ">0 r/s</span></div><input type="range" id="sOZ" min="-60" max="60" value="0"><div class="sub-lbl">Useful for discs, balls, and visible spin tests</div></div>
-  </div></details>
-  <details open><summary>Environment</summary><div class="sec-body">
-    <div class="ctl"><div class="ctl-row"><span class="ctl-lbl">Surface</span></div><select id="surfSelect"><option value="grass">Grass</option><option value="concrete">Concrete</option><option value="hardwood">Hardwood</option><option value="sand">Sand</option><option value="ice">Ice</option><option value="water">Water</option></select></div>
-    <div class="ctl" style="margin-top:8px"><div class="ctl-row"><span class="ctl-lbl">Altitude</span><span class="ctl-val" id="vAlt">0 m</span></div><input type="range" id="sAlt" min="0" max="12000" value="0" step="100"><div class="sub-lbl" id="rhoLbl">rho = 1.2250 kg/m^3 (100% sea level)</div></div>
-    <div class="ctl"><div class="ctl-row"><span class="ctl-lbl">Ceiling Height</span><span class="ctl-val" id="vCeil">220 m</span></div><input type="range" id="sCeil" min="40" max="500" value="220" step="5"><div class="sub-lbl">Much taller test chamber than the old build</div></div>
-    <div class="ctl"><div class="ctl-row"><span class="ctl-lbl">Particle Density</span><span class="ctl-val" id="vPCount">320</span></div><input type="range" id="sPCount" min="60" max="900" value="320" step="10"></div>
-    <div class="ctl"><div class="ctl-row"><span class="ctl-lbl">Particle Size</span><span class="ctl-val" id="vPSize">0.13</span></div><input type="range" id="sPSize" min="0.05" max="0.40" value="0.13" step="0.01"></div>
-    <div class="ctl"><div class="ctl-row"><span class="ctl-lbl">Trail Length</span><span class="ctl-val" id="vTrailLen">700</span></div><input type="range" id="sTrailLen" min="100" max="1600" value="700" step="50"></div>
-    <div style="margin-top:8px"><div class="tgl-row">Gravity<div class="tgl on" id="tGrav" onclick="toggleEnv('grav')"></div></div><div class="tgl-row">Wind Particles<div class="tgl on" id="tPart" onclick="toggleEnv('part')"></div></div><div class="tgl-row">Object Trail<div class="tgl on" id="tTrail" onclick="toggleEnv('trail')"></div></div><div class="tgl-row">Floor Bounce<div class="tgl on" id="tBounce" onclick="toggleEnv('bounce')"></div></div><div class="tgl-row">Force Vectors<div class="tgl on" id="tForce" onclick="toggleEnv('force')"></div></div><div class="tgl-row">Magnus Effect<div class="tgl on" id="tMagnus" onclick="toggleEnv('magnus')"></div></div><div class="tgl-row">Rotational Dynamics<div class="tgl on" id="tRotation" onclick="toggleEnv('rotation')"></div></div><div class="tgl-row">Reynolds Cd<div class="tgl on" id="tReCd" onclick="toggleEnv('reCd')"></div></div><div class="tgl-row">Spin Axis Marker<div class="tgl on" id="tSpinViz" onclick="toggleEnv('spinViz')"></div></div></div><div class="sub-lbl">Particle cues are seeded reduced-order flow visuals, not solved CFD streamlines.</div>
-  </div></details>
-  <details><summary>Physics Params</summary><div class="sec-body"><div class="phys-box"><div class="pp-row"><span class="pp-l">Air density rho</span><span class="pp-v" id="ppRho">1.2250 kg/m^3</span></div><div class="pp-row"><span class="pp-l">Viscosity mu</span><span class="pp-v">1.81e-5 Pa.s</span></div><div class="pp-row"><span class="pp-l">Reynolds Re</span><span class="pp-v" id="ppRe">--</span></div><div class="pp-row"><span class="pp-l">Drag coeff Cd</span><span class="pp-v" id="ppCd">--</span></div><div class="pp-row"><span class="pp-l">mu static</span><span class="pp-v" id="ppMs">0.35</span></div><div class="pp-row"><span class="pp-l">mu kinetic</span><span class="pp-v" id="ppMk">0.28</span></div><div class="pp-row"><span class="pp-l">mu rolling</span><span class="pp-v" id="ppMr">0.025</span></div><div class="pp-row"><span class="pp-l">Restitution e</span><span class="pp-v" id="ppCr">--</span></div><div class="pp-row"><span class="pp-l">Integration</span><span class="pp-v">Euler x8 per frame</span></div><div class="pp-row"><span class="pp-l">F drag</span><span class="pp-v">0.5 rho Cd A v^2</span></div><div class="pp-row"><span class="pp-l">F magnus</span><span class="pp-v">rho pi r^3 (w x vrel)</span></div></div></div></details>
-  <details open><summary>Simulation</summary><div class="sec-body"><div class="ctl"><div class="ctl-row"><span class="ctl-lbl">Physics Solver</span></div><select id="solverSelect"></select></div><div class="ctl"><div class="ctl-row"><span class="ctl-lbl">Sim Rate</span><span class="ctl-val" id="vSimRate">1.00x</span></div><input type="range" id="sSimRate" min="0.10" max="2.50" value="1.00" step="0.05"></div><button class="btn btn-c" id="pauseBtn" onclick="togglePause()">Pause</button><button class="btn btn-r" onclick="resetObj()">Reset Object</button><div class="kbd" id="simKbd">Space = pause, R = reset</div></div></details>
-  <details open><summary>Camera</summary><div class="sec-body"><div class="tgl-row">Auto Follow<div class="tgl on" id="tCamFollow" onclick="toggleCamFollow()"></div></div><div class="ctl" style="margin-top:8px"><div class="ctl-row"><span class="ctl-lbl">Distance</span><span class="ctl-val" id="vCamDist">28.0 m</span></div><input type="range" id="sCamDist" min="4" max="120" value="28" step="0.5"></div><div class="ctl"><div class="ctl-row"><span class="ctl-lbl">Yaw</span><span class="ctl-val" id="vCamYaw">-23 deg</span></div><input type="range" id="sCamYaw" min="-180" max="180" value="-23" step="1"></div><div class="ctl"><div class="ctl-row"><span class="ctl-lbl">Pitch</span><span class="ctl-val" id="vCamPitch">49 deg</span></div><input type="range" id="sCamPitch" min="8" max="88" value="49" step="1"></div><div class="ctl"><div class="ctl-row"><span class="ctl-lbl">Field of View</span><span class="ctl-val" id="vFov">52 deg</span></div><input type="range" id="sFov" min="30" max="95" value="52" step="1"></div><div class="ctl"><div class="ctl-row"><span class="ctl-lbl">Follow Lag</span><span class="ctl-val" id="vCamLag">0.08</span></div><input type="range" id="sCamLag" min="0.02" max="0.25" value="0.08" step="0.01"></div><button class="btn btn-d" onclick="resetCamera(true)">Center Camera</button><div class="kbd" id="camKbd">Drag = orbit, Shift+drag = pan, Follow off = WASDQE move</div></div></details>
-  <details open><summary>Telemetry</summary><div class="sec-body"><button class="btn btn-g" onclick="downloadCSV()">Export CSV</button><button class="btn btn-d" onclick="clearTelemetry()">Clear Data</button><div id="tcount">0 data points recorded</div></div></details>
-</div>
-<div id="sidebar-resizer" aria-hidden="true"></div>
-<div id="main"><div class="orbit-hint" id="orbitHint">DRAG: orbit . SHIFT+DRAG: pan . SCROLL: zoom<br>AXES: X = East, Y = Up, Z = North</div><div id="status-pill"><span id="sTxt" class="sr">RUNNING</span></div><div id="overlay-stack"><div id="energy-panel"><div class="panel-cap">Energy State</div><div class="ep-row"><span class="ep-l">KE trans</span><span class="ep-v" id="eKet">0.000 J</span></div><div class="ep-row"><span class="ep-l">KE rot</span><span class="ep-v" id="eKer">0.000 J</span></div><div class="ep-row"><span class="ep-l">PE grav</span><span class="ep-v" id="ePe">0.000 J</span></div><div class="ep-row"><span class="ep-l">Wind dE</span><span class="ep-v" id="eWw">0.000 J</span></div><div class="ep-row"><span class="ep-l">Loss dE</span><span class="ep-v" id="eFl">0.000 J</span></div></div><div id="legend-panel"><div class="legend-title">Force Legend</div><div class="legend-row"><span class="legend-chip" style="background:#5AD1FF"></span>Drag</div><div class="legend-row"><span class="legend-chip" style="background:#FF8A4C"></span>Gravity</div><div class="legend-row"><span class="legend-chip" style="background:#A8FF78"></span>Velocity</div><div class="legend-row"><span class="legend-chip" style="background:#C78BFF"></span>Magnus</div><div class="legend-row"><span class="legend-chip" style="background:#FFD166"></span>Spin Axis</div></div></div><div id="scale-pill">GRID: 1 LARGE CELL = 5 M</div><div id="hud-resizer" aria-hidden="true"></div><div id="hud"><div class="hi"><div class="hl">Speed</div><div class="hv" id="hSpd">0.00 m/s</div></div><div class="hi"><div class="hl">Drag F</div><div class="hv" id="hDrag">0.000 N</div></div><div class="hi"><div class="hl">Net F</div><div class="hv" id="hNet">0.000 N</div></div><div class="hi"><div class="hl">Accel</div><div class="hv" id="hAcc">0.00 m/s^2</div></div><div class="hi"><div class="hl">Height Y</div><div class="hv" id="hH">0.00 m</div></div><div class="hi"><div class="hl">X pos</div><div class="hv" id="hX">0.00 m</div></div><div class="hi"><div class="hl">Z pos</div><div class="hv" id="hZ">0.00 m</div></div><div class="hi"><div class="hl">Reynolds</div><div class="hv" id="hRe">--</div></div><div class="hi"><div class="hl">Curr Cd</div><div class="hv" id="hCd">--</div></div><div class="hi"><div class="hl">Spin</div><div class="hv" id="hSpin">0.00 r/s</div></div><div class="hi"><div class="hl">Heading</div><div class="hv" id="hHead">90 deg E</div></div><div class="hi"><div class="hl">Air rho</div><div class="hv" id="hRho">1.225 kg/m^3</div></div><div class="hi"><div class="hl">Sim Time</div><div class="hv" id="hT">0.00 s</div></div></div></div>
-<div id="entry-root" aria-live="polite"></div>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/RGBELoader.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
-<script src="./windsim-data.js"></script>
-<script src="./windsim-physics.js"></script>
-<script src="./windsim-solvers.js"></script>
-<script src="./windsim-cfd.js"></script>
-<script src="./windsim-ui.js"></script>
-<script src="./windsim-workflows.js"></script>
-<script src="./windsim-textures.js"></script>
-<script src="./windsim-models.js"></script>
-<script src="./windsim-scene.js"></script>
-<script src="./windsim-app.js"></script>
-<script type="module" src="./windsim-entry.js"></script>
+
+  <!-- Top bar -->
+  <nav class="top-bar">
+    <span class="top-brand">WindSim</span>
+    <div class="top-nav">
+      <a href="https://github.com" class="top-link" target="_blank" rel="noopener">GitHub</a>
+      <a href="./docs/CFD_MASTER_BLUEPRINT.md" class="top-link">Docs</a>
+    </div>
+  </nav>
+
+  <!-- Split layout -->
+  <div class="landing-split" id="landing-split">
+
+    <!-- LEFT: Aerodynamic Sandbox -->
+    <a class="panel panel-left" href="./sandbox.html" id="panel-sandbox">
+      <div class="panel-bg">
+        <div class="bg-grid"></div>
+      </div>
+      <div class="float-snippets">
+        <div class="snippet">F_drag = 0.5 * rho * Cd * A * v²
+Magnus = rho * π * r³ * (ω × v)
+Re = rho * v * d / mu</div>
+        <div class="snippet">euler.step(dt)
+bounce.check(ground)
+trail.record(pos)</div>
+        <div class="snippet">particle.advect(wind)
+field.sample(pos)
+energy.track()</div>
+        <div class="snippet">camera.orbit(yaw, pitch)
+renderer.render(scene)
+telemetry.export(csv)</div>
+      </div>
+      <canvas class="particles-canvas" id="particles-left"></canvas>
+      <div class="panel-glow"></div>
+      <div class="panel-content">
+        <div class="brand">
+          <div class="brand-icon">🌀</div>
+          <span class="brand-text">Module A</span>
+        </div>
+        <div class="kicker">
+          <span class="kicker-dot"></span>
+          Live Sandbox
+        </div>
+        <h1 class="panel-title">
+          Aerodynamic<br><span class="title-accent">Sandbox.</span>
+        </h1>
+        <p class="panel-body">
+          Real-time ballistic physics, wind field visualization, object flight dynamics, and telemetry — all running live in the browser.
+        </p>
+        <div class="cta">
+          Enter Sandbox
+          <span class="cta-arrow">→</span>
+        </div>
+      </div>
+    </a>
+
+    <!-- RIGHT: CFD Laboratory -->
+    <a class="panel panel-right" href="./cfd.html" id="panel-cfd">
+      <div class="panel-bg">
+        <div class="bg-grid"></div>
+      </div>
+      <div style="position:absolute;inset:0;pointer-events:none;overflow:hidden;">
+        <div class="circle-deco"></div>
+        <div class="circle-deco"></div>
+        <div class="circle-deco"></div>
+      </div>
+      <svg class="flow-svg" viewBox="0 0 600 400" preserveAspectRatio="none">
+        <path d="M0 80 Q150 60 300 100 T600 80" stroke="rgba(232,113,90,.6)" stroke-width="1.2" fill="none"/>
+        <path d="M0 120 Q150 140 300 110 T600 130" stroke="rgba(232,113,90,.4)" stroke-width="1" fill="none"/>
+        <path d="M0 180 Q150 160 300 200 T600 170" stroke="rgba(232,113,90,.5)" stroke-width="1.1" fill="none"/>
+        <path d="M0 240 Q150 260 300 230 T600 250" stroke="rgba(232,113,90,.3)" stroke-width="0.9" fill="none"/>
+        <path d="M0 300 Q150 280 300 310 T600 290" stroke="rgba(232,113,90,.4)" stroke-width="1" fill="none"/>
+        <path d="M0 340 Q150 360 300 340 T600 355" stroke="rgba(232,113,90,.25)" stroke-width="0.8" fill="none"/>
+      </svg>
+      <div class="panel-glow"></div>
+      <div class="panel-content">
+        <div class="brand">
+          <div class="brand-icon">🔬</div>
+          <span class="brand-text">Module B</span>
+        </div>
+        <div class="kicker">
+          <span class="kicker-dot"></span>
+          Professional Solver
+        </div>
+        <h1 class="panel-title">
+          CFD <span class="title-accent">Laboratory.</span>
+        </h1>
+        <p class="panel-body">
+          GPU-accelerated Lattice Boltzmann solver, mesh voxelization, pressure maps, and dense streamline visualization.
+        </p>
+        <div class="cta">
+          Open CFD Lab
+          <span class="cta-arrow">→</span>
+        </div>
+      </div>
+    </a>
+  </div>
+
+  <!-- Center logo medallion -->
+  <div class="center-logo">
+    <span class="center-logo-inner">WS</span>
+  </div>
+
+  <!-- Bottom hint -->
+  <div class="bottom-bar">
+    <div class="bottom-hint">
+      <span class="hint-line"></span>
+      Choose your lab
+      <span class="hint-line"></span>
+    </div>
+  </div>
+
+  <!-- Particles animation for left panel -->
+  <script>
+    (function () {
+      const canvas = document.getElementById('particles-left');
+      if (!canvas) return;
+      const ctx = canvas.getContext('2d');
+      let w, h;
+      const dots = [];
+      const DOT_COUNT = 50;
+
+      function resize() {
+        const rect = canvas.parentElement.getBoundingClientRect();
+        w = rect.width;
+        h = rect.height;
+        canvas.width = w * (window.devicePixelRatio || 1);
+        canvas.height = h * (window.devicePixelRatio || 1);
+        canvas.style.width = w + 'px';
+        canvas.style.height = h + 'px';
+        ctx.scale(window.devicePixelRatio || 1, window.devicePixelRatio || 1);
+      }
+
+      function initDots() {
+        dots.length = 0;
+        for (let i = 0; i < DOT_COUNT; i++) {
+          dots.push({
+            x: Math.random() * w,
+            y: Math.random() * h,
+            vx: (Math.random() - 0.4) * 0.6,
+            vy: (Math.random() - 0.5) * 0.3,
+            r: 1.2 + Math.random() * 2,
+            opacity: 0.08 + Math.random() * 0.14
+          });
+        }
+      }
+
+      function draw() {
+        ctx.clearRect(0, 0, w, h);
+
+        for (const dot of dots) {
+          dot.x += dot.vx;
+          dot.y += dot.vy;
+
+          if (dot.x > w + 10) dot.x = -10;
+          if (dot.x < -10) dot.x = w + 10;
+          if (dot.y > h + 10) dot.y = -10;
+          if (dot.y < -10) dot.y = h + 10;
+
+          ctx.beginPath();
+          ctx.arc(dot.x, dot.y, dot.r, 0, Math.PI * 2);
+          ctx.fillStyle = `rgba(255, 255, 255, ${dot.opacity})`;
+          ctx.fill();
+        }
+
+        // Draw faint connecting lines between close dots
+        for (let i = 0; i < dots.length; i++) {
+          for (let j = i + 1; j < dots.length; j++) {
+            const dx = dots[i].x - dots[j].x;
+            const dy = dots[i].y - dots[j].y;
+            const dist = Math.sqrt(dx * dx + dy * dy);
+            if (dist < 140) {
+              ctx.beginPath();
+              ctx.moveTo(dots[i].x, dots[i].y);
+              ctx.lineTo(dots[j].x, dots[j].y);
+              ctx.strokeStyle = `rgba(255, 255, 255, ${0.04 * (1 - dist / 140)})`;
+              ctx.lineWidth = 0.6;
+              ctx.stroke();
+            }
+          }
+        }
+
+        requestAnimationFrame(draw);
+      }
+
+      resize();
+      initDots();
+      draw();
+      window.addEventListener('resize', function () {
+        resize();
+        initDots();
+      });
+    })();
+
+    // Animate flow lines on right panel
+    (function () {
+      const svg = document.querySelector('.flow-svg');
+      if (!svg) return;
+      const paths = svg.querySelectorAll('path');
+      paths.forEach(function (path, i) {
+        const len = path.getTotalLength();
+        path.style.strokeDasharray = len;
+        path.style.strokeDashoffset = len;
+        path.style.animation = `flowDraw 2.4s cubic-bezier(.22,1,.36,1) ${i * 0.15}s forwards, flowPulse 4s ease-in-out ${2.4 + i * 0.15}s infinite`;
+      });
+
+      const style = document.createElement('style');
+      style.textContent = `
+        @keyframes flowDraw {
+          to { stroke-dashoffset: 0; }
+        }
+        @keyframes flowPulse {
+          0%, 100% { opacity: 1; }
+          50% { opacity: 0.5; }
+        }
+      `;
+      document.head.appendChild(style);
+    })();
+  </script>
 </body>
 </html>
