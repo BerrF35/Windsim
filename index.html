@@ -97,38 +97,56 @@
     .panel-bg {
       position: absolute;
       inset: 0;
-      pointer-events: none;
       overflow: hidden;
+      z-index: 0;
     }
 
-    .panel-left .panel-bg {
-      opacity: 0.06;
-    }
-
-    .panel-right .panel-bg {
-      opacity: 0.04;
-    }
-
-    .bg-grid {
+    /* ── Interactive Grid ── */
+    .interactive-grid-wrap {
       position: absolute;
-      inset: -20%;
-      background-image:
-        linear-gradient(rgba(255,255,255,.18) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(255,255,255,.18) 1px, transparent 1px);
-      background-size: 80px 80px;
-      transform: rotate(-4deg);
-      animation: gridDrift 40s linear infinite;
+      top: -30%;
+      left: -15%;
+      display: flex;
+      transform: skewX(-48deg) skewY(14deg) scale(0.675) translateZ(0);
+      pointer-events: auto; /* Allow hover */
     }
 
-    .panel-right .bg-grid {
-      background-image:
-        linear-gradient(rgba(0,0,0,.05) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(0,0,0,.05) 1px, transparent 1px);
+    .ig-col {
+      width: 64px;
+      position: relative;
+      border-left: 1px solid var(--ig-stroke);
     }
 
-    @keyframes gridDrift {
-      0% { transform: rotate(-4deg) translate(0, 0); }
-      100% { transform: rotate(-4deg) translate(80px, 80px); }
+    .ig-cell {
+      width: 64px;
+      height: 32px;
+      border-right: 1px solid var(--ig-stroke);
+      border-top: 1px solid var(--ig-stroke);
+      position: relative;
+      background-color: transparent;
+      transition: background-color 2s var(--ease);
+    }
+
+    .ig-cell:hover {
+      transition: background-color 0s;
+    }
+
+    .ig-plus {
+      position: absolute;
+      width: 24px;
+      height: 24px;
+      top: -12.5px;
+      left: -12.5px;
+      color: var(--ig-stroke);
+      pointer-events: none;
+    }
+
+    .panel-left {
+      --ig-stroke: rgba(255, 255, 255, 0.08);
+    }
+
+    .panel-right {
+      --ig-stroke: rgba(0, 0, 0, 0.04);
     }
 
     /* ── Floating particles (left panel) ── */
@@ -620,9 +638,7 @@
 
     <!-- LEFT: Aerodynamic Sandbox -->
     <a class="panel panel-left" href="./sandbox.html" id="panel-sandbox">
-      <div class="panel-bg">
-        <div class="bg-grid"></div>
-      </div>
+      <div class="panel-bg" id="ig-left"></div>
       <div class="float-snippets">
         <div class="snippet">F_drag = 0.5 * rho * Cd * A * v²
 Magnus = rho * π * r³ * (ω × v)
@@ -663,9 +679,7 @@ telemetry.export(csv)</div>
 
     <!-- RIGHT: CFD Laboratory -->
     <a class="panel panel-right" href="./cfd.html" id="panel-cfd">
-      <div class="panel-bg">
-        <div class="bg-grid"></div>
-      </div>
+      <div class="panel-bg" id="ig-right"></div>
       <div style="position:absolute;inset:0;pointer-events:none;overflow:hidden;">
         <div class="circle-deco"></div>
         <div class="circle-deco"></div>
@@ -822,6 +836,89 @@ telemetry.export(csv)</div>
         }
       `;
       document.head.appendChild(style);
+    })();
+
+    // Interactive BG Grid generator
+    (function () {
+      function createInteractiveGrid(container, type) {
+        if (!container) return;
+        const wrap = document.createElement('div');
+        wrap.className = 'interactive-grid-wrap';
+        
+        const numCols = 64; 
+        const numRows = 44; 
+
+        let colors = [];
+        if (type === 'left') {
+          // Sunset coral panel colors
+          colors = [
+            "rgba(255, 255, 255, 0.4)",
+            "rgba(253, 224, 71, 0.3)",
+            "rgba(254, 215, 170, 0.3)",
+            "rgba(255, 228, 230, 0.3)"
+          ];
+        } else {
+          // Template diverse pastel colors
+          colors = [
+            "rgba(125, 211, 252, 0.22)", // sky
+            "rgba(249, 168, 212, 0.22)", // pink
+            "rgba(134, 239, 172, 0.22)", // green
+            "rgba(253, 224, 71, 0.22)",  // yellow
+            "rgba(252, 165, 165, 0.22)", // red
+            "rgba(216, 180, 254, 0.22)", // purple
+            "rgba(147, 197, 253, 0.22)", // blue
+            "rgba(165, 180, 252, 0.22)", // indigo
+            "rgba(196, 181, 253, 0.22)"  // violet
+          ];
+        }
+
+        const getRandomColor = () => colors[Math.floor(Math.random() * colors.length)];
+        const fragment = document.createDocumentFragment();
+
+        for (let i = 0; i < numCols; i++) {
+          const colDiv = document.createElement('div');
+          colDiv.className = 'ig-col';
+          
+          for (let j = 0; j < numRows; j++) {
+            const cellDiv = document.createElement('div');
+            cellDiv.className = 'ig-cell';
+            
+            cellDiv.addEventListener('mouseenter', () => {
+              cellDiv.style.backgroundColor = getRandomColor();
+            });
+            cellDiv.addEventListener('mouseleave', () => {
+              cellDiv.style.backgroundColor = 'transparent';
+            });
+
+            if (j % 2 === 0 && i % 2 === 0) {
+              const svgNS = "http://www.w3.org/2000/svg";
+              const svg = document.createElementNS(svgNS, "svg");
+              svg.setAttribute("fill", "none");
+              svg.setAttribute("viewBox", "0 0 24 24");
+              svg.setAttribute("stroke-width", "1.5");
+              svg.setAttribute("stroke", "currentColor");
+              svg.setAttribute("class", "ig-plus");
+              
+              const path = document.createElementNS(svgNS, "path");
+              path.setAttribute("stroke-linecap", "round");
+              path.setAttribute("stroke-linejoin", "round");
+              path.setAttribute("d", "M12 6v12m6-6H6");
+              
+              svg.appendChild(path);
+              cellDiv.appendChild(svg);
+            }
+
+            colDiv.appendChild(cellDiv);
+          }
+          fragment.appendChild(colDiv);
+        }
+
+        wrap.appendChild(fragment);
+        container.appendChild(wrap);
+      }
+
+      createInteractiveGrid(document.getElementById('ig-left'), 'left');
+      createInteractiveGrid(document.getElementById('ig-right'), 'right');
     })();
   </script>
 </body>
