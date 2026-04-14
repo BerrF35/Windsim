@@ -111,6 +111,7 @@
       display: flex;
       transform: translate(-50%, -50%) skewX(-48deg) skewY(14deg) scale(0.675) translateZ(0);
       pointer-events: auto; /* Allow hover */
+      will-change: transform;
     }
 
     .ig-col {
@@ -848,8 +849,9 @@ telemetry.export(csv)</div>
         const wrap = document.createElement('div');
         wrap.className = 'interactive-grid-wrap';
         
-        const numCols = 150; 
-        const numRows = 100; 
+        /* Cut down node count to 64x64 to preserve 60FPS fluid flex animations */
+        const numCols = 64; 
+        const numRows = 64; 
 
         let colors = [];
         if (type === 'left') {
