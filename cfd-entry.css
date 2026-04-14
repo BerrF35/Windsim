@@ -1,0 +1,610 @@
+/* ═══════════════════════════════════════════════════════════
+   WindSim CFD Laboratory — Visual System
+   Dark aerospace theme, SimScale-inspired professional layout
+   ═══════════════════════════════════════════════════════════ */
+
+:root {
+  --cfd-bg: #0a0e13;
+  --cfd-surf: #0f141a;
+  --cfd-surf2: #151c24;
+  --cfd-surf3: #1a232e;
+  --cfd-surf4: #212b38;
+  --cfd-bdr: rgba(90, 209, 255, .10);
+  --cfd-bdr2: rgba(90, 209, 255, .20);
+  --cfd-bdr3: rgba(90, 209, 255, .35);
+  --cfd-cyan: #5ad1ff;
+  --cfd-green: #7ae582;
+  --cfd-amber: #ffd166;
+  --cfd-red: #ff6b6b;
+  --cfd-violet: #c78bff;
+  --cfd-orange: #ff8a4c;
+  --cfd-coral: #e8715a;
+  --cfd-txt: #d4dee8;
+  --cfd-txt2: rgba(212, 222, 232, .72);
+  --cfd-txt3: rgba(148, 168, 188, .50);
+  --cfd-ease: cubic-bezier(.22, 1, .36, 1);
+  --cfd-sidebar-w: 320px;
+  --cfd-statusbar-h: 38px;
+  --cfd-toolbar-h: 48px;
+  --cfd-results-w: 300px;
+  --cfd-radius: 12px;
+  --cfd-radius-sm: 8px;
+  --cfd-mono: 'JetBrains Mono', monospace;
+  --cfd-sans: 'Barlow', 'Inter', system-ui, sans-serif;
+}
+
+*, *::before, *::after {
+  margin: 0; padding: 0; box-sizing: border-box;
+}
+
+html, body {
+  height: 100%;
+  overflow: hidden;
+  font-family: var(--cfd-sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+body {
+  background: var(--cfd-bg);
+  color: var(--cfd-txt);
+  display: flex;
+  flex-direction: column;
+}
+
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: rgba(90, 209, 255, .18); border-radius: 3px; }
+
+/* ── Toolbar ── */
+.cfd-toolbar {
+  flex: 0 0 var(--cfd-toolbar-h);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 0 16px;
+  background: var(--cfd-surf);
+  border-bottom: 1px solid var(--cfd-bdr);
+  z-index: 10;
+}
+
+.cfd-brand {
+  display: flex; align-items: center; gap: 10px;
+  margin-right: 16px;
+  text-decoration: none;
+}
+
+.cfd-brand-logo {
+  font-size: 14px; font-weight: 800;
+  letter-spacing: .12em;
+  color: var(--cfd-cyan);
+}
+
+.cfd-brand-tag {
+  font-family: var(--cfd-mono);
+  font-size: 9px; letter-spacing: .16em;
+  text-transform: uppercase;
+  color: var(--cfd-txt3);
+  padding: 3px 8px;
+  border: 1px solid var(--cfd-bdr);
+  border-radius: 999px;
+}
+
+.cfd-toolbar-sep {
+  width: 1px; height: 24px;
+  background: var(--cfd-bdr);
+}
+
+.cfd-tb-group {
+  display: flex; align-items: center; gap: 4px;
+}
+
+.cfd-tb-btn {
+  appearance: none; border: none; cursor: pointer;
+  display: flex; align-items: center; justify-content: center; gap: 6px;
+  height: 32px; padding: 0 12px;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--cfd-txt2);
+  font-family: var(--cfd-mono);
+  font-size: 10px; font-weight: 500;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  transition: background .18s var(--cfd-ease), color .18s var(--cfd-ease);
+}
+
+.cfd-tb-btn:hover {
+  background: rgba(90, 209, 255, .08);
+  color: var(--cfd-txt);
+}
+
+.cfd-tb-btn.is-primary {
+  background: rgba(90, 209, 255, .12);
+  border: 1px solid var(--cfd-bdr2);
+  color: var(--cfd-cyan);
+}
+
+.cfd-tb-btn.is-primary:hover {
+  background: rgba(90, 209, 255, .20);
+  border-color: var(--cfd-bdr3);
+}
+
+.cfd-tb-btn.is-run {
+  background: rgba(122, 229, 130, .10);
+  border: 1px solid rgba(122, 229, 130, .22);
+  color: var(--cfd-green);
+}
+
+.cfd-tb-btn.is-run:hover {
+  background: rgba(122, 229, 130, .18);
+  border-color: rgba(122, 229, 130, .38);
+}
+
+.cfd-tb-btn.is-stop {
+  background: rgba(255, 107, 107, .10);
+  border: 1px solid rgba(255, 107, 107, .22);
+  color: var(--cfd-red);
+}
+
+.cfd-tb-btn.is-stop:hover {
+  background: rgba(255, 107, 107, .18);
+}
+
+.cfd-tb-btn .ico {
+  font-size: 14px; line-height: 1;
+}
+
+.cfd-toolbar-spacer { flex: 1; }
+
+.cfd-tb-status {
+  font-family: var(--cfd-mono);
+  font-size: 10px; letter-spacing: .08em;
+  color: var(--cfd-txt3);
+  display: flex; align-items: center; gap: 8px;
+}
+
+.cfd-status-dot {
+  width: 7px; height: 7px;
+  border-radius: 50%;
+  background: var(--cfd-txt3);
+  flex-shrink: 0;
+}
+
+.cfd-status-dot.is-ready { background: var(--cfd-cyan); box-shadow: 0 0 6px rgba(90, 209, 255, .4); }
+.cfd-status-dot.is-running { background: var(--cfd-green); box-shadow: 0 0 6px rgba(122, 229, 130, .4); animation: statusPulse 1.2s ease infinite; }
+.cfd-status-dot.is-error { background: var(--cfd-red); box-shadow: 0 0 6px rgba(255, 107, 107, .4); }
+
+@keyframes statusPulse {
+  0%, 100% { opacity: 1; } 50% { opacity: .5; }
+}
+
+/* ── Layout Body ── */
+.cfd-body {
+  flex: 1; display: flex;
+  min-height: 0;
+}
+
+/* ── Sidebar ── */
+.cfd-sidebar {
+  flex: 0 0 var(--cfd-sidebar-w);
+  width: var(--cfd-sidebar-w);
+  background: var(--cfd-surf);
+  border-right: 1px solid var(--cfd-bdr);
+  display: flex; flex-direction: column;
+  overflow: hidden;
+}
+
+.cfd-sidebar-scroll {
+  flex: 1; overflow-y: auto; overflow-x: hidden;
+}
+
+.cfd-panel {
+  border-bottom: 1px solid var(--cfd-bdr);
+}
+
+.cfd-panel-head {
+  display: flex; align-items: center; gap: 8px;
+  padding: 10px 14px;
+  cursor: pointer;
+  user-select: none;
+  transition: background .14s;
+}
+
+.cfd-panel-head:hover { background: rgba(90, 209, 255, .04); }
+
+.cfd-panel-chevron {
+  font-size: 10px; color: var(--cfd-txt3);
+  transition: transform .2s var(--cfd-ease);
+  flex-shrink: 0;
+}
+
+.cfd-panel.is-open .cfd-panel-chevron { transform: rotate(90deg); }
+
+.cfd-panel-title {
+  font-family: var(--cfd-mono);
+  font-size: 9px; font-weight: 600;
+  letter-spacing: .18em;
+  text-transform: uppercase;
+  color: var(--cfd-txt3);
+  flex: 1;
+}
+
+.cfd-panel-badge {
+  font-family: var(--cfd-mono);
+  font-size: 8px;
+  padding: 2px 6px;
+  border-radius: 999px;
+  background: rgba(90, 209, 255, .08);
+  color: var(--cfd-cyan);
+  border: 1px solid var(--cfd-bdr);
+}
+
+.cfd-panel-body {
+  padding: 0 14px 12px;
+  display: none;
+}
+
+.cfd-panel.is-open .cfd-panel-body { display: block; }
+
+/* ── Controls ── */
+.cfd-ctl {
+  margin-bottom: 10px;
+}
+
+.cfd-ctl:last-child { margin-bottom: 0; }
+
+.cfd-ctl-row {
+  display: flex; justify-content: space-between;
+  align-items: baseline; gap: 8px;
+  margin-bottom: 4px;
+}
+
+.cfd-ctl-lbl {
+  font-size: 11px; font-weight: 600;
+  color: var(--cfd-txt2);
+  letter-spacing: .02em;
+}
+
+.cfd-ctl-val {
+  font-family: var(--cfd-mono);
+  font-size: 11px; font-weight: 600;
+  color: var(--cfd-cyan);
+  white-space: nowrap;
+}
+
+.cfd-ctl-note {
+  font-family: var(--cfd-mono);
+  font-size: 8px; color: var(--cfd-txt3);
+  margin-top: 2px; line-height: 1.5;
+}
+
+input[type=range].cfd-range {
+  width: 100%; height: 5px;
+  appearance: none; -webkit-appearance: none;
+  background: linear-gradient(90deg, rgba(90, 209, 255, .12), rgba(90, 209, 255, .30));
+  border-radius: 999px; outline: none; cursor: pointer;
+}
+
+input[type=range].cfd-range::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 14px; height: 14px;
+  border-radius: 50%;
+  background: var(--cfd-cyan);
+  border: 2px solid var(--cfd-bg);
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(0,0,0,.3), 0 0 6px rgba(90, 209, 255, .15);
+}
+
+select.cfd-select {
+  width: 100%;
+  background: var(--cfd-surf2);
+  border: 1px solid var(--cfd-bdr);
+  color: var(--cfd-txt);
+  border-radius: var(--cfd-radius-sm);
+  padding: 7px 28px 7px 10px;
+  font-family: var(--cfd-sans);
+  font-size: 12px; font-weight: 600;
+  cursor: pointer; outline: none;
+  appearance: none; -webkit-appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%235AD1FF'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+}
+
+select.cfd-select:focus { border-color: var(--cfd-cyan); }
+select.cfd-select option { background: var(--cfd-surf); }
+
+/* ── Mesh list items ── */
+.cfd-mesh-item {
+  display: flex; align-items: center; gap: 10px;
+  padding: 8px 10px;
+  border-radius: var(--cfd-radius-sm);
+  cursor: pointer;
+  transition: background .14s;
+  margin-bottom: 4px;
+}
+
+.cfd-mesh-item:hover { background: rgba(90, 209, 255, .06); }
+.cfd-mesh-item.is-active {
+  background: rgba(90, 209, 255, .10);
+  border: 1px solid var(--cfd-bdr2);
+}
+
+.cfd-mesh-ico {
+  width: 32px; height: 32px;
+  border-radius: 8px;
+  background: var(--cfd-surf3);
+  border: 1px solid var(--cfd-bdr);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 16px; flex-shrink: 0;
+}
+
+.cfd-mesh-info { flex: 1; min-width: 0; }
+
+.cfd-mesh-name {
+  font-size: 12px; font-weight: 600;
+  color: var(--cfd-txt);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+
+.cfd-mesh-meta {
+  font-family: var(--cfd-mono);
+  font-size: 9px; color: var(--cfd-txt3);
+  margin-top: 2px;
+}
+
+/* ── Viewport ── */
+.cfd-viewport-wrap {
+  flex: 1; position: relative;
+  min-width: 0;
+  display: flex; flex-direction: column;
+}
+
+.cfd-viewport {
+  flex: 1; position: relative;
+  background: var(--cfd-bg);
+  overflow: hidden;
+}
+
+.cfd-viewport canvas {
+  display: block; position: absolute;
+  inset: 0; touch-action: none;
+}
+
+/* ── Viewport overlays ── */
+.cfd-vp-overlay {
+  position: absolute; z-index: 5; pointer-events: none;
+}
+
+.cfd-vp-info {
+  top: 12px; left: 12px;
+  font-family: var(--cfd-mono);
+  font-size: 9px; letter-spacing: .06em;
+  color: var(--cfd-txt3);
+  line-height: 1.8;
+  background: rgba(10, 14, 19, .80);
+  border: 1px solid var(--cfd-bdr);
+  border-radius: var(--cfd-radius);
+  padding: 10px 12px;
+  backdrop-filter: blur(8px);
+}
+
+.cfd-vp-legend {
+  bottom: 12px; right: 12px;
+  background: rgba(10, 14, 19, .82);
+  border: 1px solid var(--cfd-bdr);
+  border-radius: var(--cfd-radius);
+  padding: 10px 12px;
+  backdrop-filter: blur(8px);
+  min-width: 160px;
+}
+
+.cfd-legend-title {
+  font-family: var(--cfd-mono);
+  font-size: 8px; letter-spacing: .14em;
+  text-transform: uppercase;
+  color: var(--cfd-txt3);
+  margin-bottom: 8px;
+}
+
+.cfd-legend-bar {
+  height: 8px;
+  border-radius: 4px;
+  background: linear-gradient(90deg, #2166ac, #67a9cf, #f7f7f7, #ef8a62, #b2182b);
+}
+
+.cfd-legend-range {
+  display: flex; justify-content: space-between;
+  margin-top: 4px;
+  font-family: var(--cfd-mono);
+  font-size: 8px; color: var(--cfd-txt3);
+}
+
+.cfd-vp-axes {
+  bottom: 12px; left: 12px;
+  width: 64px; height: 64px;
+}
+
+/* ── Viz mode switcher ── */
+.cfd-viz-bar {
+  top: 12px; right: 12px;
+  display: flex; gap: 3px;
+  background: rgba(10, 14, 19, .82);
+  border: 1px solid var(--cfd-bdr);
+  border-radius: 999px;
+  padding: 3px;
+  pointer-events: auto;
+  backdrop-filter: blur(8px);
+}
+
+.cfd-viz-btn {
+  appearance: none; border: none; cursor: pointer;
+  padding: 5px 10px;
+  border-radius: 999px;
+  font-family: var(--cfd-mono);
+  font-size: 9px; letter-spacing: .06em;
+  text-transform: uppercase;
+  background: transparent;
+  color: var(--cfd-txt3);
+  transition: background .14s, color .14s;
+}
+
+.cfd-viz-btn:hover { color: var(--cfd-txt2); }
+.cfd-viz-btn.is-active {
+  background: rgba(90, 209, 255, .14);
+  color: var(--cfd-cyan);
+}
+
+/* ── Results panel (right) ── */
+.cfd-results {
+  flex: 0 0 var(--cfd-results-w);
+  width: var(--cfd-results-w);
+  background: var(--cfd-surf);
+  border-left: 1px solid var(--cfd-bdr);
+  display: flex; flex-direction: column;
+  overflow-y: auto;
+}
+
+.cfd-result-card {
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--cfd-bdr);
+}
+
+.cfd-result-title {
+  font-family: var(--cfd-mono);
+  font-size: 8px; letter-spacing: .16em;
+  text-transform: uppercase;
+  color: var(--cfd-txt3);
+  margin-bottom: 8px;
+}
+
+.cfd-result-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.cfd-result-item {
+  padding: 8px 10px;
+  border-radius: var(--cfd-radius-sm);
+  border: 1px solid var(--cfd-bdr);
+  background: rgba(90, 209, 255, .02);
+}
+
+.cfd-result-label {
+  font-family: var(--cfd-mono);
+  font-size: 8px; letter-spacing: .12em;
+  text-transform: uppercase;
+  color: var(--cfd-txt3);
+  margin-bottom: 4px;
+}
+
+.cfd-result-value {
+  font-family: var(--cfd-mono);
+  font-size: 15px; font-weight: 700;
+  color: var(--cfd-cyan);
+}
+
+.cfd-result-unit {
+  font-size: 9px; font-weight: 400;
+  color: var(--cfd-txt3);
+  margin-left: 2px;
+}
+
+/* ── Convergence graph ── */
+.cfd-conv-canvas {
+  width: 100%; height: 100px;
+  background: var(--cfd-surf2);
+  border-radius: var(--cfd-radius-sm);
+  border: 1px solid var(--cfd-bdr);
+}
+
+/* ── Status Bar ── */
+.cfd-statusbar {
+  flex: 0 0 var(--cfd-statusbar-h);
+  display: flex; align-items: center;
+  gap: 16px; padding: 0 16px;
+  background: var(--cfd-surf);
+  border-top: 1px solid var(--cfd-bdr);
+  font-family: var(--cfd-mono);
+  font-size: 9px; letter-spacing: .06em;
+  color: var(--cfd-txt3);
+}
+
+.cfd-sb-item {
+  display: flex; align-items: center; gap: 6px;
+}
+
+.cfd-sb-label { color: var(--cfd-txt3); }
+.cfd-sb-val { color: var(--cfd-txt2); font-weight: 600; }
+.cfd-sb-sep { width: 1px; height: 16px; background: var(--cfd-bdr); }
+
+/* ── WebGPU error overlay ── */
+.cfd-gpu-error {
+  position: absolute; inset: 0;
+  display: flex; align-items: center; justify-content: center;
+  flex-direction: column; gap: 18px;
+  background: rgba(10, 14, 19, .92);
+  z-index: 20;
+  text-align: center; padding: 32px;
+}
+
+.cfd-gpu-error-ico {
+  font-size: 48px; opacity: .6;
+}
+
+.cfd-gpu-error-title {
+  font-size: 20px; font-weight: 700;
+  color: var(--cfd-txt);
+}
+
+.cfd-gpu-error-body {
+  max-width: 460px;
+  font-size: 14px; line-height: 1.6;
+  color: var(--cfd-txt2);
+}
+
+.cfd-gpu-error-hint {
+  font-family: var(--cfd-mono);
+  font-size: 10px; letter-spacing: .08em;
+  color: var(--cfd-txt3);
+  padding: 8px 14px;
+  border: 1px solid var(--cfd-bdr);
+  border-radius: 999px;
+}
+
+/* ── Upload zone ── */
+.cfd-upload-zone {
+  border: 2px dashed var(--cfd-bdr2);
+  border-radius: var(--cfd-radius);
+  padding: 16px;
+  text-align: center;
+  cursor: pointer;
+  transition: border-color .2s, background .2s;
+}
+
+.cfd-upload-zone:hover {
+  border-color: var(--cfd-cyan);
+  background: rgba(90, 209, 255, .04);
+}
+
+.cfd-upload-label {
+  font-size: 11px; color: var(--cfd-txt2);
+  font-weight: 600;
+}
+
+.cfd-upload-hint {
+  font-family: var(--cfd-mono);
+  font-size: 9px; color: var(--cfd-txt3);
+  margin-top: 4px;
+}
+
+/* ── Responsive ── */
+@media (max-width: 1024px) {
+  .cfd-results { display: none; }
+  :root { --cfd-sidebar-w: 260px; }
+}
+
+@media (max-width: 768px) {
+  .cfd-sidebar { display: none; }
+  .cfd-toolbar { padding: 0 10px; }
+}
