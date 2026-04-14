@@ -104,15 +104,19 @@
     /* ── Interactive Grid ── */
     .interactive-grid-wrap {
       position: absolute;
-      top: -30%;
-      left: -15%;
+      top: -25%;
+      left: 25%;
+      width: 100%;
+      height: 100%;
+      padding: 16px;
       display: flex;
-      transform: skewX(-48deg) skewY(14deg) scale(0.675) translateZ(0);
+      transform: translate(-40%, -60%) skewX(-48deg) skewY(14deg) scale(0.675) translateZ(0);
       pointer-events: auto; /* Allow hover */
     }
 
     .ig-col {
       width: 64px;
+      flex-shrink: 0;
       position: relative;
       border-left: 1px solid var(--ig-stroke);
     }
@@ -845,8 +849,8 @@ telemetry.export(csv)</div>
         const wrap = document.createElement('div');
         wrap.className = 'interactive-grid-wrap';
         
-        const numCols = 64; 
-        const numRows = 44; 
+        const numCols = 100; 
+        const numRows = 75; 
 
         let colors = [];
         if (type === 'left') {
