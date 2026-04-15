@@ -944,38 +944,49 @@ telemetry.export(csv)</div>
       `;
 
       const fragmentShader = `
-        #define PI 3.14159265359
         precision highp float;
         uniform vec2 resolution;
         uniform float time;
         uniform vec2 mouse;
-        uniform float mix_v;
+        uniform float uRadius;
+        uniform float uMode; // 1.0 = Exit, 2.0 = Entry
         uniform vec3 color_mode;
 
         void main(void) {
           vec2 uv = (gl_FragCoord.xy * 2.0 - resolution.xy) / min(resolution.x, resolution.y);
           vec2 m = (mouse.xy * 2.0 - resolution.xy) / min(resolution.x, resolution.y);
           
-          float t = time * 0.04;
-          float lineWidth = 0.0025;
           float dist = length(uv - m);
+          float t = time * 0.5;
           
-          vec3 color = vec3(0.0);
+          // Refined Bloom Ring (Symmetry & Clarity focus)
+          vec3 bloom = vec3(0.0);
           for(int j = 0; j < 3; j++){
-            float channel_offset = 0.015 * float(j);
-            for(int i=0; i < 5; i++){
-              float burst = fract(t - channel_offset + float(i) * 0.02) * 4.0;
-              float waves = abs(burst - dist + mod(uv.x + uv.y, 0.1));
-              color[j] += (lineWidth * float(i*i)) / waves;
+            float channel_offset = float(j) * 0.15;
+            for(int i = 0; i < 4; i++){
+              // Multiple concentric rings for soft but vibrant bloom
+              float ring_dist = uRadius + sin(t * 1.2 + float(i) * 0.8 + channel_offset) * 0.02;
+              float ring = 0.004 / abs(dist - ring_dist);
+              bloom[j] += ring * (1.0 + float(i) * 0.2);
             }
           }
           
-          // Mix with the color mode (Coral or Ink)
-          color *= color_mode;
+          bloom *= color_mode;
           
-          // Vignette/Edge fade based on mix_v
-          float alpha = smoothstep(2.5, 0.0, dist - mix_v * 3.0);
-          gl_FragColor = vec4(color, alpha * clamp(mix_v * 2.0, 0.0, 1.0));
+          // Portal Logic
+          float mask = 0.0;
+          if (uMode < 1.5) { // Exit Mode (Index -> Lab)
+            // Inside ring = Black, Outside = Transparent
+            mask = smoothstep(uRadius + 0.01, uRadius - 0.01, dist);
+          } else { // Entry Mode (Black -> Lab)
+            // Inside ring = Transparent, Outside = Black
+            mask = smoothstep(uRadius - 0.01, uRadius + 0.01, dist);
+          }
+          
+          // Final composite: Color is bloom, alpha is mask OR bloom intensity
+          // This ensures the ring is always visible even over black or transparency
+          float finalAlpha = max(mask, length(bloom));
+          gl_FragColor = vec4(bloom, finalAlpha);
         }
       `;
 
@@ -991,7 +1002,8 @@ telemetry.export(csv)</div>
             time: { value: 1.0 },
             resolution: { value: new THREE.Vector2() },
             mouse: { value: new THREE.Vector2() },
-            mix_v: { value: 0.0 },
+            uRadius: { value: 0.0 },
+            uMode: { value: 1.0 }, // Exit
             color_mode: { value: new THREE.Vector3(1, 1, 1) }
           };
 
@@ -999,8 +1011,7 @@ telemetry.export(csv)</div>
             uniforms: this.uniforms,
             vertexShader,
             fragmentShader,
-            transparent: true,
-            blending: THREE.AdditiveBlending
+            transparent: true
           });
 
           const mesh = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), material);
@@ -1033,14 +1044,12 @@ telemetry.export(csv)</div>
               const url = panel.getAttribute('href');
               const isLeft = panel.classList.contains('panel-left');
               
-              // Set color mode: Coral for left, Blue/Deep for right
               if (isLeft) {
-                this.uniforms.color_mode.value.set(0.91, 0.44, 0.35); // Coral
+                this.uniforms.color_mode.value.set(0.95, 0.45, 0.35); // Vibrate Coral
               } else {
-                this.uniforms.color_mode.value.set(0.35, 0.82, 1.0); // Cyan/Blue
+                this.uniforms.color_mode.value.set(0.35, 0.85, 1.0); // Electric Cyan
               }
 
-              // Store coordinates
               sessionStorage.setItem('windsim_transition_x', e.clientX);
               sessionStorage.setItem('windsim_transition_y', e.clientY);
               sessionStorage.setItem('windsim_transition_color', isLeft ? 'coral' : 'cyan');
@@ -1051,33 +1060,27 @@ telemetry.export(csv)</div>
         }
 
         triggerTransition(x, y, url) {
-          // Transform mouse to canvas space
           this.uniforms.mouse.value.set(x * window.devicePixelRatio, (window.innerHeight - y) * window.devicePixelRatio);
           
           const tl = gsap.timeline({
             onComplete: () => window.location.href = url
           });
 
-          // Show canvas
           gsap.set(canvas, { opacity: 1, pointerEvents: 'auto' });
 
-          tl.to(this.uniforms.mix_v, {
-            value: 1.5,
+          // Animate the radius expand
+          tl.to(this.uniforms.uRadius, {
+            value: 2.5, // Cover screen
             duration: 1.2,
-            ease: "power2.in"
+            ease: "power2.inOut"
           });
 
           tl.to('.landing-split', {
-            scale: 1.15,
-            filter: 'blur(12px) brightness(0.4)',
+            scale: 1.1,
+            filter: 'blur(8px) brightness(0.7)',
             duration: 1.2,
-            ease: "power2.in"
+            ease: "power2.inOut"
           }, 0);
-
-          tl.to(canvas, {
-            backgroundColor: 'rgba(12, 17, 23, 1)',
-            duration: 0.8
-          }, 0.6);
         }
       }
 

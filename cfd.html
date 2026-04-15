@@ -48,24 +48,27 @@
         uniform vec2 resolution;
         uniform float time;
         uniform vec2 mouse;
-        uniform float mix_v;
+        uniform float uRadius;
+        uniform float uMode;
         uniform vec3 color_mode;
         void main(){
           vec2 uv = (gl_FragCoord.xy * 2.0 - resolution.xy) / min(resolution.x, resolution.y);
           vec2 m = (mouse.xy * 2.0 - resolution.xy) / min(resolution.x, resolution.y);
-          float t = time * 0.04;
           float dist = length(uv - m);
-          vec3 color = vec3(0.0);
-          for(int j=0; j<3; j++) {
-            float offset = 0.015 * float(j);
-            for(int i=0; i<5; i++) {
-              float burst = fract(t - offset + float(i)*0.02)*4.0;
-              color[j] += (0.0025 * float(i*i)) / abs(burst - dist + mod(uv.x+uv.y, 0.1));
+          float t = time * 0.5;
+          
+          vec3 bloom = vec3(0.0);
+          for(int j = 0; j < 3; j++){
+            float channel_offset = float(j) * 0.15;
+            for(int i = 0; i < 4; i++){
+              float ring_dist = uRadius + sin(t * 1.2 + float(i) * 0.8 + channel_offset) * 0.02;
+              bloom[j] += (0.004 * (1.0 + float(i) * 0.2)) / abs(dist - ring_dist);
             }
           }
-          color *= color_mode;
-          float alpha = smoothstep(3.0, 0.0, dist - mix_v * 3.5);
-          gl_FragColor = vec4(color, alpha * mix_v);
+          bloom *= color_mode;
+          
+          float mask = smoothstep(uRadius - 0.01, uRadius + 0.01, dist);
+          gl_FragColor = vec4(bloom, max(mask, length(bloom)));
         }
       `;
 
@@ -73,16 +76,17 @@
         time: { value: 1.0 },
         resolution: { value: new THREE.Vector2(window.innerWidth * window.devicePixelRatio, window.innerHeight * window.devicePixelRatio) },
         mouse: { value: new THREE.Vector2(x * window.devicePixelRatio, (window.innerHeight - y) * window.devicePixelRatio) },
-        mix_v: { value: 1.5 },
-        color_mode: { value: color === 'coral' ? new THREE.Vector3(0.91, 0.44, 0.35) : new THREE.Vector3(0.35, 0.82, 1.0) }
+        uRadius: { value: 0.1 },
+        uMode: { value: 2.0 },
+        color_mode: { value: color === 'coral' ? new THREE.Vector3(0.95, 0.45, 0.35) : new THREE.Vector3(0.35, 0.85, 1.0) }
       };
 
       const scene = new THREE.Scene();
-      const mesh = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), new THREE.ShaderMaterial({ uniforms, vertexShader, fragmentShader, transparent: true, blending: THREE.AdditiveBlending }));
+      const mesh = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), new THREE.ShaderMaterial({ uniforms, vertexShader, fragmentShader, transparent: true }));
       scene.add(mesh);
 
       function animate() {
-        if (uniforms.mix_v.value > 0.01) {
+        if (uniforms.uRadius.value < 3.0) {
           requestAnimationFrame(animate);
           uniforms.time.value += 0.05;
           renderer.render(scene, new THREE.Camera());
@@ -94,8 +98,8 @@
       animate();
 
       const tl = gsap.timeline();
-      tl.to(uniforms.mix_v, { value: 0, duration: 1.5, ease: "power2.out" });
-      tl.to(document.body, { scale: 1, filter: 'blur(0px) brightness(1)', duration: 1.2, ease: "power2.out" }, 0.1);
+      tl.to(uniforms.uRadius, { value: 3.0, duration: 1.5, ease: "power2.out" });
+      tl.to(document.body, { scale: 1, filter: 'blur(0px) brightness(1)', duration: 1.2, ease: "power2.out" }, 0.2);
     })();
   </script>
 </head>
