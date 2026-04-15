@@ -485,7 +485,8 @@ body.layout-dragging,body.layout-dragging *{user-select:none}
       sessionStorage.removeItem('windsim_transition_color');
 
       document.body.classList.add('transition-scaling');
-      gsap.set(document.body, { scale: 1.1, filter: 'blur(12px) brightness(0.5)' });
+      // Start hidden and scaled
+      gsap.set(document.body, { scale: 1.05, filter: 'blur(10px) brightness(0.7)' });
 
       const canvas = document.getElementById('page-transition-canvas');
       const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
@@ -499,27 +500,50 @@ body.layout-dragging,body.layout-dragging *{user-select:none}
         uniform float time;
         uniform vec2 mouse;
         uniform float uRadius;
-        uniform float uMode;
+        uniform float uStarMix;
         uniform vec3 color_mode;
+
         void main(){
           vec2 uv = (gl_FragCoord.xy * 2.0 - resolution.xy) / min(resolution.x, resolution.y);
           vec2 m = (mouse.xy * 2.0 - resolution.xy) / min(resolution.x, resolution.y);
           float dist = length(uv - m);
           float t = time * 0.5;
           
-          vec3 bloom = vec3(0.0);
-          for(int j = 0; j < 3; j++){
-            float channel_offset = float(j) * 0.15;
-            for(int i = 0; i < 4; i++){
-              float ring_dist = uRadius + sin(t * 1.2 + float(i) * 0.8 + channel_offset) * 0.02;
-              bloom[j] += (0.004 * (1.0 + float(i) * 0.2)) / abs(dist - ring_dist);
-            }
-          }
-          bloom *= color_mode;
+          // ── Stage 1: Cosmetic Star Flare ──
+          float d_star = length(uv - m);
+          // Central glow
+          float star_core = 0.01 / d_star;
+          // Anamorphic flare streaks
+          vec2 star_uv = uv - m;
+          float star_rays = (0.002 / abs(star_uv.x)) * (0.002 / abs(star_uv.y));
+          star_rays += (0.001 / abs(star_uv.x + star_uv.y)) + (0.001 / abs(star_uv.x - star_uv.y));
           
-          // Entry Mode: Inside is transparent, outside is black
-          float mask = smoothstep(uRadius - 0.01, uRadius + 0.01, dist);
-          gl_FragColor = vec4(bloom, max(mask, length(bloom)));
+          vec3 star_color = (vec3(1.0, 1.0, 1.0) * star_core * 1.5) + (color_mode * star_rays * 50.0);
+          star_color *= uStarMix * smoothstep(0.8, 0.2, d_star / (uStarMix + 0.01));
+
+          // ── Stage 2: Portal Reveal ──
+          // Vibrant Bloom Ring
+          vec3 bloom = vec3(0.0);
+          if (uRadius < 3.0) {
+            for(int j = 0; j < 3; j++){
+              float channel_offset = float(j) * 0.15;
+              for(int i = 0; i < 4; i++){
+                float ring_dist = uRadius + sin(t * 1.2 + float(i) * 0.8 + channel_offset) * 0.02;
+                bloom[j] += (0.005 * (1.0 + float(i) * 0.2)) / abs(dist - ring_dist);
+              }
+            }
+            bloom *= color_mode;
+          }
+
+          // Shrink Reveal: Outside = Transparent (Page), Inside = Black
+          // As uRadius shrinks from 3.0 to 0.0, the black area disappears
+          float mask = smoothstep(uRadius + 0.01, uRadius - 0.01, dist);
+          
+          // Composite: Star on top of Black/Bloom
+          vec3 finalColor = max(star_color, bloom);
+          float finalAlpha = max(mask, length(finalColor));
+          
+          gl_FragColor = vec4(finalColor, finalAlpha);
         }
       `;
 
@@ -527,8 +551,8 @@ body.layout-dragging,body.layout-dragging *{user-select:none}
         time: { value: 1.0 },
         resolution: { value: new THREE.Vector2(window.innerWidth * window.devicePixelRatio, window.innerHeight * window.devicePixelRatio) },
         mouse: { value: new THREE.Vector2(x * window.devicePixelRatio, (window.innerHeight - y) * window.devicePixelRatio) },
-        uRadius: { value: 0.1 },
-        uMode: { value: 2.0 }, // Entry
+        uRadius: { value: 3.5 }, // Start fully covering
+        uStarMix: { value: 0.0 }, // Start star hidden
         color_mode: { value: color === 'coral' ? new THREE.Vector3(0.95, 0.45, 0.35) : new THREE.Vector3(0.35, 0.85, 1.0) }
       };
 
@@ -537,7 +561,7 @@ body.layout-dragging,body.layout-dragging *{user-select:none}
       scene.add(mesh);
 
       function animate() {
-        if (uniforms.uRadius.value < 3.0) {
+        if (uniforms.uRadius.value > 0.0 || uniforms.uStarMix.value > 0.001) {
           requestAnimationFrame(animate);
           uniforms.time.value += 0.05;
           renderer.render(scene, new THREE.Camera());
@@ -549,8 +573,32 @@ body.layout-dragging,body.layout-dragging *{user-select:none}
       animate();
 
       const tl = gsap.timeline();
-      tl.to(uniforms.uRadius, { value: 3.0, duration: 1.5, ease: "power2.out" });
-      tl.to(document.body, { scale: 1, filter: 'blur(0px) brightness(1)', duration: 1.2, ease: "power2.out" }, 0.2);
+      
+      // Phase 1: Star Flash
+      tl.to(uniforms.uStarMix, { 
+        value: 1.0, 
+        duration: 0.8, 
+        ease: "power2.out" 
+      });
+      tl.to(uniforms.uStarMix, { 
+        value: 0.0, 
+        duration: 1.2, 
+        ease: "power2.in" 
+      });
+
+      // Phase 2: Shrink Reveal
+      tl.to(uniforms.uRadius, { 
+        value: 0.0, 
+        duration: 1.4, 
+        ease: "power3.inOut" 
+      }, "-=0.2"); // Start slightly before star fully fades
+
+      tl.to(document.body, { 
+        scale: 1, 
+        filter: 'blur(0px) brightness(1)', 
+        duration: 1.5, 
+        ease: "power2.out" 
+      }, "-=1.0");
     })();
   </script>
 </head>
