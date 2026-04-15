@@ -112,10 +112,10 @@ body.entry-entering #main canvas{
   max-width:1320px;
   padding:14px 18px;
   border:1px solid var(--entry-line);
-  border-radius:999px;
-  background:rgba(14,18,23,.72);
-  box-shadow:var(--entry-shadow);
-  backdrop-filter:blur(18px);
+  border-radius:12px;
+  background:rgba(14,18,23,.82);
+  box-shadow: 0 20px 40px rgba(0,0,0,0.4), inset 0 1px 1px rgba(255,255,255,0.05);
+  backdrop-filter:blur(24px);
 }
 
 .entry-brand{
@@ -156,55 +156,79 @@ body.entry-entering #main canvas{
   border:none;
   cursor:pointer;
   font:inherit;
+  position: relative;
+  overflow: hidden;
+  transition: transform 0.15s var(--entry-ease), box-shadow 0.2s var(--entry-ease), filter 0.2s var(--entry-ease);
 }
 
 .entry-pill-btn{
   border:1px solid rgba(245,238,231,.12);
-  border-radius:999px;
+  border-radius:4px;
   padding:10px 14px;
-  background:rgba(255,255,255,.02);
+  background:linear-gradient(180deg, rgba(255,255,255,.05), rgba(255,255,255,.01));
   color:var(--entry-ink-dim);
   font-family:'JetBrains Mono',monospace;
   font-size:11px;
   letter-spacing:.18em;
   text-transform:uppercase;
-  transition:background .25s var(--entry-ease), border-color .25s var(--entry-ease), color .25s var(--entry-ease), transform .25s var(--entry-ease);
-}
-
-.entry-pill-btn:hover,
-.entry-chip-btn:hover,
-.entry-ghost-btn:hover{
-  transform:translateY(-1px);
 }
 
 .entry-pill-btn:hover{
   border-color:var(--entry-line-strong);
   color:var(--entry-ink);
-  background:rgba(236,114,90,.08);
+  background:rgba(236,114,90,.12);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.05);
 }
 
 .entry-primary-btn{
   display:inline-flex;
   align-items:center;
   justify-content:center;
-  gap:10px;
+  gap:12px;
   min-height:52px;
-  padding:0 20px;
-  border-radius:999px;
-  background:linear-gradient(135deg, rgba(236,114,90,.98), rgba(236,114,90,.86));
+  padding:0 28px;
+  border-radius:6px;
+  background:linear-gradient(135deg, rgba(236,114,90,1), rgba(236,114,90,.88));
   color:#1c1411;
   font-size:14px;
-  font-weight:700;
-  letter-spacing:.12em;
+  font-weight:800;
+  letter-spacing:.14em;
   text-transform:uppercase;
-  box-shadow:0 16px 34px rgba(236,114,90,.20);
-  transition:transform .22s var(--entry-ease), box-shadow .22s var(--entry-ease), filter .22s var(--entry-ease);
+  border: 1px solid rgba(0,0,0,0.3);
+  box-shadow: 
+    0 12px 24px rgba(236,114,90,.25), 
+    inset 0 1px 1px rgba(255,255,255,0.45), 
+    inset 0 -1px 1px rgba(0,0,0,0.1);
+  text-shadow: 0 1px 0 rgba(255,255,255,0.2);
 }
 
 .entry-primary-btn:hover{
-  transform:translateY(-2px);
-  box-shadow:0 20px 40px rgba(236,114,90,.26);
-  filter:brightness(1.02);
+  filter:brightness(1.05);
+  box-shadow: 0 16px 32px rgba(236,114,90,.32), inset 0 1px 1px rgba(255,255,255,0.6);
+}
+
+/* Shine Sweep Effect */
+.entry-pill-btn::after,
+.entry-ghost-btn::after,
+.entry-primary-btn::after{
+  content: '';
+  position: absolute;
+  top: 0; left: -100%;
+  width: 60%; height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent);
+  transform: skewX(-25deg);
+  transition: left 0.5s var(--entry-ease);
+  pointer-events: none;
+}
+.entry-pill-btn:hover::after,
+.entry-ghost-btn:hover::after,
+.entry-primary-btn:hover::after{ left: 150%; }
+
+.entry-pill-btn:active,
+.entry-ghost-btn:active,
+.entry-primary-btn:active{
+  transform: translateY(2px) scale(0.985);
+  filter: brightness(0.92);
 }
 
 .entry-ghost-btn{
@@ -213,21 +237,22 @@ body.entry-entering #main canvas{
   justify-content:center;
   gap:10px;
   min-height:50px;
-  padding:0 18px;
-  border-radius:999px;
-  border:1px solid rgba(245,238,231,.12);
-  background:rgba(255,255,255,.03);
+  padding:0 22px;
+  border-radius:6px;
+  border:1px solid rgba(245,238,231,.18);
+  background:linear-gradient(180deg, rgba(255,255,255,.04), rgba(255,255,255,.01));
   color:var(--entry-ink);
   font-size:13px;
-  font-weight:600;
-  letter-spacing:.08em;
+  font-weight:700;
+  letter-spacing:.1em;
   text-transform:uppercase;
-  transition:background .22s var(--entry-ease), border-color .22s var(--entry-ease), color .22s var(--entry-ease), transform .22s var(--entry-ease);
+  box-shadow: inset 0 1px 1px rgba(255,255,255,0.05);
 }
 
 .entry-ghost-btn:hover{
-  background:rgba(236,114,90,.08);
+  background:rgba(236,114,90,.10);
   border-color:var(--entry-line-strong);
+  color:var(--entry-ink);
 }
 
 .entry-shell{
@@ -275,23 +300,24 @@ body.entry-entering #main canvas{
   align-items:center;
   gap:8px;
   margin-bottom:18px;
-  padding:8px 12px;
-  border:1px solid var(--entry-line);
-  border-radius:999px;
-  background:rgba(255,255,255,.03);
+  padding:8px 14px;
+  border:1px solid rgba(236,114,90,0.15);
+  border-radius:4px;
+  background:linear-gradient(180deg, rgba(236,114,90,0.06), rgba(236,114,90,0.02));
   font-family:'JetBrains Mono',monospace;
-  font-size:11px;
-  letter-spacing:.18em;
+  font-size:10.5px;
+  letter-spacing:.16em;
   text-transform:uppercase;
   color:var(--entry-ink-dim);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.02);
 }
 
 .entry-kicker-dot{
   width:7px;
   height:7px;
-  border-radius:50%;
+  border-radius:1px;
   background:var(--cyan);
-  box-shadow:0 0 0 8px rgba(236,114,90,.10);
+  box-shadow:0 0 0 6px rgba(236,114,90,.08);
 }
 
 .entry-hero-title{
@@ -636,22 +662,24 @@ body.entry-entering #main canvas{
   align-items:center;
   justify-content:center;
   min-height:34px;
-  padding:0 12px;
-  border-radius:999px;
-  border:1px solid rgba(245,238,231,.08);
-  background:rgba(12,16,20,.42);
+  padding:0 14px;
+  border-radius:4px;
+  border:1px solid rgba(245,238,231,.10);
+  background:rgba(12,16,20,.62);
   color:var(--entry-ink-soft);
   font-family:'JetBrains Mono',monospace;
   font-size:10px;
   letter-spacing:.12em;
   text-transform:uppercase;
   white-space:nowrap;
+  transition: all 0.2s var(--entry-ease);
 }
 
 .entry-stage-mode-chip.is-active{
-  background:rgba(236,114,90,.12);
+  background:linear-gradient(180deg, rgba(236,114,90,.18), rgba(236,114,90,.10));
   border-color:var(--entry-line-strong);
   color:var(--entry-ink);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.05);
 }
 
 .entry-stage-callout{
@@ -1307,20 +1335,20 @@ body.entry-entering #main canvas{
   align-items:center;
   justify-content:center;
   min-height:42px;
-  padding:0 14px;
-  border-radius:999px;
-  border:1px solid rgba(245,238,231,.08);
-  background:rgba(255,255,255,.04);
+  padding:0 18px;
+  border-radius:6px;
+  border:1px solid rgba(245,238,231,.12);
+  background:linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,.02));
   color:var(--entry-ink-dim);
   font-family:'JetBrains Mono',monospace;
   font-size:11px;
   letter-spacing:.14em;
   text-transform:uppercase;
-  transition:background .18s var(--entry-ease), border-color .18s var(--entry-ease), color .18s var(--entry-ease), transform .18s var(--entry-ease);
+  box-shadow: inset 0 1px 1px rgba(255,255,255,0.03);
 }
 
 .entry-chip-btn:hover{
-  background:rgba(236,114,90,.08);
+  background:linear-gradient(180deg, rgba(236,114,90,.12), rgba(236,114,90,.06));
   border-color:var(--entry-line-strong);
   color:var(--entry-ink);
 }
@@ -1347,23 +1375,24 @@ body.entry-entering #main canvas{
   align-items:center;
   justify-content:center;
   min-height:42px;
-  padding:0 14px;
-  border-radius:999px;
-  border:1px solid rgba(245,238,231,.08);
-  background:rgba(255,255,255,.03);
+  padding:0 18px;
+  border-radius:6px;
+  border:1px solid rgba(245,238,231,.12);
+  background:rgba(255,255,255,.04);
   color:var(--entry-ink-dim);
   font-family:'JetBrains Mono',monospace;
   font-size:11px;
   letter-spacing:.14em;
   text-transform:uppercase;
   cursor:pointer;
-  transition:background .2s var(--entry-ease), border-color .2s var(--entry-ease), color .2s var(--entry-ease);
+  transition: all 0.2s var(--entry-ease);
 }
 
 .entry-drawer-tab.is-active{
-  background:rgba(236,114,90,.12);
+  background:linear-gradient(180deg, rgba(236,114,90,.16), rgba(236,114,90,.08));
   border-color:var(--entry-line-strong);
   color:var(--entry-ink);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.05);
 }
 
 .entry-launch-list{
@@ -1459,7 +1488,7 @@ body.entry-entering #main canvas{
   position:relative;
   width:46px;
   height:26px;
-  border-radius:999px;
+  border-radius:4px;
   background:rgba(245,238,231,.16);
   border:1px solid rgba(245,238,231,.14);
   transition:background .18s var(--entry-ease), border-color .18s var(--entry-ease);
@@ -1472,7 +1501,7 @@ body.entry-entering #main canvas{
   left:3px;
   width:18px;
   height:18px;
-  border-radius:50%;
+  border-radius:2px;
   background:var(--entry-ink);
   transition:transform .18s var(--entry-ease), background .18s var(--entry-ease);
 }
