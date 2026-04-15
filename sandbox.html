@@ -460,6 +460,95 @@ body.layout-dragging,body.layout-dragging *{user-select:none}
   #status-pill,#scale-pill{right:8px}
 }
 </style>
+  <!-- Transition Overlay -->
+  <canvas id="page-transition-canvas" style="position:fixed; inset:0; z-index:10000; pointer-events:none;"></canvas>
+
+  <style>
+    .transition-scaling {
+      transform-origin: center center;
+      will-change: transform, filter;
+    }
+  </style>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.7/gsap.min.js"></script>
+  <script>
+    (function() {
+      const x = sessionStorage.getItem('windsim_transition_x');
+      const y = sessionStorage.getItem('windsim_transition_y');
+      const color = sessionStorage.getItem('windsim_transition_color');
+      
+      if (x === null || y === null) return;
+      
+      // Clear for next time
+      sessionStorage.removeItem('windsim_transition_x');
+      sessionStorage.removeItem('windsim_transition_y');
+      sessionStorage.removeItem('windsim_transition_color');
+
+      document.body.classList.add('transition-scaling');
+      gsap.set(document.body, { scale: 1.1, filter: 'blur(12px) brightness(0.5)' });
+
+      const canvas = document.getElementById('page-transition-canvas');
+      const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
+      renderer.setPixelRatio(window.devicePixelRatio);
+      renderer.setSize(window.innerWidth, window.innerHeight);
+
+      const vertexShader = `void main(){gl_Position=vec4(position,1.0);}`;
+      const fragmentShader = `
+        precision highp float;
+        uniform vec2 resolution;
+        uniform float time;
+        uniform vec2 mouse;
+        uniform float mix_v;
+        uniform vec3 color_mode;
+        void main(){
+          vec2 uv = (gl_FragCoord.xy * 2.0 - resolution.xy) / min(resolution.x, resolution.y);
+          vec2 m = (mouse.xy * 2.0 - resolution.xy) / min(resolution.x, resolution.y);
+          float t = time * 0.04;
+          float dist = length(uv - m);
+          vec3 color = vec3(0.0);
+          for(int j=0; j<3; j++) {
+            float offset = 0.015 * float(j);
+            for(int i=0; i<5; i++) {
+              float burst = fract(t - offset + float(i)*0.02)*4.0;
+              color[j] += (0.0025 * float(i*i)) / abs(burst - dist + mod(uv.x+uv.y, 0.1));
+            }
+          }
+          color *= color_mode;
+          float alpha = smoothstep(3.0, 0.0, dist - mix_v * 3.5);
+          gl_FragColor = vec4(color, alpha * mix_v);
+        }
+      `;
+
+      const uniforms = {
+        time: { value: 1.0 },
+        resolution: { value: new THREE.Vector2(window.innerWidth * window.devicePixelRatio, window.innerHeight * window.devicePixelRatio) },
+        mouse: { value: new THREE.Vector2(x * window.devicePixelRatio, (window.innerHeight - y) * window.devicePixelRatio) },
+        mix_v: { value: 1.5 },
+        color_mode: { value: color === 'coral' ? new THREE.Vector3(0.91, 0.44, 0.35) : new THREE.Vector3(0.35, 0.82, 1.0) }
+      };
+
+      const scene = new THREE.Scene();
+      const mesh = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), new THREE.ShaderMaterial({ uniforms, vertexShader, fragmentShader, transparent: true, blending: THREE.AdditiveBlending }));
+      scene.add(mesh);
+
+      function animate() {
+        if (uniforms.mix_v.value > 0.01) {
+          requestAnimationFrame(animate);
+          uniforms.time.value += 0.05;
+          renderer.render(scene, new THREE.Camera());
+        } else {
+          canvas.style.display = 'none';
+          renderer.dispose();
+        }
+      }
+      animate();
+
+      const tl = gsap.timeline();
+      tl.to(uniforms.mix_v, { value: 0, duration: 1.5, ease: "power2.out" });
+      tl.to(document.body, { scale: 1, filter: 'blur(0px) brightness(1)', duration: 1.2, ease: "power2.out" }, 0.1);
+    })();
+  </script>
 </head>
 <body>
 <div id="sidebar">
@@ -499,7 +588,7 @@ body.layout-dragging,body.layout-dragging *{user-select:none}
 <div id="sidebar-resizer" aria-hidden="true"></div>
 <div id="main"><div class="orbit-hint" id="orbitHint">DRAG: orbit . SHIFT+DRAG: pan . SCROLL: zoom<br>AXES: X = East, Y = Up, Z = North</div><div id="status-pill"><span id="sTxt" class="sr">RUNNING</span></div><div id="overlay-stack"><div id="energy-panel"><div class="panel-cap">Energy State</div><div class="ep-row"><span class="ep-l">KE trans</span><span class="ep-v" id="eKet">0.000 J</span></div><div class="ep-row"><span class="ep-l">KE rot</span><span class="ep-v" id="eKer">0.000 J</span></div><div class="ep-row"><span class="ep-l">PE grav</span><span class="ep-v" id="ePe">0.000 J</span></div><div class="ep-row"><span class="ep-l">Wind dE</span><span class="ep-v" id="eWw">0.000 J</span></div><div class="ep-row"><span class="ep-l">Loss dE</span><span class="ep-v" id="eFl">0.000 J</span></div></div><div id="legend-panel"><div class="legend-title">Force Legend</div><div class="legend-row"><span class="legend-chip" style="background:#5AD1FF"></span>Drag</div><div class="legend-row"><span class="legend-chip" style="background:#FF8A4C"></span>Gravity</div><div class="legend-row"><span class="legend-chip" style="background:#A8FF78"></span>Velocity</div><div class="legend-row"><span class="legend-chip" style="background:#C78BFF"></span>Magnus</div><div class="legend-row"><span class="legend-chip" style="background:#FFD166"></span>Spin Axis</div></div></div><div id="scale-pill">GRID: 1 LARGE CELL = 5 M</div><div id="hud-resizer" aria-hidden="true"></div><div id="hud"><div class="hi"><div class="hl">Speed</div><div class="hv" id="hSpd">0.00 m/s</div></div><div class="hi"><div class="hl">Drag F</div><div class="hv" id="hDrag">0.000 N</div></div><div class="hi"><div class="hl">Net F</div><div class="hv" id="hNet">0.000 N</div></div><div class="hi"><div class="hl">Accel</div><div class="hv" id="hAcc">0.00 m/s^2</div></div><div class="hi"><div class="hl">Height Y</div><div class="hv" id="hH">0.00 m</div></div><div class="hi"><div class="hl">X pos</div><div class="hv" id="hX">0.00 m</div></div><div class="hi"><div class="hl">Z pos</div><div class="hv" id="hZ">0.00 m</div></div><div class="hi"><div class="hl">Reynolds</div><div class="hv" id="hRe">--</div></div><div class="hi"><div class="hl">Curr Cd</div><div class="hv" id="hCd">--</div></div><div class="hi"><div class="hl">Spin</div><div class="hv" id="hSpin">0.00 r/s</div></div><div class="hi"><div class="hl">Heading</div><div class="hv" id="hHead">90 deg E</div></div><div class="hi"><div class="hl">Air rho</div><div class="hv" id="hRho">1.225 kg/m^3</div></div><div class="hi"><div class="hl">Sim Time</div><div class="hv" id="hT">0.00 s</div></div></div></div>
 <div id="entry-root" aria-live="polite"></div>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<!-- Removed scripts already added in head -->
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/RGBELoader.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
 <script src="js/windsim-data.js"></script>

@@ -636,6 +636,9 @@
     </div>
   </nav>
 
+  <!-- Transition Canvas -->
+  <canvas id="transition-canvas" style="position:fixed; inset:0; z-index:9000; pointer-events:none; opacity:0;"></canvas>
+
   <!-- Split layout -->
   <div class="landing-split" id="landing-split">
 
@@ -923,9 +926,163 @@ telemetry.export(csv)</div>
       createInteractiveGrid(document.getElementById('ig-right'), 'right');
     })();
   </script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.7/gsap.min.js"></script>
   <script src="https://unpkg.com/lucide@latest"></script>
   <script>
     lucide.createIcons();
+
+    // ── Transition Engine ──
+    (function () {
+      const canvas = document.getElementById('transition-canvas');
+      if (!canvas) return;
+
+      const vertexShader = `
+        void main() {
+          gl_Position = vec4(position, 1.0);
+        }
+      `;
+
+      const fragmentShader = `
+        #define PI 3.14159265359
+        precision highp float;
+        uniform vec2 resolution;
+        uniform float time;
+        uniform vec2 mouse;
+        uniform float mix_v;
+        uniform vec3 color_mode;
+
+        void main(void) {
+          vec2 uv = (gl_FragCoord.xy * 2.0 - resolution.xy) / min(resolution.x, resolution.y);
+          vec2 m = (mouse.xy * 2.0 - resolution.xy) / min(resolution.x, resolution.y);
+          
+          float t = time * 0.04;
+          float lineWidth = 0.0025;
+          float dist = length(uv - m);
+          
+          vec3 color = vec3(0.0);
+          for(int j = 0; j < 3; j++){
+            float channel_offset = 0.015 * float(j);
+            for(int i=0; i < 5; i++){
+              float burst = fract(t - channel_offset + float(i) * 0.02) * 4.0;
+              float waves = abs(burst - dist + mod(uv.x + uv.y, 0.1));
+              color[j] += (lineWidth * float(i*i)) / waves;
+            }
+          }
+          
+          // Mix with the color mode (Coral or Ink)
+          color *= color_mode;
+          
+          // Vignette/Edge fade based on mix_v
+          float alpha = smoothstep(2.5, 0.0, dist - mix_v * 3.0);
+          gl_FragColor = vec4(color, alpha * clamp(mix_v * 2.0, 0.0, 1.0));
+        }
+      `;
+
+      class TransitionEngine {
+        constructor() {
+          this.renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
+          this.renderer.setPixelRatio(window.devicePixelRatio);
+          this.scene = new THREE.Scene();
+          this.camera = new THREE.Camera();
+          this.camera.position.z = 1;
+
+          this.uniforms = {
+            time: { value: 1.0 },
+            resolution: { value: new THREE.Vector2() },
+            mouse: { value: new THREE.Vector2() },
+            mix_v: { value: 0.0 },
+            color_mode: { value: new THREE.Vector3(1, 1, 1) }
+          };
+
+          const material = new THREE.ShaderMaterial({
+            uniforms: this.uniforms,
+            vertexShader,
+            fragmentShader,
+            transparent: true,
+            blending: THREE.AdditiveBlending
+          });
+
+          const mesh = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), material);
+          this.scene.add(mesh);
+
+          this.onResize();
+          window.addEventListener('resize', () => this.onResize());
+          this.animate();
+
+          this.setupPanelEvents();
+        }
+
+        onResize() {
+          this.renderer.setSize(window.innerWidth, window.innerHeight);
+          this.uniforms.resolution.value.x = this.renderer.domElement.width;
+          this.uniforms.resolution.value.y = this.renderer.domElement.height;
+        }
+
+        animate() {
+          requestAnimationFrame(() => this.animate());
+          this.uniforms.time.value += 0.05;
+          this.renderer.render(this.scene, this.camera);
+        }
+
+        setupPanelEvents() {
+          const panels = document.querySelectorAll('.panel');
+          panels.forEach(panel => {
+            panel.addEventListener('click', (e) => {
+              e.preventDefault();
+              const url = panel.getAttribute('href');
+              const isLeft = panel.classList.contains('panel-left');
+              
+              // Set color mode: Coral for left, Blue/Deep for right
+              if (isLeft) {
+                this.uniforms.color_mode.value.set(0.91, 0.44, 0.35); // Coral
+              } else {
+                this.uniforms.color_mode.value.set(0.35, 0.82, 1.0); // Cyan/Blue
+              }
+
+              // Store coordinates
+              sessionStorage.setItem('windsim_transition_x', e.clientX);
+              sessionStorage.setItem('windsim_transition_y', e.clientY);
+              sessionStorage.setItem('windsim_transition_color', isLeft ? 'coral' : 'cyan');
+
+              this.triggerTransition(e.clientX, e.clientY, url);
+            });
+          });
+        }
+
+        triggerTransition(x, y, url) {
+          // Transform mouse to canvas space
+          this.uniforms.mouse.value.set(x * window.devicePixelRatio, (window.innerHeight - y) * window.devicePixelRatio);
+          
+          const tl = gsap.timeline({
+            onComplete: () => window.location.href = url
+          });
+
+          // Show canvas
+          gsap.set(canvas, { opacity: 1, pointerEvents: 'auto' });
+
+          tl.to(this.uniforms.mix_v, {
+            value: 1.5,
+            duration: 1.2,
+            ease: "power2.in"
+          });
+
+          tl.to('.landing-split', {
+            scale: 1.15,
+            filter: 'blur(12px) brightness(0.4)',
+            duration: 1.2,
+            ease: "power2.in"
+          }, 0);
+
+          tl.to(canvas, {
+            backgroundColor: 'rgba(12, 17, 23, 1)',
+            duration: 0.8
+          }, 0.6);
+        }
+      }
+
+      window.transitionEngine = new TransitionEngine();
+    })();
   </script>
 </body>
 </html>

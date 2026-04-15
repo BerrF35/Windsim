@@ -10,6 +10,94 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="css/cfd-entry.css" />
+  <!-- Transition Overlay -->
+  <canvas id="page-transition-canvas" style="position:fixed; inset:0; z-index:10000; pointer-events:none;"></canvas>
+
+  <style>
+    .transition-scaling {
+      transform-origin: center center;
+      will-change: transform, filter;
+    }
+  </style>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.7/gsap.min.js"></script>
+  <script>
+    (function() {
+      const x = sessionStorage.getItem('windsim_transition_x');
+      const y = sessionStorage.getItem('windsim_transition_y');
+      const color = sessionStorage.getItem('windsim_transition_color');
+      
+      if (x === null || y === null) return;
+      
+      sessionStorage.removeItem('windsim_transition_x');
+      sessionStorage.removeItem('windsim_transition_y');
+      sessionStorage.removeItem('windsim_transition_color');
+
+      document.body.classList.add('transition-scaling');
+      gsap.set(document.body, { scale: 1.1, filter: 'blur(12px) brightness(0.5)' });
+
+      const canvas = document.getElementById('page-transition-canvas');
+      const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
+      renderer.setPixelRatio(window.devicePixelRatio);
+      renderer.setSize(window.innerWidth, window.innerHeight);
+
+      const vertexShader = `void main(){gl_Position=vec4(position,1.0);}`;
+      const fragmentShader = `
+        precision highp float;
+        uniform vec2 resolution;
+        uniform float time;
+        uniform vec2 mouse;
+        uniform float mix_v;
+        uniform vec3 color_mode;
+        void main(){
+          vec2 uv = (gl_FragCoord.xy * 2.0 - resolution.xy) / min(resolution.x, resolution.y);
+          vec2 m = (mouse.xy * 2.0 - resolution.xy) / min(resolution.x, resolution.y);
+          float t = time * 0.04;
+          float dist = length(uv - m);
+          vec3 color = vec3(0.0);
+          for(int j=0; j<3; j++) {
+            float offset = 0.015 * float(j);
+            for(int i=0; i<5; i++) {
+              float burst = fract(t - offset + float(i)*0.02)*4.0;
+              color[j] += (0.0025 * float(i*i)) / abs(burst - dist + mod(uv.x+uv.y, 0.1));
+            }
+          }
+          color *= color_mode;
+          float alpha = smoothstep(3.0, 0.0, dist - mix_v * 3.5);
+          gl_FragColor = vec4(color, alpha * mix_v);
+        }
+      `;
+
+      const uniforms = {
+        time: { value: 1.0 },
+        resolution: { value: new THREE.Vector2(window.innerWidth * window.devicePixelRatio, window.innerHeight * window.devicePixelRatio) },
+        mouse: { value: new THREE.Vector2(x * window.devicePixelRatio, (window.innerHeight - y) * window.devicePixelRatio) },
+        mix_v: { value: 1.5 },
+        color_mode: { value: color === 'coral' ? new THREE.Vector3(0.91, 0.44, 0.35) : new THREE.Vector3(0.35, 0.82, 1.0) }
+      };
+
+      const scene = new THREE.Scene();
+      const mesh = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), new THREE.ShaderMaterial({ uniforms, vertexShader, fragmentShader, transparent: true, blending: THREE.AdditiveBlending }));
+      scene.add(mesh);
+
+      function animate() {
+        if (uniforms.mix_v.value > 0.01) {
+          requestAnimationFrame(animate);
+          uniforms.time.value += 0.05;
+          renderer.render(scene, new THREE.Camera());
+        } else {
+          canvas.style.display = 'none';
+          renderer.dispose();
+        }
+      }
+      animate();
+
+      const tl = gsap.timeline();
+      tl.to(uniforms.mix_v, { value: 0, duration: 1.5, ease: "power2.out" });
+      tl.to(document.body, { scale: 1, filter: 'blur(0px) brightness(1)', duration: 1.2, ease: "power2.out" }, 0.1);
+    })();
+  </script>
 </head>
 <body>
 
@@ -346,7 +434,6 @@
   <script>
     lucide.createIcons();
   </script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
   <script src="js/cfd-engine.js"></script>
 
 </body>
