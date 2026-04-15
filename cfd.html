@@ -18,6 +18,29 @@
       transform-origin: center center;
       will-change: transform, filter;
     }
+    /* Temporary WIP Watermark */
+    .wip-watermark {
+      position: fixed;
+      inset: 0;
+      z-index: 9999;
+      pointer-events: none;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+      user-select: none;
+      opacity: 0.12;
+    }
+    .wip-text {
+      font-family: 'Barlow', sans-serif;
+      font-weight: 900;
+      font-size: 15vw;
+      color: #e8715a; /* --cfd-coral */
+      white-space: nowrap;
+      transform: rotate(-25deg);
+      letter-spacing: -0.02em;
+      text-transform: uppercase;
+    }
   </style>
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
@@ -454,6 +477,10 @@
     lucide.createIcons();
   </script>
   <script src="js/cfd-engine.js"></script>
+  
+  <div class="wip-watermark">
+    <div class="wip-text">Work In Progress</div>
+  </div>
 
 </body>
 </html>
