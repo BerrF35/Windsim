@@ -918,7 +918,7 @@ body.entry-entering #main canvas{
 .entry-story-visual-copy{
   position:absolute;
   left:24px;
-  bottom:24px;
+  bottom:112px;
   max-width:300px;
 }
 

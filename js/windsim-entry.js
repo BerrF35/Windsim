@@ -863,6 +863,7 @@ function useStoryChoreography(options) {
     bodyRef,
     traceRef,
     hudRef,
+    visualCopyRef,
     overlayOpen,
     reducedMotion,
     onProgress,
@@ -905,7 +906,8 @@ function useStoryChoreography(options) {
         [fieldRef.current, { xPercent: -5, yPercent: -4, rotate: -6 }],
         [bodyRef.current, { xPercent: 8, yPercent: -10, rotate: 10 }],
         [traceRef.current, { xPercent: 5, yPercent: -5, rotate: -2 }],
-        [hudRef.current, { yPercent: -8 }]
+        [hudRef.current, { yPercent: -8 }],
+        [visualCopyRef.current, { yPercent: -12 }]
       ].forEach(function (entry) {
         if (!entry[0]) return;
         gsap.to(entry[0], Object.assign({}, entry[1], {
@@ -1368,6 +1370,7 @@ function EntryApp(props) {
   const bodyRef = React.useRef(null);
   const traceRef = React.useRef(null);
   const hudRef = React.useRef(null);
+  const visualCopyRef = React.useRef(null);
   const autoSkipRef = React.useRef(false);
   const [isMobile, setIsMobile] = React.useState(function () {
     return window.innerWidth < 821;
@@ -1396,6 +1399,7 @@ function EntryApp(props) {
     bodyRef: bodyRef,
     traceRef: traceRef,
     hudRef: hudRef,
+    visualCopyRef: visualCopyRef,
     overlayOpen: props.overlayOpen,
     reducedMotion: !!reducedMotion,
     onProgress: setStoryProgress,
@@ -1707,7 +1711,7 @@ function EntryApp(props) {
                                 <div className="entry-stage-hud-value">sim ready</div>
                               </div>
                             </div>
-                            <div className="entry-story-visual-copy">
+                            <div className="entry-story-visual-copy" ref=${visualCopyRef}>
                               <${TextEffect} as="h3" per="line" preset="slide" reducedMotion=${!!reducedMotion}>${activeStory.title}</${TextEffect}>
                               <p>${activeStory.body}</p>
                             </div>
