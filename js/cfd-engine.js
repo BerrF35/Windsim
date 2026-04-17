@@ -11,6 +11,9 @@
     adapter: null,      // GPUAdapter
     gpuReady: false,
     gpuError: '',
+    executionTier: 'detecting',
+    phaseLabel: 'Phase A shell',
+    supportsKernel: false,
     scene: null,
     camera: null,
     renderer: null,
@@ -30,7 +33,24 @@
       gridX: 64, gridY: 64, gridZ: 64,
       tau: 0.6,
       inletSpeed: 0.08,
+      inletDir: '+x',
       stepsPerFrame: 4
+    },
+    workflow: {
+      geometry: false,
+      domain: false,
+      boundary: false,
+      solver: false,
+      run: false,
+      inspect: false
+    },
+    domain: {
+      x: 6,
+      y: 6,
+      z: 6
+    },
+    domainVisuals: {
+      group: null
     },
     mesh: {
       active: 'sphere',
@@ -39,8 +59,8 @@
     },
     vizMode: 'solid',
     results: {
-      cd: 0, cl: 0, cs: 0,
-      maxVel: 0, massError: 0
+      cd: null, cl: null, cs: null,
+      maxVel: null, massError: null
     },
     lastTs: 0,
     frameCount: 0
@@ -50,6 +70,21 @@
   function $(id) { return document.getElementById(id); }
   function setText(id, txt) { var el = $(id); if (el) el.textContent = txt; }
   function clamp(v, lo, hi) { return Math.max(lo, Math.min(hi, v)); }
+  function setDisabled(el, disabled) {
+    if (!el) return;
+    el.disabled = !!disabled;
+    el.classList.toggle('is-disabled', !!disabled);
+  }
+  function formatDomainSummary() {
+    return state.domain.x.toFixed(1) + ' x ' + state.domain.y.toFixed(1) + ' x ' + state.domain.z.toFixed(1);
+  }
+  function formatDomainViewport() {
+    return state.domain.x.toFixed(1) + ' × ' + state.domain.y.toFixed(1) + ' × ' + state.domain.z.toFixed(1) + ' m';
+  }
+  function formatMaybe(value, digits, suffix) {
+    if (typeof value !== 'number' || !isFinite(value)) return '—';
+    return value.toFixed(digits) + (suffix || '');
+  }
 
   /* ─── WebGPU Initialization ─── */
   async function initWebGPU() {
@@ -523,6 +558,534 @@
   }
 
   /* ─── Render Loop ─── */
+  function determineExecutionTier(adapter) {
+    if (!adapter || !adapter.limits) return 'demo';
+    if (
+      adapter.limits.maxComputeInvocationsPerWorkgroup >= 256 &&
+      adapter.limits.maxStorageBufferBindingSize >= 268435456
+    ) {
+      return 'full';
+    }
+    return 'reduced';
+  }
+
+  function tierLabel(tier) {
+    if (tier === 'detecting') return 'Detecting tier';
+    if (tier === 'full') return 'Full route';
+    if (tier === 'reduced') return 'Reduced route';
+    return 'Demo route';
+  }
+
+  function disposeMaterial(material) {
+    if (!material) return;
+    if (Array.isArray(material)) {
+      material.forEach(disposeMaterial);
+      return;
+    }
+    if (typeof material.dispose === 'function') material.dispose();
+  }
+
+  function clearDomainBox() {
+    var group = state.domainVisuals.group;
+    if (!group || !state.scene) return;
+    group.traverse(function (node) {
+      if (node.geometry && typeof node.geometry.dispose === 'function') node.geometry.dispose();
+      if (node.material) disposeMaterial(node.material);
+    });
+    state.scene.remove(group);
+    state.domainVisuals.group = null;
+  }
+
+  function buildDomainBox() {
+    if (!state.scene) return;
+    clearDomainBox();
+
+    var sx = state.domain.x;
+    var sy = state.domain.y;
+    var sz = state.domain.z;
+    var group = new THREE.Group();
+    var boxGeo = new THREE.BoxGeometry(sx, sy, sz);
+    var edges = new THREE.EdgesGeometry(boxGeo);
+    var line = new THREE.LineSegments(edges, new THREE.LineBasicMaterial({
+      color: 0x5ad1ff, transparent: true, opacity: 0.12
+    }));
+    group.add(line);
+
+    var planeGeo;
+    var planeMat = new THREE.MeshBasicMaterial({
+      color: 0x5ad1ff, transparent: true, opacity: 0.04, side: THREE.DoubleSide
+    });
+    var inlet = null;
+    var arrowDir = new THREE.Vector3(1, 0, 0);
+
+    if (state.solver.inletDir === '+x' || state.solver.inletDir === '-x') {
+      planeGeo = new THREE.PlaneGeometry(sy, sz);
+      inlet = new THREE.Mesh(planeGeo, planeMat);
+      inlet.position.x = state.solver.inletDir === '+x' ? (-sx / 2) : (sx / 2);
+      inlet.rotation.y = Math.PI / 2;
+      arrowDir.set(state.solver.inletDir === '+x' ? 1 : -1, 0, 0);
+    } else {
+      planeGeo = new THREE.PlaneGeometry(sx, sy);
+      inlet = new THREE.Mesh(planeGeo, planeMat);
+      inlet.position.z = state.solver.inletDir === '+z' ? (-sz / 2) : (sz / 2);
+      arrowDir.set(0, 0, state.solver.inletDir === '+z' ? 1 : -1);
+    }
+    group.add(inlet);
+
+    var yOffsets = [-sy * 0.26, 0, sy * 0.26];
+    var zOffsets = [-sz * 0.26, 0, sz * 0.26];
+    for (var yi = 0; yi < yOffsets.length; yi++) {
+      for (var zi = 0; zi < zOffsets.length; zi++) {
+        var origin = new THREE.Vector3(
+          arrowDir.x ? inlet.position.x - arrowDir.x * 0.3 : (-sx * 0.26 + zi * sx * 0.26),
+          yOffsets[yi],
+          arrowDir.z ? inlet.position.z - arrowDir.z * 0.3 : zOffsets[zi]
+        );
+        if (!arrowDir.x) origin.x = -sx * 0.26 + zi * sx * 0.26;
+        if (!arrowDir.z) origin.z = zOffsets[zi];
+        var arrow = new THREE.ArrowHelper(arrowDir.clone(), origin, 0.8, 0x5ad1ff, 0.15, 0.1);
+        arrow.line.material.transparent = true;
+        arrow.line.material.opacity = 0.25;
+        arrow.cone.material.transparent = true;
+        arrow.cone.material.opacity = 0.25;
+        group.add(arrow);
+      }
+    }
+
+    state.scene.add(group);
+    state.domainVisuals.group = group;
+    setText('vp-domain', formatDomainViewport());
+    setText('domain-badge', formatDomainSummary());
+  }
+
+  function invalidateWorkflowFrom(stepKey) {
+    var order = ['geometry', 'domain', 'boundary', 'solver', 'run', 'inspect'];
+    var seen = false;
+    for (var i = 0; i < order.length; i++) {
+      if (order[i] === stepKey) seen = true;
+      if (seen) state.workflow[order[i]] = false;
+    }
+    state.solver.running = false;
+    state.solver.paused = false;
+  }
+
+  function setWorkflowStep(stepKey, message) {
+    state.workflow[stepKey] = true;
+    state.workflow.run = false;
+    state.workflow.inspect = false;
+    if (message) updateGPUStatus(state.gpuReady ? 'ready' : 'error', message);
+    syncCFDUI();
+  }
+
+  function syncWorkflowPills() {
+    var order = ['geometry', 'domain', 'boundary', 'solver', 'run', 'inspect'];
+    var firstPending = null;
+    for (var i = 0; i < order.length; i++) {
+      if (!state.workflow[order[i]]) {
+        firstPending = order[i];
+        break;
+      }
+    }
+    order.forEach(function (key) {
+      var el = $('wf-' + key);
+      if (!el) return;
+      el.classList.remove('is-current', 'is-complete', 'is-locked');
+      if (state.workflow[key]) el.classList.add('is-complete');
+      else if (firstPending === key) el.classList.add('is-current');
+      else el.classList.add('is-locked');
+    });
+
+    var note = 'Select and confirm a geometry to unlock the domain stage.';
+    var vpWorkflow = 'Geometry pending';
+    if (state.workflow.geometry && !state.workflow.domain) {
+      note = 'Size the CFD domain and confirm it before boundary work starts.';
+      vpWorkflow = 'Domain pending';
+    } else if (state.workflow.domain && !state.workflow.boundary) {
+      note = 'Apply boundary conditions to unlock solver routing.';
+      vpWorkflow = 'Boundary pending';
+    } else if (state.workflow.boundary && !state.workflow.solver) {
+      note = 'Lock the solver settings to finish Phase A routing.';
+      vpWorkflow = 'Solver pending';
+    } else if (state.workflow.solver && !state.supportsKernel) {
+      note = 'Phase A shell is complete. Run stays locked until the numerical kernel is wired in.';
+      vpWorkflow = 'Kernel pending';
+    }
+    setText('wf-status-note', note);
+    setText('vp-workflow', vpWorkflow);
+  }
+
+  function syncPanelLocks() {
+    var locks = {
+      'p-domain': !state.workflow.geometry,
+      'p-boundary': !state.workflow.domain,
+      'p-solver': !state.workflow.boundary,
+      'p-viz': !state.workflow.inspect
+    };
+    Object.keys(locks).forEach(function (id) {
+      var panel = $(id);
+      if (!panel) return;
+      panel.classList.toggle('is-locked', locks[id]);
+      if (locks[id]) panel.classList.remove('is-open');
+    });
+  }
+
+  function syncGridConstraints() {
+    var gridSel = $('s-grid');
+    if (!gridSel) return;
+    var limitHighRes = state.executionTier !== 'full';
+    Array.prototype.forEach.call(gridSel.options, function (opt) {
+      var highRes = opt.value === '128x64x64' || opt.value === '128x128x128';
+      opt.disabled = limitHighRes && highRes;
+    });
+    if (limitHighRes && (gridSel.value === '128x64x64' || gridSel.value === '128x128x128')) {
+      gridSel.value = '64x64x64';
+      state.solver.gridX = 64;
+      state.solver.gridY = 64;
+      state.solver.gridZ = 64;
+    }
+    setText('vp-grid', state.solver.gridX + ' × ' + state.solver.gridY + ' × ' + state.solver.gridZ);
+  }
+
+  function syncToolbarLocks() {
+    var canRun = state.workflow.solver && state.supportsKernel;
+    var canInspect = state.workflow.inspect;
+    setDisabled($('btn-run'), !canRun);
+    setDisabled($('btn-pause'), !(state.solver.running && state.supportsKernel));
+    setDisabled($('btn-export'), !canInspect);
+    setDisabled($('btn-screenshot'), true);
+    setDisabled($('btn-confirm-domain'), !state.workflow.geometry);
+    setDisabled($('btn-confirm-boundary'), !state.workflow.domain);
+    setDisabled($('btn-confirm-solver'), !state.workflow.boundary);
+  }
+
+  function syncFieldLocks() {
+    document.querySelectorAll('.cfd-viz-btn[data-requires-field="true"]').forEach(function (btn) {
+      btn.classList.toggle('is-disabled', !state.workflow.inspect);
+      btn.disabled = !state.workflow.inspect;
+    });
+    setDisabled($('s-colormap'), !state.workflow.inspect);
+    setDisabled($('s-field'), !state.workflow.inspect);
+    if (!state.workflow.inspect && state.vizMode !== 'solid' && state.vizMode !== 'wireframe') {
+      state.vizMode = 'solid';
+    }
+  }
+
+  function syncPhaseMeta() {
+    var tierText = tierLabel(state.executionTier);
+    setText('wf-phase-badge', state.phaseLabel);
+    setText('wf-tier-badge', tierText);
+    setText('r-phase', state.phaseLabel);
+    setText('r-tier', tierText);
+    setText('r-kernel', state.supportsKernel ? 'Connected' : 'Workflow shell only');
+    setText('r-export', state.workflow.inspect ? 'Inspection unlocked' : 'Locked until kernel is wired');
+  }
+
+  function syncCFDUI() {
+    syncWorkflowPills();
+    syncPanelLocks();
+    syncGridConstraints();
+    syncToolbarLocks();
+    syncFieldLocks();
+    syncPhaseMeta();
+    updateResults();
+    updateStatusBar();
+    applyVizMode();
+  }
+
+  async function initWebGPU() {
+    var errorOverlay = $('gpu-error-overlay');
+    if (errorOverlay) errorOverlay.style.display = 'none';
+
+    if (!navigator.gpu) {
+      showGPUError(
+        'WebGPU unavailable',
+        'This browser cannot expose the GPU compute path, so the CFD page stays in demo-route shell mode.',
+        'Geometry and workflow validation still work.'
+      );
+      return false;
+    }
+
+    try {
+      state.adapter = await navigator.gpu.requestAdapter({ powerPreference: 'high-performance' });
+      if (!state.adapter) {
+        showGPUError(
+          'No GPU adapter found',
+          'A WebGPU adapter was not returned, so the CFD page is limited to the demo route.',
+          'Try updating your GPU drivers or browser build.'
+        );
+        return false;
+      }
+
+      state.executionTier = determineExecutionTier(state.adapter);
+      state.gpu = await state.adapter.requestDevice();
+      state.gpuReady = true;
+
+      state.gpu.lost.then(function (info) {
+        console.error('WebGPU device lost:', info.message);
+        state.gpuReady = false;
+        state.executionTier = 'demo';
+        updateGPUStatus('error', 'GPU device lost - demo route only');
+        syncCFDUI();
+      });
+
+      updateGPUStatus('ready', 'WebGPU ready - ' + tierLabel(state.executionTier));
+      syncCFDUI();
+      return true;
+
+    } catch (err) {
+      showGPUError(
+        'WebGPU init failed',
+        err && err.message ? err.message : 'Unknown GPU initialization error',
+        'The CFD shell will stay on the demo route.'
+      );
+      return false;
+    }
+  }
+
+  function showGPUError(title, body, hint) {
+    state.gpuError = title;
+    state.gpuReady = false;
+    state.executionTier = 'demo';
+    console.warn(title + ': ' + body + ' ' + hint);
+    updateGPUStatus('error', title + ' - demo route');
+    syncCFDUI();
+  }
+
+  function updateGPUStatus(status, label) {
+    var dot = $('status-dot');
+    var txt = $('status-text');
+    if (dot) {
+      dot.className = 'cfd-status-dot';
+      if (status === 'ready') dot.classList.add('is-ready');
+      else if (status === 'running') dot.classList.add('is-running');
+      else if (status === 'error') dot.classList.add('is-error');
+    }
+    if (txt) txt.textContent = label || '';
+  }
+
+  function setMesh(key) {
+    if (state.mesh.object) {
+      state.scene.remove(state.mesh.object);
+      if (state.mesh.wireframe) state.scene.remove(state.mesh.wireframe);
+    }
+
+    state.mesh.active = key;
+    var def = MESHES[key];
+    if (!def) return;
+    var built = def.build();
+
+    if (built instanceof THREE.Group) {
+      state.mesh.object = built;
+      state.scene.add(built);
+      state.mesh.wireframe = null;
+    } else {
+      var mat = new THREE.MeshStandardMaterial({
+        color: 0x5a7080,
+        roughness: 0.5,
+        metalness: 0.4,
+        transparent: false
+      });
+      state.mesh.object = new THREE.Mesh(built, mat);
+      state.scene.add(state.mesh.object);
+      var wireEdges = new THREE.EdgesGeometry(built, 15);
+      state.mesh.wireframe = new THREE.LineSegments(wireEdges, new THREE.LineBasicMaterial({
+        color: 0x5ad1ff, transparent: true, opacity: 0.08
+      }));
+      state.scene.add(state.mesh.wireframe);
+    }
+
+    document.querySelectorAll('.cfd-mesh-item').forEach(function (el) {
+      el.classList.toggle('is-active', el.dataset.mesh === key);
+    });
+
+    setText('mesh-badge-name', def.label);
+    setText('sb-mesh-name', def.label);
+    setText('vp-object', def.label + ' (' + def.meta + ')');
+    invalidateWorkflowFrom('geometry');
+    syncCFDUI();
+  }
+
+  function bindUI() {
+    document.querySelectorAll('.cfd-mesh-item').forEach(function (el) {
+      el.addEventListener('click', function () {
+        setMesh(el.dataset.mesh);
+      });
+    });
+
+    document.querySelectorAll('.cfd-panel-head').forEach(function (head) {
+      head.addEventListener('click', function () {
+        if (head.parentElement.classList.contains('is-locked')) return;
+        head.parentElement.classList.toggle('is-open');
+      });
+    });
+
+    document.querySelectorAll('.cfd-viz-btn').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        if (btn.disabled || btn.classList.contains('is-disabled')) return;
+        document.querySelectorAll('.cfd-viz-btn').forEach(function (b) { b.classList.remove('is-active'); });
+        btn.classList.add('is-active');
+        state.vizMode = btn.dataset.mode;
+        applyVizMode();
+      });
+    });
+
+    var runBtn = $('btn-run');
+    var pauseBtn = $('btn-pause');
+    var resetBtn = $('btn-reset');
+
+    if (runBtn) runBtn.addEventListener('click', function () {
+      if (!state.workflow.solver || !state.supportsKernel) {
+        updateGPUStatus('error', 'Run locked - numerical kernel not wired into this shell yet');
+        return;
+      }
+      state.solver.running = true;
+      state.solver.paused = false;
+      updateGPUStatus('running', 'Solver running - iteration ' + state.solver.iteration);
+      syncCFDUI();
+    });
+
+    if (pauseBtn) pauseBtn.addEventListener('click', function () {
+      if (!state.supportsKernel || !state.solver.running) return;
+      state.solver.paused = !state.solver.paused;
+      updateGPUStatus(state.solver.paused ? 'ready' : 'running', state.solver.paused ? 'Solver paused' : 'Solver running');
+      syncCFDUI();
+    });
+
+    if (resetBtn) resetBtn.addEventListener('click', function () {
+      state.solver.running = false;
+      state.solver.paused = false;
+      state.solver.iteration = 0;
+      state.workflow.run = false;
+      state.workflow.inspect = false;
+      state.results = { cd: null, cl: null, cs: null, maxVel: null, massError: null };
+      updateGPUStatus(state.gpuReady ? 'ready' : 'error', state.gpuReady ? ('WebGPU ready - ' + tierLabel(state.executionTier)) : 'Demo route active');
+      syncCFDUI();
+    });
+
+    bindSlider('s-tau', 'v-tau', function (v) {
+      state.solver.tau = parseFloat(v);
+      invalidateWorkflowFrom('solver');
+      syncCFDUI();
+      return parseFloat(v).toFixed(3);
+    });
+
+    bindSlider('s-inlet', 'v-inlet', function (v) {
+      state.solver.inletSpeed = parseFloat(v);
+      invalidateWorkflowFrom('boundary');
+      syncCFDUI();
+      return parseFloat(v).toFixed(3) + ' lu/ts';
+    });
+
+    bindSlider('s-steps', 'v-steps', function (v) {
+      state.solver.stepsPerFrame = parseInt(v, 10);
+      invalidateWorkflowFrom('solver');
+      syncCFDUI();
+      return v;
+    });
+
+    bindSlider('s-domain-x', 'v-domain-x', function (v) {
+      state.domain.x = parseFloat(v);
+      buildDomainBox();
+      invalidateWorkflowFrom('domain');
+      syncCFDUI();
+      return parseFloat(v).toFixed(1) + ' m';
+    });
+    bindSlider('s-domain-y', 'v-domain-y', function (v) {
+      state.domain.y = parseFloat(v);
+      buildDomainBox();
+      invalidateWorkflowFrom('domain');
+      syncCFDUI();
+      return parseFloat(v).toFixed(1) + ' m';
+    });
+    bindSlider('s-domain-z', 'v-domain-z', function (v) {
+      state.domain.z = parseFloat(v);
+      buildDomainBox();
+      invalidateWorkflowFrom('domain');
+      syncCFDUI();
+      return parseFloat(v).toFixed(1) + ' m';
+    });
+
+    var inletDir = $('s-inlet-dir');
+    if (inletDir) inletDir.addEventListener('change', function () {
+      state.solver.inletDir = inletDir.value;
+      buildDomainBox();
+      invalidateWorkflowFrom('boundary');
+      syncCFDUI();
+    });
+
+    var gridSel = $('s-grid');
+    if (gridSel) gridSel.addEventListener('change', function () {
+      var parts = gridSel.value.split('x');
+      state.solver.gridX = parseInt(parts[0], 10);
+      state.solver.gridY = parseInt(parts[1], 10);
+      state.solver.gridZ = parseInt(parts[2], 10);
+      invalidateWorkflowFrom('solver');
+      syncCFDUI();
+    });
+
+    if ($('btn-confirm-geometry')) $('btn-confirm-geometry').addEventListener('click', function () {
+      setWorkflowStep('geometry', 'Geometry confirmed - define the CFD domain next');
+    });
+    if ($('btn-confirm-domain')) $('btn-confirm-domain').addEventListener('click', function () {
+      if (!state.workflow.geometry) return;
+      setWorkflowStep('domain', 'Domain confirmed - boundary setup is now unlocked');
+    });
+    if ($('btn-confirm-boundary')) $('btn-confirm-boundary').addEventListener('click', function () {
+      if (!state.workflow.domain) return;
+      setWorkflowStep('boundary', 'Boundary setup confirmed - lock the solver routing next');
+    });
+    if ($('btn-confirm-solver')) $('btn-confirm-solver').addEventListener('click', function () {
+      if (!state.workflow.boundary) return;
+      setWorkflowStep('solver', 'Phase A shell complete - run remains locked until the kernel exists');
+    });
+
+    syncCFDUI();
+  }
+
+  function applyVizMode() {
+    if (!state.mesh.object) return;
+    if (state.vizMode !== 'solid' && state.vizMode !== 'wireframe' && !state.workflow.inspect) {
+      state.vizMode = 'solid';
+      document.querySelectorAll('.cfd-viz-btn').forEach(function (btn) {
+        btn.classList.toggle('is-active', btn.dataset.mode === 'solid');
+      });
+    }
+    if (state.mesh.object instanceof THREE.Group) return;
+
+    if (state.vizMode === 'wireframe') {
+      state.mesh.object.material.wireframe = true;
+      state.mesh.object.material.opacity = 0.6;
+      state.mesh.object.material.transparent = true;
+    } else {
+      state.mesh.object.material.wireframe = false;
+      state.mesh.object.material.opacity = 1;
+      state.mesh.object.material.transparent = false;
+    }
+    if (state.mesh.wireframe) state.mesh.wireframe.visible = true;
+  }
+
+  function updateResults() {
+    setText('r-cd', formatMaybe(state.results.cd, 4, ''));
+    setText('r-cl', formatMaybe(state.results.cl, 4, ''));
+    setText('r-cs', formatMaybe(state.results.cs, 4, ''));
+    setText('r-maxvel', formatMaybe(state.results.maxVel, 4, ''));
+    setText('r-mass-err', formatMaybe(typeof state.results.massError === 'number' ? state.results.massError * 100 : null, 4, '%'));
+    if (!state.workflow.solver) setText('r-conv-status', 'Locked');
+    else if (!state.supportsKernel) setText('r-conv-status', 'Kernel pending');
+    else if (state.solver.running) setText('r-conv-status', 'Running');
+    else setText('r-conv-status', 'Ready');
+  }
+
+  function updateStatusBar() {
+    setText('sb-phase', state.phaseLabel);
+    setText('sb-tier', tierLabel(state.executionTier));
+    setText('sb-iter', state.solver.iteration.toLocaleString());
+    setText('sb-grid', state.solver.gridX + '×' + state.solver.gridY + '×' + state.solver.gridZ);
+    setText('sb-tau', state.solver.tau.toFixed(3));
+    setText('sb-inlet', state.solver.inletSpeed.toFixed(3));
+    setText('sb-fps', '—');
+  }
+
   function loop(ts) {
     requestAnimationFrame(loop);
 
@@ -555,6 +1118,11 @@
 
   /* ─── Boot ─── */
   async function boot() {
+    document.title = 'WindSim - CFD Laboratory';
+    var metaDesc = document.querySelector('meta[name="description"]');
+    if (metaDesc) {
+      metaDesc.setAttribute('content', 'WindSim CFD Laboratory Phase A shell. Hardware routing, geometry setup, domain sizing, and workflow gating for the upcoming WebGPU solver stack.');
+    }
     initScene();
     installInput();
     bindUI();

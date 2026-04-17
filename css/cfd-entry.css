@@ -119,6 +119,15 @@ body {
   color: var(--cfd-txt);
 }
 
+.cfd-tb-btn:disabled,
+.cfd-tb-btn.is-disabled {
+  cursor: not-allowed;
+  color: var(--cfd-txt3);
+  background: rgba(255,255,255,0.02);
+  border-color: rgba(255,255,255,0.05);
+  box-shadow: none;
+}
+
 .cfd-tb-btn.is-primary {
   background: rgba(90, 209, 255, .12);
   border: 1px solid var(--cfd-bdr2);
@@ -199,6 +208,84 @@ body {
   flex: 1; overflow-y: auto; overflow-x: hidden;
 }
 
+.cfd-phase-banner {
+  margin: 14px;
+  padding: 14px;
+  border: 1px solid var(--cfd-bdr2);
+  border-radius: var(--cfd-radius);
+  background:
+    linear-gradient(180deg, rgba(90, 209, 255, .08), rgba(90, 209, 255, .02)),
+    linear-gradient(180deg, rgba(255,255,255,0.02), transparent);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.04);
+}
+
+.cfd-phase-eyebrow {
+  font-family: var(--cfd-mono);
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: .18em;
+  text-transform: uppercase;
+  color: var(--cfd-cyan);
+  margin-bottom: 8px;
+}
+
+.cfd-phase-copy {
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--cfd-txt2);
+}
+
+.cfd-phase-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.cfd-phase-steps {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 12px;
+}
+
+.cfd-step-pill {
+  padding: 5px 9px;
+  border-radius: 999px;
+  border: 1px solid rgba(255,255,255,0.06);
+  background: rgba(255,255,255,0.03);
+  color: var(--cfd-txt3);
+  font-family: var(--cfd-mono);
+  font-size: 8px;
+  font-weight: 600;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+}
+
+.cfd-step-pill.is-current {
+  border-color: rgba(90, 209, 255, .28);
+  background: rgba(90, 209, 255, .12);
+  color: var(--cfd-cyan);
+}
+
+.cfd-step-pill.is-complete {
+  border-color: rgba(122, 229, 130, .28);
+  background: rgba(122, 229, 130, .10);
+  color: var(--cfd-green);
+}
+
+.cfd-step-pill.is-locked {
+  opacity: .6;
+}
+
+.cfd-phase-note {
+  margin-top: 12px;
+  font-family: var(--cfd-mono);
+  font-size: 9px;
+  line-height: 1.6;
+  color: var(--cfd-txt3);
+}
+
 .cfd-panel {
   border-bottom: 1px solid var(--cfd-bdr);
 }
@@ -247,6 +334,52 @@ body {
 }
 
 .cfd-panel.is-open .cfd-panel-body { display: block; }
+
+.cfd-panel.is-locked .cfd-panel-body {
+  opacity: .48;
+}
+
+.cfd-panel.is-locked .cfd-panel-body input,
+.cfd-panel.is-locked .cfd-panel-body select,
+.cfd-panel.is-locked .cfd-panel-body button,
+.cfd-panel.is-locked .cfd-panel-body .cfd-mesh-item {
+  pointer-events: none;
+}
+
+.cfd-step-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 12px;
+}
+
+.cfd-step-btn {
+  appearance: none;
+  border: 1px solid var(--cfd-bdr2);
+  border-radius: 6px;
+  padding: 8px 12px;
+  background: linear-gradient(180deg, rgba(90, 209, 255, .12), rgba(90, 209, 255, .04));
+  color: var(--cfd-cyan);
+  cursor: pointer;
+  font-family: var(--cfd-mono);
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  transition: background .18s, border-color .18s, color .18s, transform .12s;
+}
+
+.cfd-step-btn:hover {
+  background: linear-gradient(180deg, rgba(90, 209, 255, .18), rgba(90, 209, 255, .08));
+  border-color: var(--cfd-bdr3);
+}
+
+.cfd-step-btn:disabled,
+.cfd-step-btn.is-disabled {
+  cursor: not-allowed;
+  color: var(--cfd-txt3);
+  border-color: rgba(255,255,255,0.06);
+  background: rgba(255,255,255,0.03);
+}
 
 /* ── Controls ── */
 .cfd-ctl {
@@ -461,6 +594,12 @@ select.cfd-select option { background: var(--cfd-surf); }
   box-shadow: inset 0 1px 0 rgba(255,255,255,0.1);
 }
 
+.cfd-viz-btn.is-disabled {
+  cursor: not-allowed;
+  color: var(--cfd-txt3);
+  opacity: .55;
+}
+
 /* ── Results panel (right) ── */
 .cfd-results {
   flex: 0 0 var(--cfd-results-w);
@@ -592,6 +731,17 @@ select.cfd-select option { background: var(--cfd-surf); }
 .cfd-upload-zone:hover {
   border-color: var(--cfd-cyan);
   background: rgba(90, 209, 255, .04);
+}
+
+.cfd-upload-zone.is-disabled {
+  cursor: not-allowed;
+  border-color: rgba(255,255,255,0.08);
+  background: rgba(255,255,255,0.02);
+}
+
+.cfd-upload-zone.is-disabled:hover {
+  border-color: rgba(255,255,255,0.08);
+  background: rgba(255,255,255,0.02);
 }
 
 .cfd-upload-label {

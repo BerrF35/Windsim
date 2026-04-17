@@ -17,16 +17,15 @@ WindSim is not a research demo; it is a serious engineering platform.
 Instead of hard-wiring the system to a single physics kernel, the platform relies on a strict **Solver Contract Interface**.
 
 ```text
-landing.html
-  ├── index.html        → Sandbox (Legacy/Stable)
-  └── cfd.html          → CFD Platform (New)
-        ├── cfd-ui.js         Strict sequence UI shell (State Machine)
-        ├── cfd-contract.js   Abstract Solver Interface
-        ├── cfd-engine.js     WebGPU init and multi-tier hardware routing
+index.html             → Launcher
+  ├── sandbox.html     → Sandbox (Legacy/Stable)
+  └── cfd.html         → CFD Platform (New)
+        ├── js/cfd-engine.js  WebGPU init, workflow gating, and tier routing
+        ├── js/cfd-contract.js Abstract Solver Interface
         ├── kernels/
         │   └── lbm_d3q19/    First numerical kernel implementation (WGSL)
-        ├── cfd-geometry.js   Strict sanitization & CPU-first voxelization
-        └── cfd-observability.js Runtime diagnostics, logging, and recovery
+        ├── js/cfd-geometry.js Strict sanitization & CPU-first voxelization
+        └── js/cfd-observability.js Runtime diagnostics, logging, and recovery
 ```
 
 ### The Standardized Solver Contract

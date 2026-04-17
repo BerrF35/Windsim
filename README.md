@@ -1,73 +1,75 @@
 # WindSim
 
-See [PROJECT_MASTER_PLAN.md](./PROJECT_MASTER_PLAN.md) for the long-term execution plan and the non-negotiable truthfulness rules.
+WindSim is a browser-native aerodynamics project with two distinct surfaces:
 
-## What This Repo Is
+- `sandbox.html`: the working reduced-order 3D wind sandbox
+- `cfd.html`: the Phase A CFD laboratory shell for the future WebGPU solver stack
 
-WindSim is a browser-based 3D aerodynamic sandbox. The current build is a reduced-order simulator with live visualization, experiment controls, and telemetry. It is meant to make motion and airflow assumptions inspectable in real time.
+The launcher at `index.html` routes between them.
 
-It is not a CFD solver today.
+## Source Of Truth
+
+The current CFD roadmap lives in [docs/CFD_MASTER_BLUEPRINT.md](./docs/CFD_MASTER_BLUEPRINT.md).
+
+That blueprint is the active plan for the CFD side of the repo. The core rule is simple: the UI must not imply solved physics that the code does not actually compute.
 
 ## Current State
 
-What is already working in the repo:
+### Sandbox
 
-- **NEW**: 2D Maker-and-Cell (MAC) Eulerian Grid CPU solver seamlessly replacing ambient wind when activated
-- **NEW**: Full `THREE.GLTFLoader` importing for external meshes like `.glb` bounding-box autoscaling
-- **NEW**: PBR lighting models rendered with `THREE.RGBELoader` running Studio HDR environment maps
-- modular browser app split across `index.html`, `windsim-entry.css`, `windsim-entry.js`, `windsim-data.js`, `windsim-physics.js`, `windsim-solvers.js`, `windsim-cfd.js`, `windsim-ui.js`, `windsim-workflows.js`, `windsim-textures.js`, `windsim-models.js`, `windsim-scene.js`, and `windsim-app.js`
-- object library with object-specific dimensions, mass assumptions, aero tuning, and contact behavior
-- configurable wind speed, heading, elevation, turbulence, gusts, altitude, chamber size, and launch state
-- reduced-order rigid-body motion with drag, lift, Magnus force, rotation, ground contact, wall contact, and telemetry
-- mounted wind-tunnel mode, playback scrubbing, saved sweeps, run comparison, and flow-probe slices
-- cinematic first-load landing flow with mode routing, recent-run restore, saved entry preferences, and seamless handoff into the live simulator
-- CSV telemetry export and a small validation suite
+The sandbox is the mature part of the project. It currently provides:
 
-What is still true about the codebase:
+- reduced-order rigid-body aerodynamics with drag, lift, Magnus force, rotation, contact, and telemetry
+- experiment workflows such as mounted mode, playback, sweeps, saved comparisons, and flow-probe slices
+- a modular split across `js/windsim-app.js`, `js/windsim-physics.js`, `js/windsim-ui.js`, `js/windsim-scene.js`, `js/windsim-workflows.js`, `js/windsim-textures.js`, and `js/windsim-models.js`
+- multiple solver registrations through `js/windsim-solvers.js`
 
-- The 2D CFD grid solver provides high-end fluid slices but operates only horizontally. Full 3D Navier-Stokes projection is currently bottlenecked by Javascript single-thread CPU limits.
-- several models are heuristic or tuned for reduced-order behavior rather than derived from a solved flow field
-- validation coverage is useful but still limited
+### CFD Lab
+
+The CFD surface is not a finished solver yet.
+
+What is real today:
+
+- WebGPU capability detection and hardware-tier routing
+- a strict Phase A workflow shell for geometry, domain, boundary, and solver setup
+- a Three.js viewport and domain visualization for the CFD surface
+- a dedicated blueprint and project direction for the full solver stack
+
+What is not real yet:
+
+- a production LBM D3Q19 kernel running inside `cfd.html`
+- validated drag, lift, pressure, or streamline outputs from the CFD surface
+- full geometry import, voxelization, observability logging, and post-processing from the blueprint
+
+## Experimental Solver Work
+
+`js/windsim-cfd.js` contains an experimental 2D grid-based solver path for the sandbox side. It is transitional work, not the final CFD lab backend, and it does not yet replace the full reduced-order pipeline with a true coupled 3D solver.
 
 ## Repo Layout
 
 - `index.html`
-  Browser shell, import map, simulator mount points, and script loading.
-- `windsim-entry.css`
-  Landing / entry visual system, transition styling, and responsive entry layout.
-- `windsim-entry.js`
-  React-based landing flow, motion system, mode routing, persisted entry preferences, and simulator handoff.
-- `windsim-data.js`
-  Static definitions: objects, surfaces, presets, validation cases, solver metadata.
-- `windsim-physics.js`
-  Reduced-order physics, wind sampling, contact handling, telemetry generation.
-- `windsim-solvers.js`
-  Solver registry and solver-facing app contract.
-- `windsim-ui.js`
-  DOM controls, panels, graph drawing, layout resizing, and UI synchronization.
-- `windsim-workflows.js`
-  Playback capture, timeline scrubbing, mounted sweep workflows, and saved experiment comparison.
-- `windsim-textures.js`
-  Canvas-based texture generation for surfaces and objects, color utilities, and seeded RNG.
-- `windsim-models.js`
-  3D object visual construction, shape-to-mesh mapping, and material profiles.
-- `windsim-scene.js`
-  Rendering infrastructure, camera, lighting, particles, force arrows, trails, flow probes, and per-frame scene sync.
-- `windsim-app.js`
-  App bootstrap, scenario orchestration, input handling, and frame loop.
+  Launcher that routes to the sandbox or the CFD lab.
+- `sandbox.html`
+  Working reduced-order simulator surface.
+- `cfd.html`
+  Phase A CFD shell.
+- `css/windsim-entry.css`
+  Entry and landing system styling for the sandbox experience.
+- `css/cfd-entry.css`
+  CFD lab styling.
+- `js/windsim-*.js`
+  Sandbox modules.
+- `js/cfd-engine.js`
+  CFD shell engine, hardware detection, viewport setup, and workflow gating.
+- `js/windsim-cfd.js`
+  Experimental sandbox-side grid solver work.
+- `docs/CFD_MASTER_BLUEPRINT.md`
+  Active CFD implementation blueprint.
+- `docs/CHANGELOG.md`
+  High-level change history.
 
-## What The Project Is Not Yet
+## Honesty Rules
 
-- not a chamber-wide pressure solver
-- not a two-way coupled CFD system
-- not a multi-solver research platform yet
-
-## Development Direction
-
-Phase 1 (stabilize the reduced-order baseline) is complete. The current priority is solidifying the solver abstraction layer (Phase 2) and expanding research workflows (Phase 3). That means:
-
-- formalising the solver interface so a second backend can plug in
-- extending the plot set (Cl, Cm as separate channels)
-- continuing to harden validation and truthfulness labeling
-
-The new entry flow is part of that same direction: it improves first-load UX and routing without pretending the simulator underneath is more complete than it is.
+- The sandbox can use reduced-order and heuristic models, but it must label them honestly.
+- The CFD lab must not show fake solved outputs.
+- If a feature is not wired to real computation yet, it should stay locked, blank, or explicitly marked as shell-only.

@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>WindSim — CFD Laboratory</title>
-  <meta name="description" content="Browser-native CFD laboratory powered by WebGPU. GPU-accelerated Lattice Boltzmann flow solver with real-time streamlines, pressure maps, and force coefficients." />
+  <title>WindSim - CFD Laboratory</title>
+  <meta name="description" content="WindSim CFD Laboratory Phase A shell. Hardware routing, geometry setup, domain sizing, and workflow gating for the upcoming WebGPU solver stack." />
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2322cded' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M2 12h4l2-2 4 4 4-4 2 2h4'/></svg>" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -157,10 +157,10 @@
     <div class="cfd-toolbar-sep"></div>
 
     <div class="cfd-tb-group">
-      <button class="cfd-tb-btn" title="Export results">
+      <button id="btn-export" class="cfd-tb-btn" title="Export results">
         <span class="ico"><i data-lucide="download" width="16" height="16"></i></span> Export
       </button>
-      <button class="cfd-tb-btn" title="Screenshot viewport">
+      <button id="btn-screenshot" class="cfd-tb-btn" title="Screenshot viewport">
         <span class="ico"><i data-lucide="camera" width="16" height="16"></i></span> Screenshot
       </button>
     </div>
@@ -169,7 +169,7 @@
 
     <div class="cfd-tb-status">
       <span id="status-dot" class="cfd-status-dot"></span>
-      <span id="status-text">Initializing…</span>
+      <span id="status-text">Initializing...</span>
     </div>
   </div>
 
@@ -180,12 +180,33 @@
     <div class="cfd-sidebar">
       <div class="cfd-sidebar-scroll">
 
+        <div class="cfd-phase-banner">
+          <div class="cfd-phase-eyebrow">Phase A / UI shell and hardware routing</div>
+          <div class="cfd-phase-copy">
+            This lab currently validates GPU capability, geometry selection, domain sizing, boundary setup, and solver routing.
+            The numerical LBM kernel is not wired into this surface yet, so run and field inspection stay locked by design.
+          </div>
+          <div class="cfd-phase-meta">
+            <span class="cfd-panel-badge" id="wf-phase-badge">Phase A shell</span>
+            <span class="cfd-panel-badge" id="wf-tier-badge">Detecting tier</span>
+          </div>
+          <div class="cfd-phase-steps">
+            <span class="cfd-step-pill is-current" id="wf-geometry">Geometry</span>
+            <span class="cfd-step-pill" id="wf-domain">Domain</span>
+            <span class="cfd-step-pill" id="wf-boundary">Boundary</span>
+            <span class="cfd-step-pill" id="wf-solver">Solver</span>
+            <span class="cfd-step-pill" id="wf-run">Run</span>
+            <span class="cfd-step-pill" id="wf-inspect">Inspect</span>
+          </div>
+          <div class="cfd-phase-note" id="wf-status-note">Select and confirm a geometry to unlock the domain stage.</div>
+        </div>
+
         <!-- Geometry Panel -->
         <div class="cfd-panel is-open" id="p-geometry">
           <div class="cfd-panel-head">
-            <span class="cfd-panel-chevron">▸</span>
+            <span class="cfd-panel-chevron">&gt;</span>
             <span class="cfd-panel-title">Geometry</span>
-            <span class="cfd-panel-badge" id="sb-mesh-name">Sphere</span>
+            <span class="cfd-panel-badge" id="mesh-badge-name">Sphere</span>
           </div>
           <div class="cfd-panel-body">
             <div class="cfd-mesh-item is-active" data-mesh="sphere">
@@ -225,19 +246,58 @@
             </div>
 
             <div style="margin-top: 10px;">
-              <div class="cfd-upload-zone" id="upload-zone">
+              <div class="cfd-upload-zone is-disabled" id="upload-zone">
                 <div class="cfd-upload-label">+ Import Custom Mesh</div>
-                <div class="cfd-upload-hint">.glb / .stl — drag or click</div>
+                <div class="cfd-upload-hint">Phase B only - mesh import is not wired into this shell yet</div>
               </div>
               <input type="file" id="file-upload" accept=".glb,.gltf,.stl" style="display:none" />
+            </div>
+            <div class="cfd-step-actions">
+              <button id="btn-confirm-geometry" class="cfd-step-btn">Confirm geometry</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Domain -->
+        <div class="cfd-panel" id="p-domain">
+          <div class="cfd-panel-head">
+            <span class="cfd-panel-chevron">&gt;</span>
+            <span class="cfd-panel-title">Domain</span>
+            <span class="cfd-panel-badge" id="domain-badge">6.0 x 6.0 x 6.0</span>
+          </div>
+          <div class="cfd-panel-body">
+            <div class="cfd-ctl">
+              <div class="cfd-ctl-row">
+                <span class="cfd-ctl-lbl">Span X</span>
+                <span class="cfd-ctl-val" id="v-domain-x">6.0 m</span>
+              </div>
+              <input type="range" class="cfd-range" id="s-domain-x" min="3" max="18" step="0.5" value="6" />
+            </div>
+            <div class="cfd-ctl">
+              <div class="cfd-ctl-row">
+                <span class="cfd-ctl-lbl">Span Y</span>
+                <span class="cfd-ctl-val" id="v-domain-y">6.0 m</span>
+              </div>
+              <input type="range" class="cfd-range" id="s-domain-y" min="3" max="18" step="0.5" value="6" />
+            </div>
+            <div class="cfd-ctl">
+              <div class="cfd-ctl-row">
+                <span class="cfd-ctl-lbl">Span Z</span>
+                <span class="cfd-ctl-val" id="v-domain-z">6.0 m</span>
+              </div>
+              <input type="range" class="cfd-range" id="s-domain-z" min="3" max="18" step="0.5" value="6" />
+              <div class="cfd-ctl-note">Domain sizing is live in Phase A and drives the viewport shell immediately.</div>
+            </div>
+            <div class="cfd-step-actions">
+              <button id="btn-confirm-domain" class="cfd-step-btn">Confirm domain</button>
             </div>
           </div>
         </div>
 
         <!-- Boundary Conditions -->
-        <div class="cfd-panel is-open" id="p-boundary">
+        <div class="cfd-panel" id="p-boundary">
           <div class="cfd-panel-head">
-            <span class="cfd-panel-chevron">▸</span>
+            <span class="cfd-panel-chevron">&gt;</span>
             <span class="cfd-panel-title">Boundary Conditions</span>
           </div>
           <div class="cfd-panel-body">
@@ -261,13 +321,16 @@
                 <option value="-z">−Z (front → back)</option>
               </select>
             </div>
+            <div class="cfd-step-actions">
+              <button id="btn-confirm-boundary" class="cfd-step-btn">Apply boundary setup</button>
+            </div>
           </div>
         </div>
 
         <!-- Solver Settings -->
-        <div class="cfd-panel is-open" id="p-solver">
+        <div class="cfd-panel" id="p-solver">
           <div class="cfd-panel-head">
-            <span class="cfd-panel-chevron">▸</span>
+            <span class="cfd-panel-chevron">&gt;</span>
             <span class="cfd-panel-title">Solver Settings</span>
           </div>
           <div class="cfd-panel-body">
@@ -300,13 +363,16 @@
               <input type="range" class="cfd-range" id="s-steps" min="1" max="32" step="1" value="4" />
               <div class="cfd-ctl-note">More steps = faster convergence but heavier GPU load.</div>
             </div>
+            <div class="cfd-step-actions">
+              <button id="btn-confirm-solver" class="cfd-step-btn">Lock solver settings</button>
+            </div>
           </div>
         </div>
 
         <!-- Visualization -->
         <div class="cfd-panel" id="p-viz">
           <div class="cfd-panel-head">
-            <span class="cfd-panel-chevron">▸</span>
+            <span class="cfd-panel-chevron">&gt;</span>
             <span class="cfd-panel-title">Visualization</span>
           </div>
           <div class="cfd-panel-body">
@@ -353,16 +419,17 @@
         <div class="cfd-vp-overlay cfd-vp-info" id="vp-info">
           Domain: <span id="vp-domain">6.0 × 6.0 × 6.0 m</span><br/>
           Object: <span id="vp-object">Sphere (r=0.6)</span><br/>
-          Grid: <span id="vp-grid">64 × 64 × 64</span>
+          Grid: <span id="vp-grid">64 × 64 × 64</span><br/>
+          Workflow: <span id="vp-workflow">Geometry pending</span>
         </div>
 
         <!-- Viz mode switcher -->
         <div class="cfd-vp-overlay cfd-viz-bar">
           <button class="cfd-viz-btn is-active" data-mode="solid">Solid</button>
           <button class="cfd-viz-btn" data-mode="wireframe">Wire</button>
-          <button class="cfd-viz-btn" data-mode="pressure">Pressure</button>
-          <button class="cfd-viz-btn" data-mode="velocity">Velocity</button>
-          <button class="cfd-viz-btn" data-mode="streamlines">Streamlines</button>
+          <button class="cfd-viz-btn is-disabled" data-mode="pressure" data-requires-field="true">Pressure</button>
+          <button class="cfd-viz-btn is-disabled" data-mode="velocity" data-requires-field="true">Velocity</button>
+          <button class="cfd-viz-btn is-disabled" data-mode="streamlines" data-requires-field="true">Streamlines</button>
         </div>
 
         <!-- Colormap legend -->
@@ -386,19 +453,19 @@
         <div class="cfd-result-grid">
           <div class="cfd-result-item">
             <div class="cfd-result-label">Drag Cd</div>
-            <div class="cfd-result-value" id="r-cd">0.0000</div>
+            <div class="cfd-result-value" id="r-cd">—</div>
           </div>
           <div class="cfd-result-item">
             <div class="cfd-result-label">Lift Cl</div>
-            <div class="cfd-result-value" id="r-cl">0.0000</div>
+            <div class="cfd-result-value" id="r-cl">—</div>
           </div>
           <div class="cfd-result-item">
             <div class="cfd-result-label">Side Cs</div>
-            <div class="cfd-result-value" id="r-cs">0.0000</div>
+            <div class="cfd-result-value" id="r-cs">—</div>
           </div>
           <div class="cfd-result-item">
             <div class="cfd-result-label">Max |u|</div>
-            <div class="cfd-result-value" id="r-maxvel">0.0000<span class="cfd-result-unit">lu/ts</span></div>
+            <div class="cfd-result-value"><span id="r-maxvel">—</span><span class="cfd-result-unit">lu/ts</span></div>
           </div>
         </div>
       </div>
@@ -410,11 +477,11 @@
         <div style="margin-top: 6px; display: flex; justify-content: space-between;">
           <div>
             <div class="cfd-result-label">Mass Error</div>
-            <div class="cfd-result-value" id="r-mass-err" style="font-size:12px;">0.0000%</div>
+            <div class="cfd-result-value" id="r-mass-err" style="font-size:12px;">—</div>
           </div>
           <div style="text-align: right;">
             <div class="cfd-result-label">Status</div>
-            <div class="cfd-result-value" id="r-conv-status" style="font-size:12px; color: var(--cfd-txt3);">Idle</div>
+            <div class="cfd-result-value" id="r-conv-status" style="font-size:12px; color: var(--cfd-txt3);">Locked</div>
           </div>
         </div>
       </div>
@@ -423,12 +490,12 @@
       <div class="cfd-result-card">
         <div class="cfd-result-title">Solver Info</div>
         <div style="font-family: var(--cfd-mono); font-size: 10px; line-height: 2; color: var(--cfd-txt2);">
-          Method: <span style="color: var(--cfd-cyan);">LBM D3Q19</span><br/>
-          Collision: <span style="color: var(--cfd-cyan);">BGK (SRT)</span><br/>
-          Boundary: <span style="color: var(--cfd-cyan);">Bounce-Back</span><br/>
-          Inlet: <span style="color: var(--cfd-cyan);">Zou-He Velocity</span><br/>
-          Outlet: <span style="color: var(--cfd-cyan);">Extrapolation</span><br/>
-          Turbulence: <span style="color: var(--cfd-cyan);">Smagorinsky SGS</span>
+          Phase: <span style="color: var(--cfd-cyan);" id="r-phase">Phase A shell</span><br/>
+          Hardware Tier: <span style="color: var(--cfd-cyan);" id="r-tier">Detecting...</span><br/>
+          Target Method: <span style="color: var(--cfd-cyan);">LBM D3Q19</span><br/>
+          Current Reality: <span style="color: var(--cfd-cyan);" id="r-kernel">Workflow shell only</span><br/>
+          Geometry Path: <span style="color: var(--cfd-cyan);">Built-in primitives only</span><br/>
+          Exportability: <span style="color: var(--cfd-cyan);" id="r-export">Locked until kernel is wired</span>
         </div>
       </div>
 
@@ -436,10 +503,9 @@
       <div class="cfd-result-card" style="border-bottom: none;">
         <div class="cfd-result-title">About</div>
         <div style="font-size: 11px; line-height: 1.8; color: var(--cfd-txt3);">
-          WindSim CFD Lab runs a Lattice Boltzmann solver entirely on your GPU via
-          <strong style="color: var(--cfd-cyan);">WebGPU</strong> compute shaders.
-          No cloud, no paywall, no installation.<br/>
-          Inspired by <a href="https://www.simscale.com/product/cfd/" target="_blank" style="color: var(--cfd-coral); text-decoration: none;">SimScale</a>.
+          This page is currently the <strong style="color: var(--cfd-cyan);">Phase A CFD shell</strong> described in the blueprint.
+          It validates hardware routing, sequencing, and viewport wiring honestly while the actual kernel stack is still under construction.
+          Nothing in this view should be read as solved CFD output yet.
         </div>
       </div>
 
@@ -448,6 +514,10 @@
 
   <!-- ═══ Status Bar ═══ -->
   <div class="cfd-statusbar">
+    <div class="cfd-sb-item"><span class="cfd-sb-label">PHASE</span> <span class="cfd-sb-val" id="sb-phase">Phase A shell</span></div>
+    <div class="cfd-sb-sep"></div>
+    <div class="cfd-sb-item"><span class="cfd-sb-label">TIER</span> <span class="cfd-sb-val" id="sb-tier">Detecting</span></div>
+    <div class="cfd-sb-sep"></div>
     <div class="cfd-sb-item"><span class="cfd-sb-label">ITER</span> <span class="cfd-sb-val" id="sb-iter">0</span></div>
     <div class="cfd-sb-sep"></div>
     <div class="cfd-sb-item"><span class="cfd-sb-label">GRID</span> <span class="cfd-sb-val" id="sb-grid">64×64×64</span></div>
