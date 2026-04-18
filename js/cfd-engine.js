@@ -39,7 +39,8 @@
     voxelMask: null, voxelHash: '',
     solverKernel: null,
     logs: [],
-    runId: ''
+    runId: '',
+    diagnosticMode: false
   };
 
   /* ─── DOM Helpers ─── */
@@ -545,8 +546,9 @@
           if (diag.isDiverged) {
               handleDivergence(diag);
           } else {
-              // Log state occasionally
-              if (diag.iteration % 100 === 0) {
+              // Log state: every iteration in diagnosticMode, else every 100
+              const freq = state.diagnosticMode ? 1 : 100;
+              if (diag.iteration % freq === 0) {
                   const logEntry = {
                       runId: state.runId,
                       ts: Date.now(),

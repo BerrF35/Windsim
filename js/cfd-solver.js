@@ -33,7 +33,8 @@
                 mass: 0,
                 maxVel: 0,
                 maxResidual: 0,
-                initialMass: 0
+                initialMass: 0,
+                rho_prev: null // Cache for residual calculation
             };
             this.isInitialized = false;
         }
@@ -133,8 +134,11 @@
                             const eu = E[q][0]*ux + E[q][1]*uy + E[q][2]*uz;
                             const feq = W[q] * rho * (1 + 3*eu + 4.5*eu*eu - 1.5*u2);
                             
-                            // Post-collision value
                             const f_post = f_val + omega * (feq - f_val);
+
+                            // PRE-STREAMING RHO CAPTURE (for residual next step)
+                            // We capture the post-collision, pre-stream density change effectively by comparing 
+                            // the state at the end of each full step.
 
                             // Streaming
                             let nx_ = x + E[q][0];
@@ -169,11 +173,14 @@
 
         updateTelemetry() {
             const [nx, ny, nz] = this.res;
+            const count = nx * ny * nz;
             let totalMass = 0;
             let maxU2 = 0;
-            let maxRes = 0;
+            let totalDensityDiff = 0;
 
-            for (let i = 0; i < nx * ny * nz; i++) {
+            const currentRho = new Float32Array(count);
+
+            for (let i = 0; i < count; i++) {
                 const base = i * Q;
                 let rho = 0, ux = 0, uy = 0, uz = 0;
                 for (let q = 0; q < Q; q++) {
@@ -181,16 +188,29 @@
                     rho += v;
                     ux += v * E[q][0]; uy += v * E[q][1]; uz += v * E[q][2];
                 }
+                
+                currentRho[i] = rho;
                 totalMass += rho;
                 if (rho > 0) {
                     const u2 = (ux*ux + uy*uy + uz*uz) / (rho*rho);
                     maxU2 = Math.max(maxU2, u2);
                 }
+
+                if (this.stats.rho_prev) {
+                    totalDensityDiff += Math.abs(rho - this.stats.rho_prev[i]);
+                }
             }
 
             this.stats.mass = totalMass;
             this.stats.maxVel = Math.sqrt(maxU2);
-            this.stats.maxResidual = 0; // TBD: implement actual diff from last step
+            this.stats.maxResidual = totalDensityDiff / count; // MADD Formula
+            this.stats.rho_prev = currentRho;
+        }
+
+        async getBufferHash() {
+            const hashBuffer = await crypto.subtle.digest('SHA-256', this.f.buffer);
+            const hashArray = Array.from(new Uint8Array(hashBuffer));
+            return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
         }
 
         calculateTotalMass() {
@@ -248,32 +268,23 @@
          * We only serialize macroscopic fields to save space, then reconstruct equilibrium on reload.
          */
         getStateSnapshot() {
-            const fields = this.getFieldBuffers();
             return {
                 res: this.res,
                 iteration: this.stats.iteration,
                 initialMass: this.stats.initialMass,
-                density: Array.from(fields.mass),
-                velocity: Array.from(fields.momentum)
+                f: Array.from(this.f) // Full buffer for bitwise recovery
             };
         }
 
         loadStateSnapshot(snapshot) {
-            // Reconstruct distributions from macroscopic
             const [nx, ny, nz] = snapshot.res;
             this.res = snapshot.res;
             this.stats.iteration = snapshot.iteration;
             this.stats.initialMass = snapshot.initialMass;
             
             const size = nx * ny * nz * Q;
-            this.f = new Float32Array(size);
+            this.f = new Float32Array(snapshot.f);
             this.f_tmp = new Float32Array(size);
-
-            for (let i = 0; i < nx * ny * nz; i++) {
-                const rho = snapshot.density[i];
-                const u = [snapshot.velocity[i*3], snapshot.velocity[i*3+1], snapshot.velocity[i*3+2]];
-                this.setEquilibrium(i, rho, u);
-            }
             this.isInitialized = true;
         }
     }

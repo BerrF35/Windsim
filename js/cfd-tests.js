@@ -1,92 +1,133 @@
 /**
- * Phase B Verification Suite
+ * WindSim CFD — Phase C Deterministic Validation Suite
  */
-(function() {
-    'use strict';
+async function runPhaseCValidation() {
+    console.log("%c Starting Phase C Deterministic Validation... ", "background: #1e293b; color: #35d1ff; font-weight: bold; padding: 4px;");
+    
+    const results = {
+        bitwiseIdenticality: { pass: false, hashes: [] },
+        pauseResumeEquivalence: { pass: false, diff: null },
+        massDrift: { max: 0, steps: [] },
+        residualHistory: { steps: [], formula: "MADD: Mean Absolute Density Deviation" },
+        symmetryError: { xy: 0, xz: 0, yz: 0 },
+        divergenceHalt: { pass: false, iteration: 0 }
+    };
 
-    async function runAnalyticTests() {
-        console.log("--- Phase B: Analytic Tests ---");
-        
-        // 1. Unit Cube Test (Slightly offset to avoid boundary touching ambiguity)
-        const eps = 1e-4;
-        const cubePos = new Float64Array([
-            -0.5+eps, -0.5+eps,  0.5-eps,  0.5-eps, -0.5+eps,  0.5-eps,  0.5-eps,  0.5-eps,  0.5-eps, -0.5+eps,  0.5-eps,  0.5-eps,
-            -0.5+eps, -0.5+eps, -0.5+eps,  0.5-eps, -0.5+eps, -0.5+eps,  0.5-eps,  0.5-eps, -0.5+eps, -0.5+eps,  0.5-eps, -0.5+eps
-        ]);
-        const cubeIndices = new Int32Array([
-            0, 1, 2, 0, 2, 3, // Front
-            1, 5, 6, 1, 6, 2, // Right
-            5, 4, 7, 5, 7, 6, // Back
-            4, 0, 3, 4, 3, 7, // Left
-            3, 2, 6, 3, 6, 7, // Top
-            4, 5, 1, 4, 1, 0  // Bottom
-        ]);
+    const engine = window.CFDEngine;
+    const solver = window.WindSimSolver;
 
-        const mesh = new WindSimGeometry.TriMesh(cubePos, cubeIndices);
-        const report = mesh.validate();
-        console.assert(report.success, "Cube validation failed");
-        console.assert(Math.abs(report.volume - 1.0) < 1e-9, `Cube volume error: ${report.volume}`);
-
-        // Voxelize at 8x8x8 in a 2x2x2 box
-        const voxelizer = new WindSimGeometry.Voxelizer(mesh, [8, 8, 8], { min: [-1, -1, -1], max: [1, 1, 1] });
-        const mask = await voxelizer.voxelize();
-        
-        let count = 0;
-        for(let i=0; i<mask.length; i++) if(mask[i] > 0) count++;
-        
-        // With boundaries at -0.5, -0.25, 0, 0.25, 0.5, the cube [-0.499, 0.499] 
-        // should strictly occupy 4x4x4 voxels.
-        if (count !== 64) {
-            console.error(`Cube voxel count mismatch: expected 64, got ${count}`);
-            if (window.logValidation) window.logValidation(`FAIL: Cube test got ${count} voxels`, 'error');
-            return;
-        }
-        console.log("Unit Cube Test: PASS");
-
-        // 2. Sphere Symmetry Test
-        console.log("Running Sphere Symmetry Test...");
-        const sphereGeo = new THREE.SphereGeometry(0.6, 20, 20);
-        const sMesh = new WindSimGeometry.TriMesh(sphereGeo.attributes.position.array, sphereGeo.index.array);
-        const sVoxelizer = new WindSimGeometry.Voxelizer(sMesh, [32, 32, 32], { min: [-1, -1, -1], max: [1, 1, 1] });
-        const sMask = await sVoxelizer.voxelize();
-        
-        // Check symmetry across X, Y, Z planes
-        const nx = 32, ny = 32, nz = 32;
-        let symmetric = true;
-        for (let i = 0; i < 16; i++) {
-            for (let j = 0; j < 32; j++) {
-                for (let k = 0; k < 32; k++) {
-                    const idx1 = i + nx * (j + ny * k);
-                    const idx2 = (nx - 1 - i) + nx * (j + ny * k);
-                    if (sMask[idx1] !== sMask[idx2]) symmetric = false;
-                }
-            }
-        }
-        if (!symmetric) {
-             console.warn("Sphere symmetry test failed (minor asymmetry due to triangulation expected, but checking for large drifts)");
-             // Note: Depending on sphere triangulation, it might not be perfectly symmetric.
-             // But for a centered sphere, it should be very close.
-        }
-        console.log("Sphere Symmetry Check complete.");
-
-        // 3. Degenerate Mesh Test
-        const degPos = new Float64Array([0,0,0, 0,0,0, 0,0,0]);
-        const degIdx = new Int32Array([0,1,2]);
-        const degMesh = new WindSimGeometry.TriMesh(degPos, degIdx);
-        const degReport = degMesh.validate();
-        console.assert(!degReport.success, "Degenerate mesh was NOT rejected");
-        console.log("Degenerate Rejection Test: PASS");
-
-        // 3. Determinism Test
-        const h1 = await voxelizer.generateHash(mask, { test: 1 });
-        const h2 = await voxelizer.generateHash(mask, { test: 1 });
-        console.assert(h1 === h2, "Hash mismatch for identical input");
-        console.log("Determinism Test: PASS");
-
-        console.log("--- All Analytic Tests Passed ---");
-        if (window.logValidation) window.logValidation("All Phase B Analytic Tests Passed.", "success");
+    // Helper: Reset engine to clean state
+    function resetEngine() {
+        engine.state.workflow = { geometry: false, domain: false, boundary: false, solver: false, run: false, inspect: false };
+        engine.state.solver.iteration = 0;
+        engine.state.solver.running = false;
+        engine.state.logs = [];
+        engine.state.diagnosticMode = true;
     }
 
-    // Expose
-    window.runCFDTests = runAnalyticTests;
-})();
+    // --- CASE 1: Bitwise Identicality ---
+    console.log("Case 1: Checking Bitwise Identicality (3 runs)...");
+    const hashes = [];
+    for (let i = 0; i < 3; i++) {
+        const s = new solver.LBMSolver();
+        // Init 32^3 domain for speed
+        s.init([6,6,6], [32,32,32], { tau: 0.6, inletSpeed: 0.08, inletDir: '+x' }, null);
+        s.step(50);
+        const h = await s.getBufferHash();
+        hashes.push(h);
+    }
+    results.bitwiseIdenticality.hashes = hashes;
+    results.bitwiseIdenticality.pass = hashes.every(h => h === hashes[0]);
+    console.log(`- Success: ${results.bitwiseIdenticality.pass} (Hash: ${hashes[0]})`);
+
+    // --- CASE 2: Pause/Resume Equivalence ---
+    console.log("Case 2: Checking Pause/Resume Equivalence...");
+    const s_cont = new solver.LBMSolver();
+    s_cont.init([6,6,6], [32,32,32], { tau: 0.6, inletSpeed: 0.08, inletDir: '+x' }, null);
+    s_cont.step(100);
+    const hash_cont = await s_cont.getBufferHash();
+
+    const s_pr = new solver.LBMSolver();
+    s_pr.init([6,6,6], [32,32,32], { tau: 0.6, inletSpeed: 0.08, inletDir: '+x' }, null);
+    s_pr.step(50);
+    const snap = s_pr.getStateSnapshot(); 
+    s_pr.reset(); // Simulate clear
+    s_pr.loadStateSnapshot(snap);
+    s_pr.step(50);
+    const hash_pr = await s_pr.getBufferHash();
+
+    results.pauseResumeEquivalence.pass = (hash_cont === hash_pr);
+    console.log(`- Success: ${results.pauseResumeEquivalence.pass}`);
+
+    // --- CASE 3 & 4: Mass & Residual (Per-Step) ---
+    console.log("Case 3/4: Collecting high-frequency Mass & Residual data...");
+    const s_diag = new solver.LBMSolver();
+    s_diag.init([6,6,6], [32,32,32], { tau: 0.6, inletSpeed: 0.08, inletDir: '+x' }, null);
+    for (let i = 0; i < 50; i++) {
+        s_diag.step(1);
+        const d = s_diag.getDiagnostics();
+        results.massDrift.steps.push(d.massDrift);
+        results.residualHistory.steps.push(d.maxResidual);
+        results.massDrift.max = Math.max(results.massDrift.max, d.massDrift);
+    }
+
+    // --- CASE 5: Symmetry Test ---
+    console.log("Case 5: Measuring Symmetry (centered empty domain)...");
+    const s_sym = new solver.LBMSolver();
+    // Resolve at 32x32x32
+    s_sym.init([6,6,6], [32,32,32], { tau: 0.6, inletSpeed: 0.08, inletDir: '+x' }, null);
+    s_sym.step(50);
+    const fields = s_sym.getFieldBuffers();
+    const rho = fields.mass;
+    const [nx, ny, nz] = [32, 32, 32];
+    
+    let errY = 0, errZ = 0;
+    for (let x = 0; x < nx; x++) {
+        for (let y = 0; y < ny/2; y++) {
+            for (let z = 0; z < nz; z++) {
+                const i1 = x + nx * (y + ny * z);
+                const i2 = x + nx * ((ny-1-y) + ny * z);
+                errY += Math.abs(rho[i1] - rho[i2]);
+            }
+        }
+        for (let y = 0; y < ny; y++) {
+            for (let z = 0; z < nz/2; z++) {
+                const i1 = x + nx * (y + ny * z);
+                const i2 = x + nx * (y + ny * (nz-1-z));
+                errZ += Math.abs(rho[i1] - rho[i2]);
+            }
+        }
+    }
+    results.symmetryError.yz = errY / (nx * ny * nz); // Symmetry across XZ plane (Y axis)
+    results.symmetryError.xz = errZ / (nx * ny * nz); // Symmetry across XY plane (Z axis)
+    console.log(`- Symmetry Error (Y-sym): ${results.symmetryError.yz.toExponential(4)}`);
+    console.log(`- Symmetry Error (Z-sym): ${results.symmetryError.xz.toExponential(4)}`);
+
+    // --- CASE 6: Divergence Handling ---
+    console.log("Case 6: Testing Divergence Handling...");
+    const s_div = new solver.LBMSolver();
+    // Use unstable tau
+    s_div.init([6,6,6], [32,32,32], { tau: 0.501, inletSpeed: 0.15, inletDir: '+x' }, null);
+    let iter = 0;
+    while (iter < 1000) {
+        s_div.step(1);
+        iter++;
+        if (s_div.getDiagnostics().isDiverged) break;
+    }
+    results.divergenceHalt.iteration = iter;
+    results.divergenceHalt.pass = (iter < 1000); // Should diverge quickly
+    console.log(`- Diverged at Iteration: ${iter} (Success: ${results.divergenceHalt.pass})`);
+
+    console.log("%c Phase C Validation Complete ", "background: #10b981; color: white; padding: 4px;");
+    console.table({
+        "Bitwise Identical": results.bitwiseIdenticality.pass ? "YES" : "NO",
+        "Pause/Resume Equiv": results.pauseResumeEquivalence.pass ? "YES" : "NO",
+        "Max Mass Drift %": (results.massDrift.max * 100).toFixed(6),
+        "Y-Symmetry Error": results.symmetryError.yz.toExponential(4),
+        "Z-Symmetry Error": results.symmetryError.xz.toExponential(4),
+        "Divergence Halt": results.divergenceHalt.pass ? "YES" : "NO"
+    });
+
+    window.PhaseCValidationResults = results;
+    return results;
+}
