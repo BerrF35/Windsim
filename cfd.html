@@ -246,9 +246,9 @@
             </div>
 
             <div style="margin-top: 10px;">
-              <div class="cfd-upload-zone is-disabled" id="upload-zone">
+              <div class="cfd-upload-zone" id="upload-zone">
                 <div class="cfd-upload-label">+ Import Custom Mesh</div>
-                <div class="cfd-upload-hint">Phase B only - mesh import is not wired into this shell yet</div>
+                <div class="cfd-upload-hint">Phase B ready - STL, GLB, or Three.js Geometry</div>
               </div>
               <input type="file" id="file-upload" accept=".glb,.gltf,.stl" style="display:none" />
             </div>
@@ -427,6 +427,7 @@
         <div class="cfd-vp-overlay cfd-viz-bar">
           <button class="cfd-viz-btn is-active" data-mode="solid">Solid</button>
           <button class="cfd-viz-btn" data-mode="wireframe">Wire</button>
+          <button class="cfd-viz-btn" id="btn-viz-voxel" data-mode="voxel">Voxel</button>
           <button class="cfd-viz-btn is-disabled" data-mode="pressure" data-requires-field="true">Pressure</button>
           <button class="cfd-viz-btn is-disabled" data-mode="velocity" data-requires-field="true">Velocity</button>
           <button class="cfd-viz-btn is-disabled" data-mode="streamlines" data-requires-field="true">Streamlines</button>
@@ -486,6 +487,14 @@
         </div>
       </div>
 
+      <!-- Validation Log -->
+      <div class="cfd-result-card" id="validation-log-card" style="display:none;">
+        <div class="cfd-result-title">Validation Log</div>
+        <div id="validation-log" style="font-family: var(--cfd-mono); font-size: 10px; max-height: 120px; overflow-y: auto; color: var(--cfd-txt3); line-height: 1.6;">
+          <!-- Log entries will appear here -->
+        </div>
+      </div>
+
       <!-- Solver Info -->
       <div class="cfd-result-card">
         <div class="cfd-result-title">Solver Info</div>
@@ -533,9 +542,11 @@
 
   <!-- ═══ Scripts ═══ -->
   <script src="https://unpkg.com/lucide@latest"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/STLLoader.js"></script>
   <script>
     lucide.createIcons();
   </script>
+  <script src="js/cfd-geometry.js"></script>
   <script src="js/cfd-engine.js"></script>
   
   <div class="wip-watermark"></div>
