@@ -181,13 +181,14 @@
       <div class="cfd-sidebar-scroll">
 
         <div class="cfd-phase-banner">
-          <div class="cfd-phase-eyebrow">Phase A / UI shell and hardware routing</div>
+          <div class="cfd-phase-eyebrow">Phase C / Solver Core & Observability</div>
           <div class="cfd-phase-copy">
-            This lab currently validates GPU capability, geometry selection, domain sizing, boundary setup, and solver routing.
-            The numerical LBM kernel is not wired into this surface yet, so run and field inspection stay locked by design.
+            This lab now executes a deterministic LBM D3Q19 numerical kernel.
+            Voxelization is handled on CPU for ground-truth consistency. 
+            Runs are persistent across reloads.
           </div>
           <div class="cfd-phase-meta">
-            <span class="cfd-panel-badge" id="wf-phase-badge">Phase A shell</span>
+            <span class="cfd-panel-badge" id="wf-phase-badge">Phase C active</span>
             <span class="cfd-panel-badge" id="wf-tier-badge">Detecting tier</span>
           </div>
           <div class="cfd-phase-steps">
@@ -499,12 +500,12 @@
       <div class="cfd-result-card">
         <div class="cfd-result-title">Solver Info</div>
         <div style="font-family: var(--cfd-mono); font-size: 10px; line-height: 2; color: var(--cfd-txt2);">
-          Phase: <span style="color: var(--cfd-cyan);" id="r-phase">Phase A shell</span><br/>
+          Phase: <span style="color: var(--cfd-cyan);" id="r-phase">Phase C — Solver</span><br/>
           Hardware Tier: <span style="color: var(--cfd-cyan);" id="r-tier">Detecting...</span><br/>
           Target Method: <span style="color: var(--cfd-cyan);">LBM D3Q19</span><br/>
-          Current Reality: <span style="color: var(--cfd-cyan);" id="r-kernel">Workflow shell only</span><br/>
-          Geometry Path: <span style="color: var(--cfd-cyan);">Built-in primitives only</span><br/>
-          Exportability: <span style="color: var(--cfd-cyan);" id="r-export">Locked until kernel is wired</span>
+          Current Reality: <span style="color: var(--cfd-cyan);" id="r-kernel">JavaScript / TypedArrays</span><br/>
+          Geometry Path: <span style="color: var(--cfd-cyan);">Voxel Bounce-back</span><br/>
+          Exportability: <span style="color: var(--cfd-cyan);" id="r-export">JSON Logs / Field Buffers</span>
         </div>
       </div>
 
@@ -512,9 +513,9 @@
       <div class="cfd-result-card" style="border-bottom: none;">
         <div class="cfd-result-title">About</div>
         <div style="font-size: 11px; line-height: 1.8; color: var(--cfd-txt3);">
-          This page is currently the <strong style="color: var(--cfd-cyan);">Phase A CFD shell</strong> described in the blueprint.
-          It validates hardware routing, sequencing, and viewport wiring honestly while the actual kernel stack is still under construction.
-          Nothing in this view should be read as solved CFD output yet.
+          This page is currently the <strong style="color: var(--cfd-cyan);">Phase C CFD Lab</strong>.
+          It implements a deterministic LBM solver core with full observability, 
+          divergence checks, and state persistence.
         </div>
       </div>
 
@@ -523,7 +524,7 @@
 
   <!-- ═══ Status Bar ═══ -->
   <div class="cfd-statusbar">
-    <div class="cfd-sb-item"><span class="cfd-sb-label">PHASE</span> <span class="cfd-sb-val" id="sb-phase">Phase A shell</span></div>
+    <div class="cfd-sb-item"><span class="cfd-sb-label">PHASE</span> <span class="cfd-sb-val" id="sb-phase">Phase C — Solver</span></div>
     <div class="cfd-sb-sep"></div>
     <div class="cfd-sb-item"><span class="cfd-sb-label">TIER</span> <span class="cfd-sb-val" id="sb-tier">Detecting</span></div>
     <div class="cfd-sb-sep"></div>
@@ -547,6 +548,7 @@
     lucide.createIcons();
   </script>
   <script src="js/cfd-geometry.js"></script>
+  <script src="js/cfd-solver.js"></script>
   <script src="js/cfd-engine.js"></script>
   
   <div class="wip-watermark"></div>

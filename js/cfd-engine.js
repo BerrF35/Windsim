@@ -9,7 +9,7 @@
   var state = {
     gpu: null, adapter: null, gpuReady: false, gpuError: '',
     executionTier: 'detecting',
-    phaseLabel: 'Phase B Geometry',
+    phaseLabel: 'Phase C — Solver',
     supportsKernel: false,
     scene: null, camera: null, renderer: null,
     controls: {
@@ -36,7 +36,10 @@
       cd: null, cl: null, cs: null, maxVel: null, massError: null
     },
     lastTs: 0, frameCount: 0,
-    voxelMask: null, voxelHash: ''
+    voxelMask: null, voxelHash: '',
+    solverKernel: null,
+    logs: [],
+    runId: ''
   };
 
   /* ─── DOM Helpers ─── */
@@ -139,7 +142,117 @@
   function setWorkflowStep(stepKey, message) {
     state.workflow[stepKey] = true;
     if (message) updateGPUStatus(state.gpuReady ? 'ready' : 'error', message);
+    
+    // Auto-unlock solver on Phase B completion
+    if (stepKey === 'solver') {
+        initSolver();
+    }
+    
     syncCFDUI();
+  }
+
+  /* ─── Solver Management (Phase C) ─── */
+  function initSolver() {
+    if (!state.voxelMask) return;
+    logValidation('Initializing LBM D3Q19 kernel...', 'info');
+    
+    state.solverKernel = new WindSimSolver.LBMSolver();
+    state.solverKernel.init(
+        [state.domain.x, state.domain.y, state.domain.z],
+        [state.solver.gridX, state.solver.gridY, state.solver.gridZ],
+        {
+            tau: state.solver.tau,
+            inletSpeed: state.solver.inletSpeed,
+            inletDir: state.solver.inletDir
+        },
+        state.voxelMask
+    );
+
+    state.runId = state.runId || 'run_' + Math.random().toString(36).substr(2, 9);
+    state.workflow.run = true;
+    state.supportsKernel = true;
+    
+    syncCFDUI();
+    logValidation(`Solver ready. Run ID: ${state.runId}`, 'success');
+    saveSimulationState();
+  }
+
+  function toggleSimulation() {
+    if (!state.solverKernel) return;
+    state.solver.running = !state.solver.running;
+    state.solver.paused = !state.solver.running;
+    
+    if (state.solver.running) {
+        updateGPUStatus('running', 'Solver Active');
+        logValidation('Simulation started.', 'info');
+    } else {
+        updateGPUStatus('ready', 'Solver Paused');
+        logValidation('Simulation paused.', 'warning');
+    }
+    saveSimulationState();
+    syncCFDUI();
+  }
+
+  function resetSimulation() {
+    if (!state.solverKernel) return;
+    state.solver.running = false;
+    state.solver.paused = false;
+    state.solver.iteration = 0;
+    state.logs = [];
+    initSolver(); // Re-init
+    logValidation('Simulation reset.', 'warning');
+    syncCFDUI();
+  }
+
+  function handleDivergence(diag) {
+    state.solver.running = false;
+    state.solver.paused = true;
+    updateGPUStatus('error', 'DIVERGENCE DETECTED');
+    logValidation(`HALT: Physical stability limit exceeded! Mass drift: ${(diag.massDrift*100).toFixed(2)}%`, 'error');
+    
+    setText('r-conv-status', 'HALTED');
+    $('r-conv-status').style.color = '#ef4444';
+    syncCFDUI();
+    saveSimulationState();
+  }
+
+  function saveSimulationState() {
+    if (!state.solverKernel) return;
+    const snapshot = {
+        state: {
+            solver: state.solver,
+            workflow: state.workflow,
+            runId: state.runId,
+            domain: state.domain,
+            logs: state.logs.slice(-50) // Keep last 50 logs
+        },
+        solverState: state.solverKernel.getStateSnapshot()
+    };
+    localStorage.setItem('windsim_cfd_recovery', JSON.stringify(snapshot));
+  }
+
+  function loadSimulationState() {
+    const raw = localStorage.getItem('windsim_cfd_recovery');
+    if (!raw) return;
+    try {
+        const snapshot = JSON.parse(raw);
+        // Only restore if resolution matches
+        if (snapshot.state.solver.gridX !== state.solver.gridX) return;
+        
+        Object.assign(state.solver, snapshot.state.solver);
+        Object.assign(state.workflow, snapshot.state.workflow);
+        state.runId = snapshot.state.runId;
+        state.logs = snapshot.state.logs;
+        
+        state.solverKernel = new WindSimSolver.LBMSolver();
+        state.solverKernel.loadStateSnapshot(snapshot.solverState);
+        state.supportsKernel = true;
+        
+        logValidation(`Recovered simulation state. Run ID: ${state.runId}`, 'success');
+        syncCFDUI();
+    } catch (e) {
+        console.error('Failed to load state', e);
+    }
   }
 
   /* ─── Three.js Scene ─── */
@@ -305,6 +418,10 @@
     if ($('btn-confirm-boundary')) $('btn-confirm-boundary').addEventListener('click', () => setWorkflowStep('boundary', 'Boundary confirmed'));
     if ($('btn-confirm-solver')) $('btn-confirm-solver').addEventListener('click', () => setWorkflowStep('solver', 'Solver setup locked'));
 
+    if ($('btn-run')) $('btn-run').addEventListener('click', toggleSimulation);
+    if ($('btn-pause')) $('btn-pause').addEventListener('click', toggleSimulation);
+    if ($('btn-reset')) $('btn-reset').addEventListener('click', resetSimulation);
+
     function bind(id, sid, fn) { 
         var s = $(id); if (!s) return;
         s.addEventListener('input', () => { setText(sid, fn(s.value)); syncCFDUI(); }); 
@@ -358,10 +475,21 @@
   }
 
   function updateStatusBar() {
-    setText('sb-iter', state.solver.iteration);
     setText('sb-grid', state.solver.gridX + '×' + state.solver.gridY + '×' + state.solver.gridZ);
     setText('sb-tau', state.solver.tau.toFixed(3));
+    
+    if (state.solverKernel) {
+        const diag = state.solverKernel.getDiagnostics();
+        setText('sb-iter', diag.iteration);
+        setText('r-cd', formatMaybe(state.results.cd, 4));
+        setText('r-cl', formatMaybe(state.results.cl, 4));
+        setText('r-maxvel', diag.maxVelocity.toFixed(4));
+        setText('r-mass-err', (diag.massDrift * 100).toFixed(4) + '%');
+        setText('r-conv-status', state.solver.running ? 'Running' : (state.solver.paused ? 'Paused' : 'Ready'));
+    }
   }
+
+  function formatMaybe(val, d) { return (val === null || val === undefined) ? '—' : val.toFixed(d); }
 
   async function initWebGPU() {
     if (!navigator.gpu) { updateGPUStatus('error', 'WebGPU missing'); return false; }
@@ -410,6 +538,33 @@
     requestAnimationFrame(loop);
     var dt = state.lastTs ? (ts - state.lastTs) / 1000 : 1 / 60; state.lastTs = ts;
     if (state.renderer && state.scene && state.camera) {
+      if (state.solver.running && state.solverKernel) {
+          const res = state.solverKernel.step(state.solver.stepsPerFrame);
+          const diag = state.solverKernel.getDiagnostics();
+          
+          if (diag.isDiverged) {
+              handleDivergence(diag);
+          } else {
+              // Log state occasionally
+              if (diag.iteration % 100 === 0) {
+                  const logEntry = {
+                      runId: state.runId,
+                      ts: Date.now(),
+                      iter: diag.iteration,
+                      drift: diag.massDrift,
+                      uMax: diag.maxVelocity,
+                      timeMs: res.computeTimeMs,
+                      config: { tau: state.solver.tau, grid: state.solver.gridX },
+                      meta: { tier: state.executionTier }
+                  };
+                  state.logs.push(logEntry);
+                  if (state.logs.length > 500) state.logs.shift();
+              }
+              state.solver.iteration = diag.iteration;
+          }
+          updateStatusBar();
+      }
+
       if (!state.solver.running && state.mesh.object) {
         state.mesh.object.rotation.y += dt * 0.15;
         if (state.mesh.wireframe) state.mesh.wireframe.rotation.y = state.mesh.object.rotation.y;
@@ -419,7 +574,9 @@
   }
 
   async function boot() {
-    initScene(); installInput(); bindUI(); await initWebGPU(); requestAnimationFrame(loop);
+    initScene(); installInput(); bindUI(); await initWebGPU();
+    loadSimulationState();
+    requestAnimationFrame(loop);
     if (window.lucide) lucide.createIcons();
   }
 
