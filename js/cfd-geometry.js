@@ -93,9 +93,10 @@
                 }
             }
             if (degenerateCount > 0) {
-                results.warnings.push(`Mesh contains ${degenerateCount} degenerate triangles.`);
-                // Note: We "sanitize" by proceeding, but user Rules say Reject if V < eps.
+                results.errors.push(`Mesh contains ${degenerateCount} degenerate triangles. Rejected.`);
+                results.success = false;
             }
+            if (!results.success) return results;
 
             // 3. Signed Volume (Tetra Sum)
             let totalVol = 0;
@@ -120,26 +121,46 @@
             }
 
             // 4. Manifold & Edge Checks (Warnings)
-            const edgeMap = new Map();
-            for (let i = 0; i < this.indices.length; i += 3) {
-                const tri = [this.indices[i], this.indices[i + 1], this.indices[i + 2]];
-                for (let j = 0; j < 3; j++) {
-                    const u = tri[j];
-                    const v = tri[(j + 1) % 3];
-                    const key = u < v ? `${u}_${v}` : `${v}_${u}`;
-                    edgeMap.set(key, (edgeMap.get(key) || 0) + 1);
-                }
-            }
-
             let openEdges = 0;
             let nonManifoldEdges = 0;
-            edgeMap.forEach((count) => {
-                if (count === 1) openEdges++;
-                else if (count > 2) nonManifoldEdges++;
+            let inconsistentWinding = 0;
+            let badNormals = 0;
+
+            const edgeOrientations = new Map(); // key -> [v1_v2, v2_v1, ...]
+            for (let i = 0; i < this.indices.length; i += 3) {
+                const i0 = this.indices[i], i1 = this.indices[i+1], i2 = this.indices[i+2];
+                const tris = [[i0, i1], [i1, i2], [i2, i0]];
+                
+                // Normal sanity check
+                const v0 = [this.positions[i0*3], this.positions[i0*3+1], this.positions[i0*3+2]];
+                const v1 = [this.positions[i1*3], this.positions[i1*3+1], this.positions[i1*3+2]];
+                const v2 = [this.positions[i2*3], this.positions[i2*3+1], this.positions[i2*3+2]];
+                const d1 = [v1[0]-v0[0], v1[1]-v0[1], v1[2]-v0[2]];
+                const d2 = [v2[0]-v0[0], v2[1]-v0[1], v2[2]-v0[2]];
+                const cp = [d1[1]*d2[2]-d1[2]*d2[1], d1[2]*d2[0]-d1[0]*d2[2], d1[0]*d2[1]-d1[1]*d2[0]];
+                if (!isFinite(cp[0]) || !isFinite(cp[1]) || !isFinite(cp[2])) badNormals++;
+
+                tris.forEach(edge => {
+                    const [u, v] = edge;
+                    const key = u < v ? `${u}_${v}` : `${v}_${u}`;
+                    if (!edgeOrientations.has(key)) edgeOrientations.set(key, []);
+                    edgeOrientations.get(key).push(`${u}_${v}`);
+                });
+            }
+
+            edgeOrientations.forEach((dirs, key) => {
+                if (dirs.length === 1) openEdges++;
+                else if (dirs.length > 2) nonManifoldEdges++;
+                else if (dirs.length === 2) {
+                    // Check if they are opposite (consistent)
+                    if (dirs[0] === dirs[1]) inconsistentWinding++;
+                }
             });
 
             if (openEdges > 0) results.warnings.push(`Open boundaries detected: ${openEdges} edges have only one incident face.`);
             if (nonManifoldEdges > 0) results.warnings.push(`Non-manifold geometry detected: ${nonManifoldEdges} edges have more than two incident faces.`);
+            if (inconsistentWinding > 0) results.warnings.push(`Inconsistent winding detected on ${inconsistentWinding} shared edges.`);
+            if (badNormals > 0) results.warnings.push(`Suspicious normals detected on ${badNormals} triangles.`);
 
             return results;
         }
