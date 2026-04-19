@@ -20,7 +20,7 @@
     solver: {
       running: false, paused: false, iteration: 0,
       gridX: 64, gridY: 64, gridZ: 64,
-      tau: 0.8, inletSpeed: 0.02, inletDir: '+x',
+      tau: 0.6, inletSpeed: 0.08, inletDir: '+x',
       stepsPerFrame: 4,
       divergenceHalt: false
     },
@@ -34,9 +34,9 @@
     },
     viz: {
       post: null, mode: 'solid', field: 'pressure', colormap: 'viridis',
-      sliceAxis: 'x', slicePos: 0, sliceMesh: null,
-      streamlineSeeds: 64, streamlineSteps: 200, streamlineLines: null,
-      range: { min: -0.05, max: 0.05 }, showGeo: true, 
+      sliceAxis: 'z', slicePos: 0, sliceMesh: null,
+      streamlineSeeds: 64, streamlineSteps: 1000, streamlineLines: null,
+      range: { min: -0.005, max: 0.005 }, showGeo: true, 
       needsUpdate: false
     },
     results: {
@@ -357,6 +357,7 @@
     var def = MESHES[key]; if (!def) return;
     var built = def.build();
     state.mesh.object = new THREE.Mesh(built, new THREE.MeshStandardMaterial({ color: 0x5a7080, roughness: 0.5, metalness: 0.4 }));
+    state.mesh.object.renderOrder = 0;
     state.scene.add(state.mesh.object);
 
     state.mesh.wireframe = new THREE.LineSegments(new THREE.EdgesGeometry(built, 15), new THREE.LineBasicMaterial({ color: 0x5ad1ff, transparent: true, opacity: 0.08 }));
@@ -446,7 +447,7 @@
       if (btn.classList.contains('is-disabled')) return;
       document.querySelectorAll('.cfd-viz-btn').forEach(b => b.classList.remove('is-active'));
       btn.classList.add('is-active');
-      state.vizMode = btn.dataset.mode;
+      state.viz.mode = btn.dataset.mode;
       applyVizMode();
     }));
 
@@ -536,10 +537,7 @@
     $('ctl-slice-group').style.display = (mode === 'slice') ? 'block' : 'none';
     $('ctl-streamline-group').style.display = (mode === 'streamlines') ? 'block' : 'none';
     
-    // Clear post meshes if mode changed
-    if (mode !== 'slice' && state.viz.sliceMesh) { state.scene.remove(state.viz.sliceMesh); state.viz.sliceMesh = null; }
-    if (mode !== 'streamlines' && state.viz.streamlineLines) { state.scene.remove(state.viz.streamlineLines); state.viz.streamlineLines = null; }
-    
+    // Persistence: Keep post meshes alive for combined viewing
     state.viz.needsUpdate = true;
   }
 
@@ -554,6 +552,9 @@
         gridAABB,
         state.solverKernel.getFieldBuffers()
       );
+    } else {
+      // Sync fresh field buffers from the solver kernel
+      state.viz.post.updateFields(state.solverKernel.getFieldBuffers());
     }
 
     const mode = state.viz.mode;
@@ -563,25 +564,36 @@
         if (state.viz.sliceMesh) state.scene.remove(state.viz.sliceMesh);
         state.viz.sliceMesh = post.createSlice(state.viz.sliceAxis, state.viz.slicePos, state.viz.field, state.viz.colormap, state.viz.range);
         state.scene.add(state.viz.sliceMesh);
-    } else if (mode === 'streamlines') {
+    } 
+    
+    if (mode === 'streamlines') {
         if (state.viz.streamlineLines) state.scene.remove(state.viz.streamlineLines);
-        // Deterministic seeds: 8x8 grid on inlet plane
         const seeds = [];
         const dimA = state.domain.y, dimB = state.domain.z;
-        const count = Math.sqrt(state.viz.streamlineSeeds);
-        for(let i=0; i<count; i++) for(let j=0; j<count; j++) {
-            seeds.push(new THREE.Vector3(-state.domain.x/2 + 0.1, -dimA/2 + (i+0.5)*(dimA/count), -dimB/2 + (j+0.5)*(dimB/count)));
+        const scount = Math.sqrt(state.viz.streamlineSeeds);
+        for(let i=0; i<scount; i++) for(let j=0; j<scount; j++) {
+            // Shift seeds to x=-1.2 to ensure they start in a fully developed flow zone
+            seeds.push(new THREE.Vector3(-1.2, -dimA/2 + (i+0.5)*(dimA/scount), -dimB/2 + (j+0.5)*(dimB/scount)));
         }
         state.viz.streamlineLines = post.createStreamlines(seeds, {
-            maxSteps: state.viz.streamlineSteps,
+            maxSteps: 1000,
+            stepSize: 1.5,
             colormapName: state.viz.colormap,
-            range: state.viz.range,
-            fieldType: state.viz.field === 'pressure' ? 'pressure' : 'velocity_mag'
+            range: { min: 0, max: 0.12 },
+            fieldType: 'velocity_mag'
         });
         state.scene.add(state.viz.streamlineLines);
-    } else if (mode === 'surface') {
-        post.mapSurface(state.mesh.object, state.viz.field, state.viz.colormap, state.viz.range);
+    } 
+    
+    // Surface Mapping
+    if (mode === 'surface' || mode === 'slice' || mode === 'streamlines') {
+        const range = state.viz.field === 'pressure' ? state.viz.range : { min: 0, max: 0.12 };
+        post.mapSurface(state.mesh.object, state.viz.field, state.viz.colormap, range);
     }
+
+    // Independent Visibility (Allowing persistence of layers)
+    if (state.viz.sliceMesh) state.viz.sliceMesh.visible = (mode === 'slice' || mode === 'surface' || mode === 'streamlines');
+    if (state.viz.streamlineLines) state.viz.streamlineLines.visible = (mode === 'streamlines' || mode === 'surface' || mode === 'slice');
 
     updateLegend();
     state.viz.needsUpdate = false;
@@ -624,7 +636,7 @@
     geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
     geo.setAttribute('color', new THREE.Float32BufferAttribute(col, 3));
     state.mesh.voxelPoints = new THREE.Points(geo, new THREE.PointsMaterial({ size: 0.05, vertexColors: true, transparent: true, opacity: 0.8 }));
-    state.mesh.voxelPoints.visible = (state.vizMode === 'voxel');
+    state.mesh.voxelPoints.visible = (state.viz.mode === 'voxel');
     state.scene.add(state.mesh.voxelPoints);
   }
 
@@ -780,7 +792,9 @@
         state.mesh.object.rotation.y += dt * 0.15;
         if (state.mesh.wireframe) state.mesh.wireframe.rotation.y = state.mesh.object.rotation.y;
       }
+      
       state.renderer.render(state.scene, state.camera);
+      state.frameCount++;
     }
   }
 

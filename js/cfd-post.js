@@ -40,6 +40,10 @@
             ];
         }
 
+        updateFields(newFields) {
+            this.fields = newFields;
+        }
+
         /**
          * Trilinear interpolation for field sampling
          */
@@ -52,11 +56,14 @@
             let gy = (pos.y - min[1]) / this.vSize[1] - 0.5;
             let gz = (pos.z - min[2]) / this.vSize[2] - 0.5;
 
+            // Clamping to ensure we always sample valid interior or boundary cells
+            gx = THREE.MathUtils.clamp(gx, 0, nx - 1.001);
+            gy = THREE.MathUtils.clamp(gy, 0, ny - 1.001);
+            gz = THREE.MathUtils.clamp(gz, 0, nz - 1.001);
+
             const i0 = Math.floor(gx), i1 = i0 + 1;
             const j0 = Math.floor(gy), j1 = j0 + 1;
             const k0 = Math.floor(gz), k1 = k0 + 1;
-
-            if (i0 < 0 || i1 >= nx || j0 < 0 || j1 >= ny || k0 < 0 || k1 >= nz) return type === 'velocity' ? new THREE.Vector3() : 0;
 
             const tx = gx - i0, ty = gy - j0, tz = gz - k0;
 
@@ -148,8 +155,17 @@
             }
 
             geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
-            const material = new THREE.MeshBasicMaterial({ vertexColors: true, side: THREE.DoubleSide, transparent: true, opacity: 0.8 });
-            return new THREE.Mesh(geometry, material);
+            const material = new THREE.MeshBasicMaterial({ 
+                vertexColors: true, 
+                side: THREE.DoubleSide, 
+                transparent: true, 
+                opacity: 0.4,
+                depthWrite: false,
+                depthTest: true
+            });
+            const mesh = new THREE.Mesh(geometry, material);
+            mesh.renderOrder = 1;
+            return mesh;
         }
 
         /**
@@ -157,37 +173,59 @@
          */
         createStreamlines(seeds, settings = {}) {
             const { 
-                maxSteps = 200, 
-                stepSize = 0.05, 
+                maxSteps = 500, 
+                stepSize = 0.15, 
                 colormapName = 'viridis', 
-                range = { min: 0, max: 0.2 },
+                range = { min: 0, max: 0.12 },
                 fieldType = 'velocity_mag'
             } = settings;
 
             const cm = this.getColormap(colormapName);
             const linePositions = [];
             const lineColors = [];
+            
+            // Dynamic Step Size: 0.5 * voxel size
+            const h = Math.min(...this.vSize);
+            const actualStepSize = settings.stepSize || (h * 1.0);
+            
+            let totalTraveled = 0;
+            let totalSegments = 0;
 
-            for (const seed of seeds) {
+            for (let i = 0; i < seeds.length; i++) {
+                const seed = seeds[i];
                 let currentPos = new THREE.Vector3().copy(seed);
-                for (let s = 0; s < maxSteps; s++) {
-                    const v1 = this.sampleField(currentPos, 'velocity');
-                    if (v1.lengthSq() < 1e-8) break;
+                let streamLength = 0;
+                let streamSteps = 0;
 
-                    // RK4 Integration
-                    const k1 = v1.multiplyScalar(stepSize);
-                    const k2 = this.sampleField(new THREE.Vector3().copy(currentPos).addScaledVector(k1, 0.5), 'velocity').multiplyScalar(stepSize);
-                    const k3 = this.sampleField(new THREE.Vector3().copy(currentPos).addScaledVector(k2, 0.5), 'velocity').multiplyScalar(stepSize);
-                    const k4 = this.sampleField(new THREE.Vector3().copy(currentPos).add(k3), 'velocity').multiplyScalar(stepSize);
+                for (let s = 0; s < maxSteps; s++) {
+                    const v_lu = this.sampleField(currentPos, 'velocity');
+                    if (v_lu.lengthSq() < 1e-10) break;
+
+                    // Physical Scaling: Convert LBM lu/ts to m/ts by multiplying by voxel size h (m)
+                    // Then multiply by integration stepSize (multiplier of ts)
+                    const v1 = v_lu.clone().multiplyScalar(h).multiplyScalar(actualStepSize);
                     
-                    const delta = new THREE.Vector3().copy(k1).addScaledVector(k2, 2).addScaledVector(k3, 2).add(k4).multiplyScalar(1/6);
-                    const nextPos = new THREE.Vector3().copy(currentPos).add(delta);
+                    // RK4 Integration (using scaled velocities)
+                    const k1 = v1;
+                    
+                    const p2 = currentPos.clone().addScaledVector(k1, 0.5);
+                    const k2 = this.sampleField(p2, 'velocity').multiplyScalar(h).multiplyScalar(actualStepSize);
+                    
+                    const p3 = currentPos.clone().addScaledVector(k2, 0.5);
+                    const k3 = this.sampleField(p3, 'velocity').multiplyScalar(h).multiplyScalar(actualStepSize);
+                    
+                    const p4 = currentPos.clone().add(k3);
+                    const k4 = this.sampleField(p4, 'velocity').multiplyScalar(h).multiplyScalar(actualStepSize);
+                    
+                    const delta = k1.clone().addScaledVector(k2, 2).addScaledVector(k3, 2).add(k4).multiplyScalar(1/6);
+                    const nextPos = currentPos.clone().add(delta);
 
                     // Check boundaries
                     if (nextPos.x < this.aabb.min[0] || nextPos.x > this.aabb.max[0] ||
                         nextPos.y < this.aabb.min[1] || nextPos.y > this.aabb.max[1] ||
                         nextPos.z < this.aabb.min[2] || nextPos.z > this.aabb.max[2]) break;
 
+                    // Segment: current -> next
                     linePositions.push(currentPos.x, currentPos.y, currentPos.z);
                     linePositions.push(nextPos.x, nextPos.y, nextPos.z);
 
@@ -197,14 +235,23 @@
                     lineColors.push(color.r, color.g, color.b);
                     lineColors.push(color.r, color.g, color.b);
 
+                    const dist = currentPos.distanceTo(nextPos);
+                    streamLength += dist;
+                    streamSteps++;
                     currentPos.copy(nextPos);
                 }
+                totalTraveled += streamLength;
+                totalSegments += streamSteps;
             }
+
+            console.log(`[Phase D] Streamlines: Generated ${seeds.length} paths, Avg Length: ${(totalTraveled/seeds.length).toFixed(3)}m, Total Segments: ${totalSegments}`);
 
             const geometry = new THREE.BufferGeometry();
             geometry.setAttribute('position', new THREE.Float32BufferAttribute(linePositions, 3));
             geometry.setAttribute('color', new THREE.Float32BufferAttribute(lineColors, 3));
-            return new THREE.LineSegments(geometry, new THREE.LineBasicMaterial({ vertexColors: true, transparent: true, opacity: 0.6 }));
+            const lines = new THREE.LineSegments(geometry, new THREE.LineBasicMaterial({ vertexColors: true, transparent: true, opacity: 0.6 }));
+            lines.renderOrder = 2;
+            return lines;
         }
 
         /**
