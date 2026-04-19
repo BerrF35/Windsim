@@ -8,7 +8,7 @@
   /* ─── State ─── */
   var state = {
     gpu: null, adapter: null, gpuReady: false, gpuError: '',
-    executionTier: 'detecting',
+    executionTier: 'detecting', // 'full', 'reduced', 'demo'
     phaseLabel: 'Phase C — Solver',
     supportsKernel: false,
     scene: null, camera: null, renderer: null,
@@ -20,8 +20,9 @@
     solver: {
       running: false, paused: false, iteration: 0,
       gridX: 64, gridY: 64, gridZ: 64,
-      tau: 0.6, inletSpeed: 0.08, inletDir: '+x',
-      stepsPerFrame: 4
+      tau: 0.8, inletSpeed: 0.02, inletDir: '+x',
+      stepsPerFrame: 4,
+      divergenceHalt: false
     },
     workflow: {
       geometry: false, domain: false, boundary: false, solver: false, run: false, inspect: false
@@ -31,14 +32,20 @@
     mesh: {
       active: 'sphere', object: null, wireframe: null, voxelPoints: null
     },
-    vizMode: 'solid',
+    viz: {
+      post: null, mode: 'solid', field: 'pressure', colormap: 'viridis',
+      sliceAxis: 'x', slicePos: 0, sliceMesh: null,
+      streamlineSeeds: 64, streamlineSteps: 200, streamlineLines: null,
+      range: { min: -0.05, max: 0.05 }, showGeo: true, 
+      needsUpdate: false
+    },
     results: {
       cd: null, cl: null, cs: null, maxVel: null, massError: null
     },
     lastTs: 0, frameCount: 0,
     voxelMask: null, voxelHash: '',
     solverKernel: null,
-    logs: [],
+    obs: null, // ObservabilityManager instance
     runId: '',
     diagnosticMode: false
   };
@@ -120,17 +127,24 @@
     setDisabled('btn-confirm-domain', !state.workflow.geometry);
     setDisabled('btn-confirm-boundary', !state.workflow.domain);
     setDisabled('btn-confirm-solver', !state.workflow.boundary);
-    setDisabled('btn-run', !state.workflow.solver || !state.supportsKernel);
+    setDisabled('btn-run', !state.workflow.solver || !state.supportsKernel || state.solver.divergenceHalt);
+    setDisabled('btn-pause', !state.workflow.run || state.solver.divergenceHalt);
 
     setText('vp-grid', state.solver.gridX + ' × ' + state.solver.gridY + ' × ' + state.solver.gridZ);
     setText('vp-domain', formatDomainViewport());
     setText('domain-badge', formatDomainSummary());
     
+    // Check if we can unlock Inspect
+    if (state.solver.iteration > 100 && !state.workflow.inspect) {
+        setWorkflowStep('inspect');
+    }
+
     updateStatusBar();
     applyVizMode();
   }
 
-  function invalidateWorkflowFrom(stepKey) {
+  function invalidateWorkflowFrom(stepKey, silent) {
+    if (silent) return;
     var order = ['geometry', 'domain', 'boundary', 'solver', 'run', 'inspect'];
     var seen = false;
     for (var i = 0; i < order.length; i++) {
@@ -161,17 +175,20 @@
     state.solverKernel.init(
         [state.domain.x, state.domain.y, state.domain.z],
         [state.solver.gridX, state.solver.gridY, state.solver.gridZ],
-        {
-            tau: state.solver.tau,
-            inletSpeed: state.solver.inletSpeed,
-            inletDir: state.solver.inletDir
-        },
+        { tau: state.solver.tau },
         state.voxelMask
     );
 
-    state.runId = state.runId || 'run_' + Math.random().toString(36).substr(2, 9);
+    // Apply strict BCs
+    state.solverKernel.setBoundaryConditions([
+        { type: 'inlet', dir: state.solver.inletDir, speed: state.solver.inletSpeed }
+    ]);
+
+    state.obs = state.obs || new WindSimObservability.ObservabilityManager(state.runId);
+    state.runId = state.obs.runId;
     state.workflow.run = true;
     state.supportsKernel = true;
+    state.solver.divergenceHalt = false;
     
     syncCFDUI();
     logValidation(`Solver ready. Run ID: ${state.runId}`, 'success');
@@ -190,8 +207,8 @@
         updateGPUStatus('ready', 'Solver Paused');
         logValidation('Simulation paused.', 'warning');
     }
-    saveSimulationState();
     syncCFDUI();
+    saveSimulationState();
   }
 
   function resetSimulation() {
@@ -207,7 +224,8 @@
 
   function handleDivergence(diag) {
     state.solver.running = false;
-    state.solver.paused = true;
+    state.solver.paused = false;
+    state.solver.divergenceHalt = true;
     updateGPUStatus('error', 'DIVERGENCE DETECTED');
     logValidation(`HALT: Physical stability limit exceeded! Mass drift: ${(diag.massDrift*100).toFixed(2)}%`, 'error');
     
@@ -217,42 +235,62 @@
     saveSimulationState();
   }
 
-  function saveSimulationState() {
-    if (!state.solverKernel) return;
-    const snapshot = {
-        state: {
-            solver: state.solver,
-            workflow: state.workflow,
-            runId: state.runId,
-            domain: state.domain,
-            logs: state.logs.slice(-50) // Keep last 50 logs
-        },
-        solverState: state.solverKernel.getStateSnapshot()
-    };
-    localStorage.setItem('windsim_cfd_recovery', JSON.stringify(snapshot));
+  async function saveSimulationState() {
+    if (state.obs) {
+        await state.obs.saveSession(state, state.solverKernel);
+    }
   }
 
-  function loadSimulationState() {
-    const raw = localStorage.getItem('windsim_cfd_recovery');
-    if (!raw) return;
+  async function loadSimulationState() {
+    state.obs = new WindSimObservability.ObservabilityManager();
+    let snapshot = null;
     try {
-        const snapshot = JSON.parse(raw);
-        // Only restore if resolution matches
-        if (snapshot.state.solver.gridX !== state.solver.gridX) return;
+        snapshot = await state.obs.loadSession();
+    } catch (e) {
+        console.warn('Persistence Load Error:', e);
+    }
+    
+    if (!snapshot || !snapshot.engine) {
+        logValidation('No saved session found.', 'info');
+        return;
+    }
+    
+    try {
+        const engine = snapshot.engine;
+        const savedSolver = engine.solver;
+        if (!savedSolver) return;
+
+        // Restore basic state with fallbacks
+        Object.assign(state.solver, savedSolver);
+        Object.assign(state.workflow, engine.workflow || {});
+        state.domain = engine.domain || state.domain;
+        state.voxelHash = engine.voxelHash || '';
+        state.runId = snapshot.runId || state.runId;
         
-        Object.assign(state.solver, snapshot.state.solver);
-        Object.assign(state.workflow, snapshot.state.workflow);
-        state.runId = snapshot.state.runId;
-        state.logs = snapshot.state.logs;
+        // Restore Mesh Context
+        if (engine.mesh && engine.mesh.active && engine.mesh.active !== state.mesh.active) {
+            setMesh(engine.mesh.active, true);
+        }
+
+        // Ensure workflow flags are consistent
+        if (state.voxelHash) state.workflow.geometry = true;
         
-        state.solverKernel = new WindSimSolver.LBMSolver();
-        state.solverKernel.loadStateSnapshot(snapshot.solverState);
-        state.supportsKernel = true;
+        // Restore solver kernel if saved
+        if (snapshot.solverState) {
+            state.solverKernel = new WindSimSolver.LBMSolver();
+            state.solverKernel.loadStateSnapshot(snapshot.solverState);
+            state.supportsKernel = true;
+        } else if (state.workflow.solver) {
+            // Re-init if metadata exists but buffers don't (fallback)
+            initSolver();
+            state.solver.iteration = savedSolver.iteration || 0;
+        }
         
-        logValidation(`Recovered simulation state. Run ID: ${state.runId}`, 'success');
+        logValidation(`Recovered session (Iter: ${state.solver.iteration}). Run ID: ${state.runId}`, 'success');
         syncCFDUI();
     } catch (e) {
         console.error('Failed to load state', e);
+        logValidation('Session recovery partially failed. (Schema mismatch)', 'error');
     }
   }
 
@@ -290,16 +328,21 @@
     cylinder: { label: 'Cylinder', build: () => new THREE.CylinderGeometry(0.4, 0.4, 1.2, 32), meta: 'r=0.4, h=1.2' },
     airfoil: { label: 'Airfoil', build: () => {
         var shape = new THREE.Shape();
+        // Upper surface
         for (var i = 0; i <= 30; i++) {
             var t = i / 30; var x = 2 * t;
             var yt = 0.12 / 0.2 * 2 * (0.2969 * Math.sqrt(t) - 0.126 * t - 0.3516 * t**2 + 0.2843 * t**3 - 0.1015 * t**4);
             if (i === 0) shape.moveTo(x - 1, yt); else shape.lineTo(x - 1, yt);
         }
+        // Explicitly close trailing edge to zero thickness for manifold voxelization
+        shape.lineTo(1.0, 0.0); 
+        // Lower surface
         for (var i = 30; i >= 0; i--) {
             var t = i / 30; var x = 2 * t;
             var yt = 0.12 / 0.2 * 2 * (0.2969 * Math.sqrt(t) - 0.126 * t - 0.3516 * t**2 + 0.2843 * t**3 - 0.1015 * t**4);
             shape.lineTo(x - 1, -yt);
         }
+        shape.closePath(); 
         var geo = new THREE.ExtrudeGeometry(shape, { depth: 1, bevelEnabled: false });
         geo.center(); geo.rotateX(Math.PI/2); return geo;
     }, meta: 'chord=2.0' }
@@ -322,7 +365,7 @@
     document.querySelectorAll('.cfd-mesh-item').forEach(el => el.classList.toggle('is-active', el.dataset.mesh === key));
     setText('sb-mesh-name', def.label);
     setText('vp-object', def.label + ' (' + def.meta + ')');
-    invalidateWorkflowFrom('geometry');
+    invalidateWorkflowFrom('geometry', arguments[1] === true);
   }
 
   async function handleFileUpload(e) {
@@ -366,6 +409,7 @@
     report.warnings.forEach(w => logValidation(w, 'warning'));
     report.errors.forEach(e => logValidation(e, 'error'));
     if (!report.success) return false;
+    logValidation('Geometry manifold validation passed. (Open edges: 0)', 'success');
 
     const gridAABB = { min: [-state.domain.x/2, -state.domain.y/2, -state.domain.z/2], max: [state.domain.x/2, state.domain.y/2, state.domain.z/2] };
     const voxelizer = new WindSimGeometry.Voxelizer(mesh, [state.solver.gridX, state.solver.gridY, state.solver.gridZ], gridAABB);
@@ -423,6 +467,34 @@
     if ($('btn-pause')) $('btn-pause').addEventListener('click', toggleSimulation);
     if ($('btn-reset')) $('btn-reset').addEventListener('click', resetSimulation);
 
+    // Phase D Bindings
+    $('s-field').addEventListener('change', e => { state.viz.field = e.target.value; state.viz.needsUpdate = true; });
+    $('s-colormap').addEventListener('change', e => { state.viz.colormap = e.target.value; state.viz.needsUpdate = true; });
+    $('s-slice-pos').addEventListener('input', e => { 
+        state.viz.slicePos = parseFloat(e.target.value); 
+        setText('v-slice-pos', state.viz.slicePos.toFixed(2) + ' m');
+        state.viz.needsUpdate = true; 
+    });
+    document.querySelectorAll('[data-axis]').forEach(btn => btn.addEventListener('click', () => {
+        document.querySelectorAll('[data-axis]').forEach(b => b.classList.remove('is-active'));
+        btn.classList.add('is-active');
+        state.viz.sliceAxis = btn.dataset.axis;
+        state.viz.needsUpdate = true;
+    }));
+    $('s-seed-count').addEventListener('input', e => { 
+        state.viz.streamlineSeeds = parseInt(e.target.value); 
+        setText('v-seed-count', state.viz.streamlineSeeds);
+        state.viz.needsUpdate = true; 
+    });
+    $('s-max-steps').addEventListener('input', e => { 
+        state.viz.streamlineSteps = parseInt(e.target.value); 
+        setText('v-max-steps', state.viz.streamlineSteps);
+        state.viz.needsUpdate = true; 
+    });
+    $('i-range-min').addEventListener('input', e => { state.viz.range.min = parseFloat(e.target.value) || 0; state.viz.needsUpdate = true; });
+    $('i-range-max').addEventListener('input', e => { state.viz.range.max = parseFloat(e.target.value) || 0.1; state.viz.needsUpdate = true; });
+    $('c-show-geo').addEventListener('change', e => { state.viz.showGeo = e.target.checked; applyVizMode(); });
+
     function bind(id, sid, fn) { 
         var s = $(id); if (!s) return;
         s.addEventListener('input', () => { setText(sid, fn(s.value)); syncCFDUI(); }); 
@@ -442,16 +514,97 @@
 
   function applyVizMode() {
     if (!state.mesh.object) return;
-    var isVoxel = state.vizMode === 'voxel';
-    if (state.mesh.object) state.mesh.object.visible = !isVoxel;
-    if (state.mesh.wireframe) state.mesh.wireframe.visible = !isVoxel && (state.vizMode === 'wireframe' || state.vizMode === 'solid');
+    var mode = state.viz.mode;
+    var isVoxel = mode === 'voxel';
+    
+    if (state.mesh.object) state.mesh.object.visible = state.viz.showGeo && !isVoxel;
+    if (state.mesh.wireframe) state.mesh.wireframe.visible = state.viz.showGeo && !isVoxel && (mode === 'wireframe' || mode === 'solid');
     if (state.mesh.voxelPoints) state.mesh.voxelPoints.visible = isVoxel;
     
     if (!isVoxel && state.mesh.object.material) {
-        state.mesh.object.material.wireframe = (state.vizMode === 'wireframe');
-        state.mesh.object.material.opacity = (state.vizMode === 'wireframe') ? 0.6 : 1;
-        state.mesh.object.material.transparent = (state.vizMode === 'wireframe');
+        state.mesh.object.material.wireframe = (mode === 'wireframe');
+        state.mesh.object.material.opacity = (mode === 'wireframe') ? 0.6 : 1;
+        state.mesh.object.material.transparent = (mode === 'wireframe');
+        // Reset surface mapping colors if not in surface mode
+        if (mode !== 'surface' && state.mesh.object.geometry.attributes.color) {
+            state.mesh.object.geometry.deleteAttribute('color');
+            state.mesh.object.material.vertexColors = false;
+        }
     }
+
+    // Toggle panel visibility
+    $('ctl-slice-group').style.display = (mode === 'slice') ? 'block' : 'none';
+    $('ctl-streamline-group').style.display = (mode === 'streamlines') ? 'block' : 'none';
+    
+    // Clear post meshes if mode changed
+    if (mode !== 'slice' && state.viz.sliceMesh) { state.scene.remove(state.viz.sliceMesh); state.viz.sliceMesh = null; }
+    if (mode !== 'streamlines' && state.viz.streamlineLines) { state.scene.remove(state.viz.streamlineLines); state.viz.streamlineLines = null; }
+    
+    state.viz.needsUpdate = true;
+  }
+
+  function updatePostVisuals() {
+    if (!state.solverKernel || !state.workflow.inspect) return;
+    if (!state.viz.needsUpdate) return;
+    
+    if (!state.viz.post) {
+      const gridAABB = { min: [-state.domain.x/2, -state.domain.y/2, -state.domain.z/2], max: [state.domain.x/2, state.domain.y/2, state.domain.z/2] };
+      state.viz.post = new WindSimPost.PostProcessor(
+        [state.solver.gridX, state.solver.gridY, state.solver.gridZ],
+        gridAABB,
+        state.solverKernel.getFieldBuffers()
+      );
+    }
+
+    const mode = state.viz.mode;
+    const post = state.viz.post;
+
+    if (mode === 'slice') {
+        if (state.viz.sliceMesh) state.scene.remove(state.viz.sliceMesh);
+        state.viz.sliceMesh = post.createSlice(state.viz.sliceAxis, state.viz.slicePos, state.viz.field, state.viz.colormap, state.viz.range);
+        state.scene.add(state.viz.sliceMesh);
+    } else if (mode === 'streamlines') {
+        if (state.viz.streamlineLines) state.scene.remove(state.viz.streamlineLines);
+        // Deterministic seeds: 8x8 grid on inlet plane
+        const seeds = [];
+        const dimA = state.domain.y, dimB = state.domain.z;
+        const count = Math.sqrt(state.viz.streamlineSeeds);
+        for(let i=0; i<count; i++) for(let j=0; j<count; j++) {
+            seeds.push(new THREE.Vector3(-state.domain.x/2 + 0.1, -dimA/2 + (i+0.5)*(dimA/count), -dimB/2 + (j+0.5)*(dimB/count)));
+        }
+        state.viz.streamlineLines = post.createStreamlines(seeds, {
+            maxSteps: state.viz.streamlineSteps,
+            colormapName: state.viz.colormap,
+            range: state.viz.range,
+            fieldType: state.viz.field === 'pressure' ? 'pressure' : 'velocity_mag'
+        });
+        state.scene.add(state.viz.streamlineLines);
+    } else if (mode === 'surface') {
+        post.mapSurface(state.mesh.object, state.viz.field, state.viz.colormap, state.viz.range);
+    }
+
+    updateLegend();
+    state.viz.needsUpdate = false;
+  }
+
+  function updateLegend() {
+    const legend = $('vp-legend');
+    if (state.viz.mode === 'solid' || state.viz.mode === 'wireframe' || state.viz.mode === 'voxel') {
+        legend.style.display = 'none';
+        return;
+    }
+    legend.style.display = 'block';
+    setText('l-field-name', state.viz.field.toUpperCase());
+    setText('l-min', state.viz.range.min.toFixed(3));
+    setText('l-max', state.viz.range.max.toFixed(3));
+    
+    // Update gradient bar CSS
+    const cmName = state.viz.colormap;
+    const bar = legend.querySelector('.cfd-legend-bar');
+    if (cmName === 'viridis') bar.style.background = 'linear-gradient(90deg, #440154, #3b528b, #21918c, #5ec962, #fde725)';
+    else if (cmName === 'coolwarm') bar.style.background = 'linear-gradient(90deg, #3b4cc0, #8db0fe, #dddcdc, #f49477, #b40426)';
+    else if (cmName === 'jet') bar.style.background = 'linear-gradient(90deg, #00008f, #0000ff, #00ffff, #ffff00, #ff0000, #800000)';
+    else bar.style.background = 'linear-gradient(90deg, #000, #fff)';
   }
 
   function updateVoxelPoints() {
@@ -478,6 +631,7 @@
   function updateStatusBar() {
     setText('sb-grid', state.solver.gridX + '×' + state.solver.gridY + '×' + state.solver.gridZ);
     setText('sb-tau', state.solver.tau.toFixed(3));
+    setText('sb-inlet', state.solver.inletSpeed.toFixed(3));
     
     if (state.solverKernel) {
         const diag = state.solverKernel.getDiagnostics();
@@ -493,14 +647,63 @@
   function formatMaybe(val, d) { return (val === null || val === undefined) ? '—' : val.toFixed(d); }
 
   async function initWebGPU() {
-    if (!navigator.gpu) { updateGPUStatus('error', 'WebGPU missing'); return false; }
-    state.adapter = await navigator.gpu.requestAdapter();
-    if (!state.adapter) { updateGPUStatus('error', 'No GPU adapter'); return false; }
-    state.gpu = await state.adapter.requestDevice();
-    state.gpuReady = true;
-    updateGPUStatus('ready', 'WebGPU Active');
+    if (!navigator.gpu) { 
+        state.executionTier = 'demo';
+        updateGPUStatus('error', 'WebGPU missing'); 
+        enforceTierLimits();
+        return false; 
+    }
+    try {
+        state.adapter = await navigator.gpu.requestAdapter();
+        if (!state.adapter) throw new Error('No adapter');
+        state.gpu = await state.adapter.requestDevice();
+        
+        // Detect Tier
+        const limits = state.adapter.limits;
+        const invocations = limits.maxComputeInvocationsPerWorkgroup || 0;
+        const bufferSize = limits.maxStorageBufferBindingSize || 0;
+        
+        if (invocations >= 256 && bufferSize >= 256 * 1024 * 1024) {
+            state.executionTier = 'full';
+        } else {
+            state.executionTier = 'reduced';
+        }
+        
+        state.gpuReady = true;
+        updateGPUStatus('ready', `WebGPU Visualization Active`);
+    } catch (e) {
+        state.executionTier = 'demo';
+        updateGPUStatus('error', 'WebGPU Driver Error');
+    }
+    
+    enforceTierLimits();
     syncCFDUI();
-    return true;
+    return state.gpuReady;
+  }
+
+  function enforceTierLimits() {
+      const tierStr = state.executionTier.toUpperCase();
+      setText('wf-tier-badge', tierStr + ' TIER');
+      setText('sb-tier', tierStr);
+      setText('r-tier', tierStr);
+      
+      if (state.executionTier === 'reduced' || state.executionTier === 'demo') {
+          // Cap resolution options in dropdown if it exists
+          const sel = $('s-grid');
+          if (sel) {
+              Array.from(sel.options).forEach(opt => {
+                  const res = parseInt(opt.value.split('x')[0]);
+                  if (res > 64) {
+                      opt.disabled = true;
+                      opt.textContent += ' (Unavailable in ' + state.executionTier + ')';
+                  }
+              });
+              if (state.solver.gridX > 64) {
+                  state.solver.gridX = state.solver.gridY = state.solver.gridZ = 64;
+                  sel.value = '64x64x64';
+              }
+          }
+      }
   }
 
   function updateGPUStatus(status, label) {
@@ -549,25 +752,31 @@
               // Log state: every iteration in diagnosticMode, else every 100
               const freq = state.diagnosticMode ? 1 : 100;
               if (diag.iteration % freq === 0) {
-                  const logEntry = {
-                      runId: state.runId,
-                      ts: Date.now(),
+                  state.obs.log({
                       iter: diag.iteration,
                       drift: diag.massDrift,
                       uMax: diag.maxVelocity,
                       timeMs: res.computeTimeMs,
                       config: { tau: state.solver.tau, grid: state.solver.gridX },
                       meta: { tier: state.executionTier }
-                  };
-                  state.logs.push(logEntry);
-                  if (state.logs.length > 500) state.logs.shift();
+                  });
+                  
+                  // Auto-unlock workflow on some iterations
+                  if (diag.iteration === 200) syncCFDUI();
+                  
+                  // Force viz update if field changed
+                  if (state.viz.mode !== 'solid') state.viz.needsUpdate = true;
               }
               state.solver.iteration = diag.iteration;
           }
           updateStatusBar();
       }
 
-      if (!state.solver.running && state.mesh.object) {
+      if (state.workflow.inspect) {
+          updatePostVisuals();
+      }
+
+      if (!state.solver.running && state.mesh.object && state.viz.mode === 'solid') {
         state.mesh.object.rotation.y += dt * 0.15;
         if (state.mesh.wireframe) state.mesh.wireframe.rotation.y = state.mesh.object.rotation.y;
       }

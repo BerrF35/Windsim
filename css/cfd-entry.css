@@ -765,3 +765,80 @@ select.cfd-select option { background: var(--cfd-surf); }
   .cfd-sidebar { display: none; }
   .cfd-toolbar { padding: 0 10px; }
 }
+
+/* ── Phase D Additions ── */
+.cfd-ctl-sep {
+  height: 1px;
+  background: var(--cfd-bdr);
+  margin: 16px 0;
+}
+
+.cfd-toggle-group {
+  display: flex;
+  gap: 4px;
+  background: var(--cfd-surf2);
+  padding: 3px;
+  border-radius: 6px;
+  border: 1px solid var(--cfd-bdr);
+}
+
+.cfd-toggle-btn {
+  flex: 1;
+  appearance: none;
+  border: none;
+  background: transparent;
+  color: var(--cfd-txt3);
+  font-family: var(--cfd-mono);
+  font-size: 10px;
+  font-weight: 600;
+  padding: 6px 0;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all .14s;
+}
+
+.cfd-toggle-btn:hover {
+  color: var(--cfd-txt2);
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.cfd-toggle-btn.is-active {
+  background: var(--cfd-cyan);
+  color: var(--cfd-bg);
+}
+
+.cfd-input-mini {
+  flex: 1;
+  width: 0;
+  background: var(--cfd-surf2);
+  border: 1px solid var(--cfd-bdr);
+  border-radius: 6px;
+  color: var(--cfd-txt);
+  font-family: var(--cfd-mono);
+  font-size: 11px;
+  padding: 6px 8px;
+  outline: none;
+}
+
+.cfd-input-mini:focus {
+  border-color: var(--cfd-cyan);
+}
+
+.cfd-checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11px;
+  color: var(--cfd-txt2);
+  cursor: pointer;
+  user-select: none;
+}
+
+.cfd-checkbox-label input {
+  accent-color: var(--cfd-cyan);
+}
+
+.cfd-viz-btn.is-disabled {
+  display: none; /* Hide instead of just disabling to keep UI clean */
+}
+

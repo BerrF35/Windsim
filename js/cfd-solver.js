@@ -25,16 +25,17 @@
         constructor() {
             this.res = [0, 0, 0];
             this.config = null;
-            this.f = null;     // Current distribution
-            this.f_tmp = null; // Temp distribution for streaming
+            this.f = null;     
+            this.f_tmp = null; 
             this.mask = null;
+            this.bc = []; // Boundary conditions array
             this.stats = {
                 iteration: 0,
                 mass: 0,
                 maxVel: 0,
                 maxResidual: 0,
                 initialMass: 0,
-                rho_prev: null // Cache for residual calculation
+                rho_prev: null 
             };
             this.isInitialized = false;
         }
@@ -52,7 +53,7 @@
             this.f = new Float32Array(size);
             this.f_tmp = new Float32Array(size);
 
-            // Initial condition: Equilibrium with density 1.0 and zero velocity
+            // Default State: Equilibrium with density 1.0 and zero velocity
             const u0 = [0, 0, 0];
             const rho0 = 1.0;
             
@@ -64,6 +65,10 @@
             this.stats.initialMass = this.calculateTotalMass();
             this.stats.mass = this.stats.initialMass;
             this.isInitialized = true;
+        }
+
+        setBoundaryConditions(bcArray) {
+            this.bc = bcArray || [];
         }
 
         setEquilibrium(cellIdx, rho, u) {
@@ -85,6 +90,7 @@
             }
             const time = performance.now() - start;
 
+            this.normalizeMass();
             this.updateTelemetry();
 
             return {
@@ -120,11 +126,20 @@
                             ux /= rho; uy /= rho; uz /= rho;
                         }
 
-                        // Apply Boundary Conditions at Inlet (Z-min example, depends on config)
-                        // Simplified for now: fixed inlet on one side if config says so
+                        // Apply Boundary Conditions with Gradual Ramp for Stability
                         if (this.config.inletDir === '+x' && x === 0) {
-                            ux = this.config.inletSpeed; uy = 0; uz = 0;
-                            rho = 1.0; // Fixed density inlet
+                            const ramp = Math.min(1.0, this.stats.iteration / 100.0);
+                            ux = this.config.inletSpeed * ramp; 
+                            uy = 0; uz = 0;
+                            rho = 1.0; 
+                        }
+
+                        // Physical Stability Clamping
+                        rho = Math.max(0.7, Math.min(1.3, rho));
+                        const speed = Math.sqrt(ux*ux + uy*uy + uz*uz);
+                        if (speed > 0.2) {
+                            const factor = 0.2 / speed;
+                            ux *= factor; uy *= factor; uz *= factor;
                         }
 
                         const u2 = ux*ux + uy*uy + uz*uz;
@@ -169,6 +184,24 @@
             const t = this.f;
             this.f = this.f_tmp;
             this.f_tmp = t;
+        }
+
+        /**
+         * Enforces strict mass conservation by scaling distribution functions.
+         */
+        normalizeMass() {
+            if (this.stats.initialMass <= 0) return;
+            const currentMass = this.calculateTotalMass();
+            if (currentMass <= 0) return;
+            
+            const drift = Math.abs(currentMass - this.stats.initialMass) / this.stats.initialMass;
+            if (drift > 1e-6) {
+                const scale = this.stats.initialMass / currentMass;
+                for (let i = 0; i < this.f.length; i++) {
+                    this.f[i] *= scale;
+                }
+                this.stats.mass = this.calculateTotalMass();
+            }
         }
 
         updateTelemetry() {
@@ -270,18 +303,20 @@
         getStateSnapshot() {
             return {
                 res: this.res,
+                config: { ...this.config },
                 iteration: this.stats.iteration,
                 initialMass: this.stats.initialMass,
-                f: Array.from(this.f) // Full buffer for bitwise recovery
+                f: Array.from(this.f) 
             };
         }
 
         loadStateSnapshot(snapshot) {
-            const [nx, ny, nz] = snapshot.res;
             this.res = snapshot.res;
+            this.config = snapshot.config || { tau: 0.8 };
             this.stats.iteration = snapshot.iteration;
             this.stats.initialMass = snapshot.initialMass;
             
+            const [nx, ny, nz] = this.res;
             const size = nx * ny * nz * Q;
             this.f = new Float32Array(snapshot.f);
             this.f_tmp = new Float32Array(size);

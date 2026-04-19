@@ -18,19 +18,7 @@
       transform-origin: center center;
       will-change: transform, filter;
     }
-    /* Temporary WIP Tiled Watermark */
-    .wip-watermark {
-      position: fixed;
-      inset: -50% -50%;
-      width: 200%;
-      height: 200%;
-      z-index: 9999;
-      pointer-events: none;
-      user-select: none;
-      opacity: 0.08;
-      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='240' height='120' viewBox='0 0 240 120'%3E%3Ctext x='50%25' y='50%25' font-family='JetBrains Mono, monospace' font-weight='700' font-size='14' fill='%23e8715a' text-anchor='middle' dominant-baseline='middle' transform='rotate(-25 120 60)'%3EWORK IN PROGRESS%3C/text%3E%3C/svg%3E");
-      background-repeat: repeat;
-    }
+    /* Removed WIP Watermark for Phase D compliance */
   </style>
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
@@ -183,13 +171,13 @@
         <div class="cfd-phase-banner">
           <div class="cfd-phase-eyebrow">Phase C / Solver Core & Observability</div>
           <div class="cfd-phase-copy">
-            This lab now executes a deterministic LBM D3Q19 numerical kernel.
+            This lab executes a deterministic <strong>LBM D3Q19 CPU Reference Kernel</strong>.
             Voxelization is handled on CPU for ground-truth consistency. 
             Runs are persistent across reloads.
           </div>
           <div class="cfd-phase-meta">
             <span class="cfd-panel-badge" id="wf-phase-badge">Phase C active</span>
-            <span class="cfd-panel-badge" id="wf-tier-badge">Detecting tier</span>
+            <span class="cfd-panel-badge" id="wf-tier-badge">Performance Grade: Standard</span>
           </div>
           <div class="cfd-phase-steps">
             <span class="cfd-step-pill is-current" id="wf-geometry">Geometry</span>
@@ -373,30 +361,86 @@
         <!-- Visualization -->
         <div class="cfd-panel" id="p-viz">
           <div class="cfd-panel-head">
-            <span class="cfd-panel-chevron">&gt;</span>
+            <span class="cfd-panel-chevron">></span>
             <span class="cfd-panel-title">Visualization</span>
           </div>
           <div class="cfd-panel-body">
-            <div class="cfd-ctl">
-              <div class="cfd-ctl-row">
-                <span class="cfd-ctl-lbl">Color Map</span>
-              </div>
-              <select class="cfd-select" id="s-colormap">
-                <option value="coolwarm" selected>Coolwarm (diverging)</option>
-                <option value="viridis">Viridis</option>
-                <option value="jet">Jet (classic)</option>
-                <option value="grayscale">Grayscale</option>
-              </select>
-            </div>
             <div class="cfd-ctl">
               <div class="cfd-ctl-row">
                 <span class="cfd-ctl-lbl">Field Variable</span>
               </div>
               <select class="cfd-select" id="s-field">
                 <option value="pressure" selected>Pressure (ρ − ρ₀)</option>
-                <option value="velocity">Velocity magnitude |u|</option>
-                <option value="vorticity">Vorticity |ω|</option>
+                <option value="velocity_mag">Velocity magnitude |u|</option>
               </select>
+            </div>
+            
+            <div class="cfd-ctl">
+              <div class="cfd-ctl-row">
+                <span class="cfd-ctl-lbl">Color Map</span>
+              </div>
+              <select class="cfd-select" id="s-colormap">
+                <option value="viridis" selected>Viridis (Perceptual)</option>
+                <option value="coolwarm">Coolwarm (Diverging)</option>
+                <option value="jet">Jet (Classic)</option>
+                <option value="grayscale">Grayscale</option>
+              </select>
+            </div>
+
+            <div class="cfd-ctl-sep"></div>
+
+            <div id="ctl-slice-group">
+              <div class="cfd-ctl">
+                <div class="cfd-ctl-row">
+                  <span class="cfd-ctl-lbl">Slice Axis</span>
+                </div>
+                <div class="cfd-toggle-group">
+                  <button class="cfd-toggle-btn is-active" data-axis="x">X</button>
+                  <button class="cfd-toggle-btn" data-axis="y">Y</button>
+                  <button class="cfd-toggle-btn" data-axis="z">Z</button>
+                </div>
+              </div>
+              <div class="cfd-ctl">
+                <div class="cfd-ctl-row">
+                  <span class="cfd-ctl-lbl">Position</span>
+                  <span class="cfd-ctl-val" id="v-slice-pos">0.00 m</span>
+                </div>
+                <input type="range" class="cfd-range" id="s-slice-pos" min="-3" max="3" step="0.01" value="0" />
+              </div>
+            </div>
+
+            <div id="ctl-streamline-group" style="display:none;">
+              <div class="cfd-ctl">
+                <div class="cfd-ctl-row">
+                  <span class="cfd-ctl-lbl">Seed Count</span>
+                  <span class="cfd-ctl-val" id="v-seed-count">64</span>
+                </div>
+                <input type="range" class="cfd-range" id="s-seed-count" min="16" max="256" step="16" value="64" />
+              </div>
+              <div class="cfd-ctl">
+                <div class="cfd-ctl-row">
+                  <span class="cfd-ctl-lbl">Max Steps</span>
+                  <span class="cfd-ctl-val" id="v-max-steps">200</span>
+                </div>
+                <input type="range" class="cfd-range" id="s-max-steps" min="50" max="500" step="10" value="200" />
+              </div>
+            </div>
+
+            <div class="cfd-ctl">
+              <div class="cfd-ctl-row">
+                <span class="cfd-ctl-lbl">Map Range</span>
+                <span class="cfd-ctl-val" id="v-map-range">Auto</span>
+              </div>
+              <div style="display: flex; gap: 8px;">
+                <input type="number" class="cfd-input-mini" id="i-range-min" placeholder="Min" />
+                <input type="number" class="cfd-input-mini" id="i-range-max" placeholder="Max" />
+              </div>
+            </div>
+
+            <div class="cfd-ctl">
+              <label class="cfd-checkbox-label">
+                <input type="checkbox" id="c-show-geo" checked /> Show Geometry
+              </label>
             </div>
           </div>
         </div>
@@ -412,7 +456,7 @@
         <div id="gpu-error-overlay" class="cfd-gpu-error" style="display:none;">
           <div class="cfd-gpu-error-ico"><i data-lucide="triangle-alert" width="48" height="48"></i></div>
           <div class="cfd-gpu-error-title">WebGPU Not Available</div>
-          <div class="cfd-gpu-error-body">Your browser does not support WebGPU.</div>
+          <div class="cfd-gpu-error-body">Your browser does not support WebGPU (Visualization).</div>
           <div class="cfd-gpu-error-hint">chrome://flags → #enable-unsafe-webgpu</div>
         </div>
 
@@ -429,9 +473,9 @@
           <button class="cfd-viz-btn is-active" data-mode="solid">Solid</button>
           <button class="cfd-viz-btn" data-mode="wireframe">Wire</button>
           <button class="cfd-viz-btn" id="btn-viz-voxel" data-mode="voxel">Voxel</button>
-          <button class="cfd-viz-btn is-disabled" data-mode="pressure" data-requires-field="true">Pressure</button>
-          <button class="cfd-viz-btn is-disabled" data-mode="velocity" data-requires-field="true">Velocity</button>
-          <button class="cfd-viz-btn is-disabled" data-mode="streamlines" data-requires-field="true">Streamlines</button>
+          <button class="cfd-viz-btn" data-mode="slice">Slice</button>
+          <button class="cfd-viz-btn" data-mode="streamlines">Streamlines</button>
+          <button class="cfd-viz-btn" data-mode="surface">Surface</button>
         </div>
 
         <!-- Colormap legend -->
@@ -501,10 +545,11 @@
         <div class="cfd-result-title">Solver Info</div>
         <div style="font-family: var(--cfd-mono); font-size: 10px; line-height: 2; color: var(--cfd-txt2);">
           Phase: <span style="color: var(--cfd-cyan);" id="r-phase">Phase C — Solver</span><br/>
-          Hardware Tier: <span style="color: var(--cfd-cyan);" id="r-tier">Detecting...</span><br/>
+          System Grade: <span style="color: var(--cfd-cyan);" id="r-tier">Standard Performance</span><br/>
           Target Method: <span style="color: var(--cfd-cyan);">LBM D3Q19</span><br/>
-          Current Reality: <span style="color: var(--cfd-cyan);" id="r-kernel">JavaScript / TypedArrays</span><br/>
-          Geometry Path: <span style="color: var(--cfd-cyan);">Voxel Bounce-back</span><br/>
+          Solver: <span style="color: var(--cfd-cyan);" id="r-kernel">CPU LBM Reference (JS)</span><br/>
+          Graphics: <span style="color: var(--cfd-cyan);">WebGPU (Visualization Only)</span><br/>
+          Geometry Path: <span style="color: var(--cfd-cyan);">CPU Voxelization</span><br/>
           Exportability: <span style="color: var(--cfd-cyan);" id="r-export">JSON Logs / Field Buffers</span>
         </div>
       </div>
@@ -526,7 +571,7 @@
   <div class="cfd-statusbar">
     <div class="cfd-sb-item"><span class="cfd-sb-label">PHASE</span> <span class="cfd-sb-val" id="sb-phase">Phase C — Solver</span></div>
     <div class="cfd-sb-sep"></div>
-    <div class="cfd-sb-item"><span class="cfd-sb-label">TIER</span> <span class="cfd-sb-val" id="sb-tier">Detecting</span></div>
+    <div class="cfd-sb-item"><span class="cfd-sb-label">GRADE</span> <span class="cfd-sb-val" id="sb-tier">STANDARD</span></div>
     <div class="cfd-sb-sep"></div>
     <div class="cfd-sb-item"><span class="cfd-sb-label">ITER</span> <span class="cfd-sb-val" id="sb-iter">0</span></div>
     <div class="cfd-sb-sep"></div>
@@ -549,9 +594,10 @@
   </script>
   <script src="js/cfd-geometry.js"></script>
   <script src="js/cfd-solver.js"></script>
+  <script src="js/cfd-observability.js"></script>
+  <script src="js/cfd-post.js"></script>
   <script src="js/cfd-engine.js"></script>
   
-  <div class="wip-watermark"></div>
 
 </body>
 </html>

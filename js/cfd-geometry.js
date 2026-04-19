@@ -28,8 +28,31 @@
      */
     class TriMesh {
         constructor(positions, indices) {
-            this.positions = new Float64Array(positions); // Ensure double precision
-            this.indices = new Int32Array(indices);
+            // Vertex deduplication (welding) for manifoldness
+            const weldedPos = [];
+            const posMap = new Map(); // key: x+y+z string -> index
+            const indexMap = new Int32Array(indices.length);
+            
+            for (let i = 0; i < indices.length; i++) {
+                const oldIdx = indices[i];
+                const x = positions[oldIdx * 3];
+                const y = positions[oldIdx * 3 + 1];
+                const z = positions[oldIdx * 3 + 2];
+                
+                // Use 5-digit precision key for robust welding (0.01mm)
+                const key = `${x.toFixed(5)}_${y.toFixed(5)}_${z.toFixed(5)}`;
+                if (posMap.has(key)) {
+                    indexMap[i] = posMap.get(key);
+                } else {
+                    const newIdx = weldedPos.length / 3;
+                    weldedPos.push(x, y, z);
+                    posMap.set(key, newIdx);
+                    indexMap[i] = newIdx;
+                }
+            }
+
+            this.positions = new Float64Array(weldedPos);
+            this.indices = indexMap;
             this.numTriangles = this.indices.length / 3;
             this.aabb = {
                 min: [Infinity, Infinity, Infinity],
