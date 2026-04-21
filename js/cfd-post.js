@@ -3,6 +3,9 @@
  * 
  * Logic for field sampling, streamlines (RK4), cut-planes, and surface mapping.
  * Derived directly from solver FieldBuffers for ground-truth accuracy.
+ * 
+ * All sampling respects the solid voxel mask.
+ * Streamlines terminate on solid entry, low speed, or domain exit.
  */
 (function () {
     'use strict';
@@ -29,10 +32,17 @@
     };
 
     class PostProcessor {
-        constructor(res, domainAABB, fieldBuffers) {
+        /**
+         * @param {number[]} res - [nx, ny, nz]
+         * @param {Object} domainAABB - { min: [x,y,z], max: [x,y,z] }
+         * @param {Object} fieldBuffers - { mass, momentum, pressure }
+         * @param {Uint8Array|null} voxelMask - solid mask (0=fluid, 1=surface, 2=interior)
+         */
+        constructor(res, domainAABB, fieldBuffers, voxelMask) {
             this.res = res; // [nx, ny, nz]
             this.aabb = domainAABB;
             this.fields = fieldBuffers;
+            this.mask = voxelMask || null;
             this.vSize = [
                 (domainAABB.max[0] - domainAABB.min[0]) / res[0],
                 (domainAABB.max[1] - domainAABB.min[1]) / res[1],
@@ -45,7 +55,32 @@
         }
 
         /**
-         * Trilinear interpolation for field sampling
+         * Check if a grid cell (i,j,k) is solid.
+         */
+        isSolidCell(i, j, k) {
+            if (!this.mask) return false;
+            const [nx, ny, nz] = this.res;
+            if (i < 0 || i >= nx || j < 0 || j >= ny || k < 0 || k >= nz) return false;
+            const idx = i + nx * (j + ny * k);
+            return this.mask[idx] > 0;
+        }
+
+        /**
+         * Check if a world position falls inside a solid voxel.
+         */
+        isSolid(pos) {
+            const [nx, ny, nz] = this.res;
+            const { min } = this.aabb;
+            const gi = Math.floor((pos.x - min[0]) / this.vSize[0]);
+            const gj = Math.floor((pos.y - min[1]) / this.vSize[1]);
+            const gk = Math.floor((pos.z - min[2]) / this.vSize[2]);
+            return this.isSolidCell(gi, gj, gk);
+        }
+
+        /**
+         * Trilinear interpolation for field sampling.
+         * Respects solid mask: if any of the 8 interpolation neighbors is solid,
+         * only fluid neighbors contribute (inverse-distance weighted fallback).
          */
         sampleField(pos, type = 'pressure') {
             const [nx, ny, nz] = this.res;
@@ -82,6 +117,54 @@
                 return 0;
             };
 
+            // Check if any of the 8 corners is solid
+            const corners = [
+                [i0, j0, k0], [i1, j0, k0], [i0, j1, k0], [i1, j1, k0],
+                [i0, j0, k1], [i1, j0, k1], [i0, j1, k1], [i1, j1, k1]
+            ];
+            const weights = [
+                (1-tx)*(1-ty)*(1-tz), tx*(1-ty)*(1-tz), (1-tx)*ty*(1-tz), tx*ty*(1-tz),
+                (1-tx)*(1-ty)*tz, tx*(1-ty)*tz, (1-tx)*ty*tz, tx*ty*tz
+            ];
+
+            let hasSolid = false;
+            if (this.mask) {
+                for (let c = 0; c < 8; c++) {
+                    if (this.isSolidCell(corners[c][0], corners[c][1], corners[c][2])) {
+                        hasSolid = true;
+                        break;
+                    }
+                }
+            }
+
+            if (hasSolid) {
+                // Solid-aware sampling: only use fluid neighbors
+                if (type === 'velocity') {
+                    const result = new THREE.Vector3(0, 0, 0);
+                    let totalW = 0;
+                    for (let c = 0; c < 8; c++) {
+                        if (!this.isSolidCell(corners[c][0], corners[c][1], corners[c][2])) {
+                            const v = getVal(corners[c][0], corners[c][1], corners[c][2]);
+                            result.addScaledVector(v, weights[c]);
+                            totalW += weights[c];
+                        }
+                    }
+                    if (totalW > 1e-12) result.multiplyScalar(1.0 / totalW);
+                    return result;
+                } else {
+                    let result = 0;
+                    let totalW = 0;
+                    for (let c = 0; c < 8; c++) {
+                        if (!this.isSolidCell(corners[c][0], corners[c][1], corners[c][2])) {
+                            result += getVal(corners[c][0], corners[c][1], corners[c][2]) * weights[c];
+                            totalW += weights[c];
+                        }
+                    }
+                    return totalW > 1e-12 ? result / totalW : 0;
+                }
+            }
+
+            // Standard trilinear interpolation (no solid neighbors)
             const v000 = getVal(i0, j0, k0);
             const v100 = getVal(i1, j0, k0);
             const v010 = getVal(i0, j1, k0);
@@ -117,7 +200,8 @@
         }
 
         /**
-         * Generates a cut-plane mesh
+         * Generates a cut-plane mesh.
+         * Material: data-driven vertex colors, transparent, no self-emission.
          */
         createSlice(axis, pos, fieldType, colormapName, range) {
             const [nx, ny, nz] = this.res;
@@ -143,10 +227,15 @@
             const positions = geometry.attributes.position.array;
             const colors = new Float32Array(positions.length);
             
+            // Track field min/max for diagnostics
+            let fieldMin = Infinity, fieldMax = -Infinity;
+            
             const tempPos = new THREE.Vector3();
             for (let i = 0; i < positions.length; i += 3) {
                 tempPos.set(positions[i], positions[i+1], positions[i+2]);
                 const val = this.sampleField(tempPos, fieldType);
+                if (val < fieldMin) fieldMin = val;
+                if (val > fieldMax) fieldMax = val;
                 const t = THREE.MathUtils.clamp((val - range.min) / (range.max - range.min), 0, 1);
                 const color = cm(t);
                 colors[i] = color.r;
@@ -155,26 +244,32 @@
             }
 
             geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+            
+            // Non-emissive, data-driven material
             const material = new THREE.MeshBasicMaterial({ 
                 vertexColors: true, 
                 side: THREE.DoubleSide, 
                 transparent: true, 
-                opacity: 0.4,
+                opacity: 0.55,
                 depthWrite: false,
                 depthTest: true
             });
             const mesh = new THREE.Mesh(geometry, material);
             mesh.renderOrder = 1;
+            mesh.name = 'cfd-slice';
+            
+            console.log(`[PostD] Slice: axis=${axis} pos=${pos.toFixed(3)} field=${fieldType} fieldRange=[${fieldMin.toFixed(6)}, ${fieldMax.toFixed(6)}] mapRange=[${range.min.toFixed(6)}, ${range.max.toFixed(6)}]`);
+
             return mesh;
         }
 
         /**
-         * Streamline generation via RK4
+         * Streamline generation via RK4.
+         * Respects solid mask, deterministic seeding, proper termination.
          */
         createStreamlines(seeds, settings = {}) {
             const { 
                 maxSteps = 500, 
-                stepSize = 0.15, 
                 colormapName = 'viridis', 
                 range = { min: 0, max: 0.12 },
                 fieldType = 'velocity_mag'
@@ -184,46 +279,78 @@
             const linePositions = [];
             const lineColors = [];
             
-            // Dynamic Step Size: 0.5 * voxel size
+            // Step size: 0.5 * minimum voxel size for accuracy
             const h = Math.min(...this.vSize);
-            const actualStepSize = settings.stepSize || (h * 1.0);
+            const stepSize = h * 0.5;
+            
+            // Speed threshold for termination (lattice units converted)
+            const speedThreshold = 1e-4;
             
             let totalTraveled = 0;
             let totalSegments = 0;
+            let solidTerminations = 0;
+            let speedTerminations = 0;
+            let boundaryTerminations = 0;
+            let maxStepTerminations = 0;
+            let firstStreamlineSteps = [];
 
             for (let i = 0; i < seeds.length; i++) {
                 const seed = seeds[i];
+                
+                // Skip seeds that start inside solid
+                if (this.isSolid(seed)) {
+                    continue;
+                }
+                
                 let currentPos = new THREE.Vector3().copy(seed);
                 let streamLength = 0;
                 let streamSteps = 0;
+                let terminated = false;
+                let terminationReason = 'max_steps';
 
                 for (let s = 0; s < maxSteps; s++) {
-                    const v_lu = this.sampleField(currentPos, 'velocity');
-                    if (v_lu.lengthSq() < 1e-10) break;
-
-                    // Physical Scaling: Convert LBM lu/ts to m/ts by multiplying by voxel size h (m)
-                    // Then multiply by integration stepSize (multiplier of ts)
-                    const v1 = v_lu.clone().multiplyScalar(h).multiplyScalar(actualStepSize);
+                    const v_at_pos = this.sampleField(currentPos, 'velocity');
+                    const speed = v_at_pos.length();
                     
-                    // RK4 Integration (using scaled velocities)
-                    const k1 = v1;
+                    if (speed < speedThreshold) {
+                        terminationReason = 'low_speed';
+                        terminated = true;
+                        break;
+                    }
+
+                    // RK4 Integration
+                    const k1 = v_at_pos.clone().multiplyScalar(stepSize);
                     
                     const p2 = currentPos.clone().addScaledVector(k1, 0.5);
-                    const k2 = this.sampleField(p2, 'velocity').multiplyScalar(h).multiplyScalar(actualStepSize);
+                    if (this.isSolid(p2)) { terminationReason = 'solid'; terminated = true; break; }
+                    const k2 = this.sampleField(p2, 'velocity').multiplyScalar(stepSize);
                     
                     const p3 = currentPos.clone().addScaledVector(k2, 0.5);
-                    const k3 = this.sampleField(p3, 'velocity').multiplyScalar(h).multiplyScalar(actualStepSize);
+                    if (this.isSolid(p3)) { terminationReason = 'solid'; terminated = true; break; }
+                    const k3 = this.sampleField(p3, 'velocity').multiplyScalar(stepSize);
                     
                     const p4 = currentPos.clone().add(k3);
-                    const k4 = this.sampleField(p4, 'velocity').multiplyScalar(h).multiplyScalar(actualStepSize);
+                    if (this.isSolid(p4)) { terminationReason = 'solid'; terminated = true; break; }
+                    const k4 = this.sampleField(p4, 'velocity').multiplyScalar(stepSize);
                     
                     const delta = k1.clone().addScaledVector(k2, 2).addScaledVector(k3, 2).add(k4).multiplyScalar(1/6);
                     const nextPos = currentPos.clone().add(delta);
 
-                    // Check boundaries
+                    // Check if next position is inside solid
+                    if (this.isSolid(nextPos)) {
+                        terminationReason = 'solid';
+                        terminated = true;
+                        break;
+                    }
+
+                    // Check domain boundaries
                     if (nextPos.x < this.aabb.min[0] || nextPos.x > this.aabb.max[0] ||
                         nextPos.y < this.aabb.min[1] || nextPos.y > this.aabb.max[1] ||
-                        nextPos.z < this.aabb.min[2] || nextPos.z > this.aabb.max[2]) break;
+                        nextPos.z < this.aabb.min[2] || nextPos.z > this.aabb.max[2]) {
+                        terminationReason = 'boundary';
+                        terminated = true;
+                        break;
+                    }
 
                     // Segment: current -> next
                     linePositions.push(currentPos.x, currentPos.y, currentPos.z);
@@ -238,24 +365,76 @@
                     const dist = currentPos.distanceTo(nextPos);
                     streamLength += dist;
                     streamSteps++;
+                    
+                    // Log first 5 steps of first streamline
+                    if (i === 0 && s < 5) {
+                        firstStreamlineSteps.push({
+                            step: s,
+                            pos: [currentPos.x.toFixed(4), currentPos.y.toFixed(4), currentPos.z.toFixed(4)],
+                            vel: [v_at_pos.x.toFixed(6), v_at_pos.y.toFixed(6), v_at_pos.z.toFixed(6)],
+                            speed: speed.toFixed(6)
+                        });
+                    }
+                    
                     currentPos.copy(nextPos);
                 }
+                
+                if (terminationReason === 'solid') solidTerminations++;
+                else if (terminationReason === 'low_speed') speedTerminations++;
+                else if (terminationReason === 'boundary') boundaryTerminations++;
+                else maxStepTerminations++;
+                
                 totalTraveled += streamLength;
                 totalSegments += streamSteps;
             }
 
-            console.log(`[Phase D] Streamlines: Generated ${seeds.length} paths, Avg Length: ${(totalTraveled/seeds.length).toFixed(3)}m, Total Segments: ${totalSegments}`);
+            // Diagnostics
+            const vertexCount = linePositions.length / 3;
+            console.log(`[PostD] Streamlines: seeds=${seeds.length} stepSize=${stepSize.toFixed(4)} maxSteps=${maxSteps}`);
+            console.log(`[PostD] Streamlines: totalSegments=${totalSegments} vertexCount=${vertexCount} avgLength=${(seeds.length > 0 ? totalTraveled/seeds.length : 0).toFixed(3)}m`);
+            console.log(`[PostD] Terminations: solid=${solidTerminations} speed=${speedTerminations} boundary=${boundaryTerminations} maxSteps=${maxStepTerminations}`);
+            if (firstStreamlineSteps.length > 0) {
+                console.log(`[PostD] First streamline steps:`, firstStreamlineSteps);
+            }
+            if (solidTerminations > 0) {
+                console.log(`[PostD] WARNING: ${solidTerminations} streamlines terminated by solid voxel contact`);
+            }
+
+            if (vertexCount === 0) {
+                console.warn('[PostD] Streamlines produced ZERO geometry. Check field data and seed positions.');
+            }
 
             const geometry = new THREE.BufferGeometry();
             geometry.setAttribute('position', new THREE.Float32BufferAttribute(linePositions, 3));
             geometry.setAttribute('color', new THREE.Float32BufferAttribute(lineColors, 3));
-            const lines = new THREE.LineSegments(geometry, new THREE.LineBasicMaterial({ vertexColors: true, transparent: true, opacity: 0.6 }));
+            const lines = new THREE.LineSegments(geometry, new THREE.LineBasicMaterial({ 
+                vertexColors: true, 
+                transparent: true, 
+                opacity: 0.7,
+                depthWrite: false,
+                depthTest: true
+            }));
             lines.renderOrder = 2;
+            lines.name = 'cfd-streamlines';
+            
+            // Attach diagnostics to the object for verification
+            lines.userData.diagnostics = {
+                seeds: seeds.length,
+                totalSegments,
+                vertexCount,
+                avgLength: seeds.length > 0 ? totalTraveled / seeds.length : 0,
+                solidTerminations,
+                speedTerminations,
+                boundaryTerminations,
+                maxStepTerminations
+            };
+
             return lines;
         }
 
         /**
-         * Surface Mapping
+         * Surface Mapping — vertex colors from field data.
+         * Does NOT mutate solver state. Only sets vertex colors on the mesh geometry.
          */
         mapSurface(mesh, fieldType, colormapName, range) {
             const cm = this.getColormap(colormapName);
@@ -266,9 +445,13 @@
             const worldPos = new THREE.Vector3();
             const matrixWorld = mesh.matrixWorld;
 
+            let fieldMin = Infinity, fieldMax = -Infinity;
+
             for (let i = 0; i < positions.length; i += 3) {
                 worldPos.set(positions[i], positions[i+1], positions[i+2]).applyMatrix4(matrixWorld);
                 const val = this.sampleField(worldPos, fieldType);
+                if (val < fieldMin) fieldMin = val;
+                if (val > fieldMax) fieldMax = val;
                 const t = THREE.MathUtils.clamp((val - range.min) / (range.max - range.min), 0, 1);
                 const color = cm(t);
                 colors[i] = color.r;
@@ -281,6 +464,8 @@
                 mesh.material.vertexColors = true;
                 mesh.material.needsUpdate = true;
             }
+            
+            console.log(`[PostD] Surface map: field=${fieldType} range=[${fieldMin.toFixed(6)}, ${fieldMax.toFixed(6)}]`);
         }
     }
 

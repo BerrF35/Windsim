@@ -842,3 +842,141 @@ select.cfd-select option { background: var(--cfd-surf); }
   display: none; /* Hide instead of just disabling to keep UI clean */
 }
 
+/* ── Home Button ── */
+.cfd-home-btn {
+  padding: 0 8px !important;
+  min-width: 32px;
+  border: 1px solid var(--cfd-bdr) !important;
+  margin-right: 4px;
+}
+
+.cfd-home-btn:hover {
+  background: rgba(90, 209, 255, .12) !important;
+  border-color: var(--cfd-bdr2) !important;
+  color: var(--cfd-cyan) !important;
+}
+
+/* ── Session Restore Modal ── */
+.cfd-modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  background: rgba(4, 6, 10, 0.85);
+  backdrop-filter: blur(12px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: modalFadeIn 0.3s ease;
+}
+
+@keyframes modalFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.cfd-modal {
+  background: var(--cfd-surf);
+  border: 1px solid var(--cfd-bdr2);
+  border-radius: var(--cfd-radius);
+  padding: 28px 32px;
+  min-width: 380px;
+  max-width: 440px;
+  box-shadow: 0 24px 64px rgba(0,0,0,0.5), 0 0 0 1px rgba(90, 209, 255, 0.06);
+  animation: modalSlideIn 0.35s var(--cfd-ease);
+}
+
+@keyframes modalSlideIn {
+  from { transform: translateY(20px) scale(0.97); opacity: 0; }
+  to { transform: translateY(0) scale(1); opacity: 1; }
+}
+
+.cfd-modal-title {
+  font-family: var(--cfd-mono);
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: var(--cfd-cyan);
+  margin-bottom: 18px;
+  text-transform: uppercase;
+}
+
+.cfd-modal-body {
+  margin-bottom: 24px;
+}
+
+.cfd-modal-info {
+  background: var(--cfd-surf2);
+  border: 1px solid var(--cfd-bdr);
+  border-radius: var(--cfd-radius-sm);
+  padding: 12px 14px;
+  margin-bottom: 14px;
+}
+
+.cfd-modal-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 4px 0;
+}
+
+.cfd-modal-label {
+  font-family: var(--cfd-mono);
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--cfd-txt3);
+}
+
+.cfd-modal-val {
+  font-family: var(--cfd-mono);
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--cfd-txt);
+}
+
+.cfd-modal-note {
+  font-family: var(--cfd-mono);
+  font-size: 9px;
+  line-height: 1.6;
+  color: var(--cfd-txt3);
+  padding: 8px 10px;
+  border-left: 2px solid var(--cfd-cyan);
+  background: rgba(90, 209, 255, 0.04);
+  border-radius: 0 4px 4px 0;
+}
+
+.cfd-modal-actions {
+  display: flex;
+  gap: 10px;
+}
+
+.cfd-modal-btn-primary {
+  flex: 1;
+  background: linear-gradient(180deg, rgba(90, 209, 255, .18), rgba(90, 209, 255, .08)) !important;
+  border-color: var(--cfd-bdr3) !important;
+  color: var(--cfd-cyan) !important;
+  text-align: center;
+  justify-content: center;
+  padding: 10px 14px !important;
+}
+
+.cfd-modal-btn-primary:hover {
+  background: linear-gradient(180deg, rgba(90, 209, 255, .28), rgba(90, 209, 255, .14)) !important;
+}
+
+.cfd-modal-btn-secondary {
+  flex: 1;
+  background: rgba(255,255,255,0.03) !important;
+  border-color: rgba(255,255,255,0.1) !important;
+  color: var(--cfd-txt3) !important;
+  text-align: center;
+  justify-content: center;
+  padding: 10px 14px !important;
+}
+
+.cfd-modal-btn-secondary:hover {
+  background: rgba(255,255,255,0.06) !important;
+  color: var(--cfd-txt2) !important;
+}
+

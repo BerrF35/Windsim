@@ -290,6 +290,10 @@
             return { mass: rhoArr, momentum: velArr, pressure: presArr };
         }
 
+        getMask() {
+            return this.mask;
+        }
+
         pause() {}
         resume() {}
         reset() {

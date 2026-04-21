@@ -123,7 +123,10 @@
 
   <!-- ═══ Toolbar ═══ -->
   <div class="cfd-toolbar">
-    <a href="index.html" class="cfd-brand">
+    <button id="btn-home" class="cfd-tb-btn cfd-home-btn" title="Return to landing page">
+      <span class="ico"><i data-lucide="arrow-left" width="16" height="16"></i></span>
+    </button>
+    <a href="index.html" class="cfd-brand" onclick="return false;">
       <span class="cfd-brand-logo">WINDSIM</span>
       <span class="cfd-brand-tag">CFD Lab</span>
     </a>
@@ -137,7 +140,7 @@
       <button id="btn-pause" class="cfd-tb-btn" title="Pause/Resume solver">
         <span class="ico"><i data-lucide="pause" width="16" height="16"></i></span> Pause
       </button>
-      <button id="btn-reset" class="cfd-tb-btn" title="Reset solver state">
+      <button id="btn-reset" class="cfd-tb-btn is-stop" title="Full reset — clears all data">
         <span class="ico"><i data-lucide="rotate-ccw" width="16" height="16"></i></span> Reset
       </button>
     </div>
@@ -597,7 +600,25 @@
   <script src="js/cfd-observability.js"></script>
   <script src="js/cfd-post.js"></script>
   <script src="js/cfd-engine.js"></script>
-  
+
+  <!-- ═══ Session Restore Modal ═══ -->
+  <div id="session-modal" class="cfd-modal-overlay" style="display:none;">
+    <div class="cfd-modal">
+      <div class="cfd-modal-title">Previous Session Found</div>
+      <div class="cfd-modal-body">
+        <div class="cfd-modal-info">
+          <div class="cfd-modal-row"><span class="cfd-modal-label">Mesh</span><span class="cfd-modal-val" id="modal-mesh">—</span></div>
+          <div class="cfd-modal-row"><span class="cfd-modal-label">Iterations</span><span class="cfd-modal-val" id="modal-iter">—</span></div>
+          <div class="cfd-modal-row"><span class="cfd-modal-label">Run ID</span><span class="cfd-modal-val" id="modal-runid">—</span></div>
+        </div>
+        <div class="cfd-modal-note">The simulation will NOT auto-start. You can resume manually after restoring.</div>
+      </div>
+      <div class="cfd-modal-actions">
+        <button id="btn-session-resume" class="cfd-step-btn cfd-modal-btn-primary">Resume Previous Session</button>
+        <button id="btn-session-fresh" class="cfd-step-btn cfd-modal-btn-secondary">Start Fresh</button>
+      </div>
+    </div>
+  </div>
 
 </body>
 </html>

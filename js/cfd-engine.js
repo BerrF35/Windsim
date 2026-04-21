@@ -1,6 +1,10 @@
 /**
  * WindSim CFD Laboratory — Engine
  * WebGPU initialization, Three.js scene setup, and Phase B Geometry pipeline.
+ * 
+ * Session management: Metadata-only restore on load, explicit modal for resume.
+ * Visualization: Solid-mask-aware, deterministic streamlines, proper layer isolation.
+ * Navigation: Home button with confirmation, beforeunload guard, full reset.
  */
 (function () {
   'use strict';
@@ -34,10 +38,11 @@
     },
     viz: {
       post: null, mode: 'solid', field: 'pressure', colormap: 'viridis',
-      sliceAxis: 'z', slicePos: 0, sliceMesh: null,
-      streamlineSeeds: 64, streamlineSteps: 1000, streamlineLines: null,
+      sliceAxis: 'x', slicePos: 0, sliceMesh: null,
+      streamlineSeeds: 64, streamlineSteps: 200, streamlineLines: null,
       range: { min: -0.005, max: 0.005 }, showGeo: true, 
-      needsUpdate: false
+      needsUpdate: false,
+      _lastSolverHash: null // For integrity checks
     },
     results: {
       cd: null, cl: null, cs: null, maxVel: null, massError: null
@@ -47,7 +52,8 @@
     solverKernel: null,
     obs: null, // ObservabilityManager instance
     runId: '',
-    diagnosticMode: false
+    diagnosticMode: false,
+    _pendingSession: null // Loaded session metadata (not yet restored)
   };
 
   /* ─── DOM Helpers ─── */
@@ -140,7 +146,7 @@
     }
 
     updateStatusBar();
-    applyVizMode();
+    // NOTE: applyVizMode is NOT called here to avoid re-triggering needsUpdate on every sync
   }
 
   function invalidateWorkflowFrom(stepKey, silent) {
@@ -172,10 +178,11 @@
     logValidation('Initializing LBM D3Q19 kernel...', 'info');
     
     state.solverKernel = new WindSimSolver.LBMSolver();
+    // FIX BUG 1: Pass inletDir and inletSpeed in config so the solver can access them
     state.solverKernel.init(
         [state.domain.x, state.domain.y, state.domain.z],
         [state.solver.gridX, state.solver.gridY, state.solver.gridZ],
-        { tau: state.solver.tau },
+        { tau: state.solver.tau, inletDir: state.solver.inletDir, inletSpeed: state.solver.inletSpeed },
         state.voxelMask
     );
 
@@ -189,9 +196,13 @@
     state.workflow.run = true;
     state.supportsKernel = true;
     state.solver.divergenceHalt = false;
+    // IMPORTANT: Do NOT set solver.running = true here. User must click Run.
+    state.solver.running = false;
+    state.solver.paused = false;
     
     syncCFDUI();
     logValidation(`Solver ready. Run ID: ${state.runId}`, 'success');
+    logValidation(`Solver config: tau=${state.solver.tau}, inletDir=${state.solver.inletDir}, inletSpeed=${state.solver.inletSpeed}`, 'info');
     saveSimulationState();
   }
 
@@ -211,15 +222,87 @@
     saveSimulationState();
   }
 
+  /**
+   * Full reset: stop solver, clear buffers, clear viz, clear session, return to initial state.
+   */
   function resetSimulation() {
-    if (!state.solverKernel) return;
+    // Stop solver
     state.solver.running = false;
     state.solver.paused = false;
     state.solver.iteration = 0;
-    state.logs = [];
-    initSolver(); // Re-init
-    logValidation('Simulation reset.', 'warning');
+    state.solver.divergenceHalt = false;
+    
+    // Clear solver kernel
+    if (state.solverKernel) {
+        state.solverKernel.reset();
+        state.solverKernel = null;
+    }
+    state.supportsKernel = false;
+    
+    // Clear visualization objects from scene
+    clearPostVisuals();
+    state.viz.post = null;
+    state.viz.needsUpdate = false;
+    state.viz.mode = 'solid';
+    
+    // Reset viz button state
+    document.querySelectorAll('.cfd-viz-btn').forEach(b => b.classList.remove('is-active'));
+    const solidBtn = document.querySelector('.cfd-viz-btn[data-mode="solid"]');
+    if (solidBtn) solidBtn.classList.add('is-active');
+    
+    // Reset mesh appearance
+    if (state.mesh.object && state.mesh.object.geometry.attributes.color) {
+        state.mesh.object.geometry.deleteAttribute('color');
+        state.mesh.object.material.vertexColors = false;
+        state.mesh.object.material.wireframe = false;
+        state.mesh.object.material.opacity = 1;
+        state.mesh.object.material.transparent = false;
+        state.mesh.object.material.needsUpdate = true;
+    }
+    if (state.mesh.object) state.mesh.object.visible = true;
+    if (state.mesh.wireframe) state.mesh.wireframe.visible = true;
+    
+    // Clear persisted session
+    if (state.obs) {
+        state.obs.clearSession();
+        logValidation('Session data cleared from IndexedDB.', 'warning');
+    }
+    
+    // Reset workflow (keep geometry since mesh is still there)
+    state.workflow = { geometry: false, domain: false, boundary: false, solver: false, run: false, inspect: false };
+    state.results = { cd: null, cl: null, cs: null, maxVel: null, massError: null };
+    
+    // Clear validation log
+    const log = $('validation-log');
+    if (log) log.innerHTML = '';
+    
+    updateGPUStatus('ready', 'Reset Complete');
+    logValidation('Full reset completed. All solver state, visualization, and session data cleared.', 'warning');
     syncCFDUI();
+    applyVizMode();
+    
+    console.log('[CFD-DIAG] Reset check: running=' + state.solver.running + ' iteration=' + state.solver.iteration + ' solverKernel=' + (state.solverKernel ? 'exists' : 'null'));
+  }
+
+  /**
+   * Remove all post-processing visual objects from the scene.
+   */
+  function clearPostVisuals() {
+    const before = state.scene ? state.scene.children.length : 0;
+    if (state.viz.sliceMesh) {
+        state.scene.remove(state.viz.sliceMesh);
+        if (state.viz.sliceMesh.geometry) state.viz.sliceMesh.geometry.dispose();
+        if (state.viz.sliceMesh.material) state.viz.sliceMesh.material.dispose();
+        state.viz.sliceMesh = null;
+    }
+    if (state.viz.streamlineLines) {
+        state.scene.remove(state.viz.streamlineLines);
+        if (state.viz.streamlineLines.geometry) state.viz.streamlineLines.geometry.dispose();
+        if (state.viz.streamlineLines.material) state.viz.streamlineLines.material.dispose();
+        state.viz.streamlineLines = null;
+    }
+    const after = state.scene ? state.scene.children.length : 0;
+    console.log(`[CFD-DIAG] clearPostVisuals: scene children before=${before} after=${after}`);
   }
 
   function handleDivergence(diag) {
@@ -241,6 +324,9 @@
     }
   }
 
+  /**
+   * Load session: Metadata only. Show modal for user choice. NO auto-run.
+   */
   async function loadSimulationState() {
     state.obs = new WindSimObservability.ObservabilityManager();
     let snapshot = null;
@@ -251,17 +337,43 @@
     }
     
     if (!snapshot || !snapshot.engine) {
-        logValidation('No saved session found.', 'info');
+        logValidation('No saved session found. Starting fresh.', 'info');
+        console.log('[CFD-DIAG] Load check: No session. running=' + state.solver.running);
         return;
     }
+    
+    // Store the snapshot but do NOT apply it yet. Show modal.
+    state._pendingSession = snapshot;
+    const iter = snapshot.engine.solver ? snapshot.engine.solver.iteration : 0;
+    const meshName = snapshot.engine.mesh ? snapshot.engine.mesh.active : 'unknown';
+    
+    logValidation(`Found saved session: ${meshName}, ${iter} iterations, Run ID: ${snapshot.runId}`, 'info');
+    showSessionModal(iter, meshName, snapshot.runId);
+    
+    // CRITICAL: Ensure solver is NOT running during load
+    state.solver.running = false;
+    state.solver.paused = false;
+    console.log('[CFD-DIAG] Load check: Session found but NOT applied. running=' + state.solver.running);
+  }
+
+  /**
+   * Actually restore the pending session (called only after user confirms).
+   */
+  function applyPendingSession() {
+    const snapshot = state._pendingSession;
+    if (!snapshot || !snapshot.engine) return;
     
     try {
         const engine = snapshot.engine;
         const savedSolver = engine.solver;
         if (!savedSolver) return;
 
-        // Restore basic state with fallbacks
+        // Restore basic state with fallbacks — but NEVER restore running=true
+        const savedRunning = savedSolver.running;
         Object.assign(state.solver, savedSolver);
+        state.solver.running = false; // NEVER auto-run
+        state.solver.paused = savedRunning; // If was running, mark as paused
+        
         Object.assign(state.workflow, engine.workflow || {});
         state.domain = engine.domain || state.domain;
         state.voxelHash = engine.voxelHash || '';
@@ -286,11 +398,72 @@
             state.solver.iteration = savedSolver.iteration || 0;
         }
         
-        logValidation(`Recovered session (Iter: ${state.solver.iteration}). Run ID: ${state.runId}`, 'success');
+        // Restore voxel mask from solver if available
+        if (state.solverKernel && state.solverKernel.getMask()) {
+            state.voxelMask = state.solverKernel.getMask();
+        }
+        
+        // Update domain visuals
+        buildDomainBox();
+        updateSliderRanges();
+        
+        logValidation(`Session restored (Iter: ${state.solver.iteration}). Run ID: ${state.runId}. State: PAUSED.`, 'success');
+        updateGPUStatus('ready', 'Session Restored — Paused');
         syncCFDUI();
+        applyVizMode();
     } catch (e) {
         console.error('Failed to load state', e);
         logValidation('Session recovery partially failed. (Schema mismatch)', 'error');
+    }
+    
+    state._pendingSession = null;
+    console.log('[CFD-DIAG] Session applied. running=' + state.solver.running + ' iteration=' + state.solver.iteration);
+  }
+
+  /**
+   * Show the session restore modal.
+   */
+  function showSessionModal(iteration, meshName, runId) {
+    const modal = $('session-modal');
+    if (!modal) return;
+    setText('modal-iter', iteration);
+    setText('modal-mesh', meshName);
+    setText('modal-runid', runId);
+    modal.style.display = 'flex';
+  }
+
+  function hideSessionModal() {
+    const modal = $('session-modal');
+    if (modal) modal.style.display = 'none';
+  }
+
+  /* ─── Navigation Guards ─── */
+  function installNavigationGuards() {
+    // Beforeunload: warn if simulation has data
+    window.addEventListener('beforeunload', function(e) {
+        if (state.solver.iteration > 0 || state.solver.running) {
+            e.preventDefault();
+            e.returnValue = 'You have an active CFD simulation. Data may be lost if you leave.';
+            return e.returnValue;
+        }
+    });
+  }
+
+  function navigateHome() {
+    if (state.solver.running) {
+        state.solver.running = false;
+        state.solver.paused = true;
+        updateGPUStatus('ready', 'Solver Paused');
+    }
+    if (state.solver.iteration > 0) {
+        if (!confirm('You have simulation data. Save session before leaving?\n\nClick OK to save and leave, Cancel to stay.')) {
+            return;
+        }
+        saveSimulationState().then(() => {
+            window.location.href = 'index.html';
+        });
+    } else {
+        window.location.href = 'index.html';
     }
   }
 
@@ -439,6 +612,27 @@
     state.domainVisuals.group = group;
   }
 
+  /**
+   * Update slice position slider ranges to match current domain.
+   */
+  function updateSliderRanges() {
+    const slider = $('s-slice-pos');
+    if (!slider) return;
+    const axis = state.viz.sliceAxis;
+    let halfSpan;
+    if (axis === 'x') halfSpan = state.domain.x / 2;
+    else if (axis === 'y') halfSpan = state.domain.y / 2;
+    else halfSpan = state.domain.z / 2;
+    
+    slider.min = (-halfSpan).toFixed(2);
+    slider.max = halfSpan.toFixed(2);
+    slider.step = '0.01';
+    // Clamp current value
+    state.viz.slicePos = clamp(state.viz.slicePos, -halfSpan, halfSpan);
+    slider.value = state.viz.slicePos;
+    setText('v-slice-pos', state.viz.slicePos.toFixed(2) + ' m');
+  }
+
   /* ─── UI Binding ─── */
   function bindUI() {
     document.querySelectorAll('.cfd-mesh-item').forEach(el => el.addEventListener('click', () => setMesh(el.dataset.mesh)));
@@ -447,7 +641,25 @@
       if (btn.classList.contains('is-disabled')) return;
       document.querySelectorAll('.cfd-viz-btn').forEach(b => b.classList.remove('is-active'));
       btn.classList.add('is-active');
+      
+      const prevMode = state.viz.mode;
       state.viz.mode = btn.dataset.mode;
+      
+      console.log(`[CFD-DIAG] Viz mode changed: ${prevMode} -> ${state.viz.mode}`);
+      
+      // Solver integrity check: verify solver buffers are unchanged by viz mode toggle
+      if (state.solverKernel) {
+          state.solverKernel.getBufferHash().then(hash => {
+              if (state.viz._lastSolverHash && state.viz._lastSolverHash !== hash) {
+                  console.error('[CFD-DIAG] INTEGRITY VIOLATION: Solver buffer hash changed during viz mode toggle!');
+                  logValidation('INTEGRITY VIOLATION: Solver state changed by visualization!', 'error');
+              } else {
+                  console.log('[CFD-DIAG] Solver integrity OK. Hash: ' + hash.substring(0, 16) + '...');
+              }
+              state.viz._lastSolverHash = hash;
+          });
+      }
+      
       applyVizMode();
     }));
 
@@ -466,7 +678,28 @@
 
     if ($('btn-run')) $('btn-run').addEventListener('click', toggleSimulation);
     if ($('btn-pause')) $('btn-pause').addEventListener('click', toggleSimulation);
-    if ($('btn-reset')) $('btn-reset').addEventListener('click', resetSimulation);
+    if ($('btn-reset')) $('btn-reset').addEventListener('click', () => {
+        if (state.solver.iteration > 0 && !confirm('This will clear all simulation data and reset the lab. Continue?')) return;
+        resetSimulation();
+    });
+    
+    // Home button
+    if ($('btn-home')) $('btn-home').addEventListener('click', (e) => {
+        e.preventDefault();
+        navigateHome();
+    });
+    
+    // Session modal buttons
+    if ($('btn-session-resume')) $('btn-session-resume').addEventListener('click', () => {
+        hideSessionModal();
+        applyPendingSession();
+    });
+    if ($('btn-session-fresh')) $('btn-session-fresh').addEventListener('click', () => {
+        hideSessionModal();
+        state._pendingSession = null;
+        if (state.obs) state.obs.clearSession();
+        logValidation('Starting fresh. Previous session discarded.', 'info');
+    });
 
     // Phase D Bindings
     $('s-field').addEventListener('change', e => { state.viz.field = e.target.value; state.viz.needsUpdate = true; });
@@ -480,6 +713,7 @@
         document.querySelectorAll('[data-axis]').forEach(b => b.classList.remove('is-active'));
         btn.classList.add('is-active');
         state.viz.sliceAxis = btn.dataset.axis;
+        updateSliderRanges();
         state.viz.needsUpdate = true;
     }));
     $('s-seed-count').addEventListener('input', e => { 
@@ -500,9 +734,9 @@
         var s = $(id); if (!s) return;
         s.addEventListener('input', () => { setText(sid, fn(s.value)); syncCFDUI(); }); 
     }
-    bind('s-domain-x', 'v-domain-x', v => { state.domain.x = parseFloat(v); buildDomainBox(); invalidateWorkflowFrom('domain'); return v + ' m'; });
-    bind('s-domain-y', 'v-domain-y', v => { state.domain.y = parseFloat(v); buildDomainBox(); invalidateWorkflowFrom('domain'); return v + ' m'; });
-    bind('s-domain-z', 'v-domain-z', v => { state.domain.z = parseFloat(v); buildDomainBox(); invalidateWorkflowFrom('domain'); return v + ' m'; });
+    bind('s-domain-x', 'v-domain-x', v => { state.domain.x = parseFloat(v); buildDomainBox(); updateSliderRanges(); invalidateWorkflowFrom('domain'); return v + ' m'; });
+    bind('s-domain-y', 'v-domain-y', v => { state.domain.y = parseFloat(v); buildDomainBox(); updateSliderRanges(); invalidateWorkflowFrom('domain'); return v + ' m'; });
+    bind('s-domain-z', 'v-domain-z', v => { state.domain.z = parseFloat(v); buildDomainBox(); updateSliderRanges(); invalidateWorkflowFrom('domain'); return v + ' m'; });
     
     var gridSel = $('s-grid');
     if (gridSel) gridSel.addEventListener('change', () => {
@@ -510,6 +744,14 @@
         invalidateWorkflowFrom('solver');
     });
 
+    // Tau slider binding
+    bind('s-tau', 'v-tau', v => { state.solver.tau = parseFloat(v); return parseFloat(v).toFixed(3); });
+    // Steps per frame binding
+    bind('s-steps', 'v-steps', v => { state.solver.stepsPerFrame = parseInt(v); return v; });
+    // Inlet velocity binding
+    bind('s-inlet', 'v-inlet', v => { state.solver.inletSpeed = parseFloat(v); return parseFloat(v).toFixed(3) + ' lu/ts'; });
+
+    updateSliderRanges();
     syncCFDUI();
   }
 
@@ -530,15 +772,29 @@
         if (mode !== 'surface' && state.mesh.object.geometry.attributes.color) {
             state.mesh.object.geometry.deleteAttribute('color');
             state.mesh.object.material.vertexColors = false;
+            state.mesh.object.material.needsUpdate = true;
         }
     }
+    
+    // In surface mode, keep the object visible and lit
+    if (mode === 'surface' && state.mesh.object) {
+        state.mesh.object.visible = true;
+    }
 
-    // Toggle panel visibility
+    // Toggle control panel visibility
     $('ctl-slice-group').style.display = (mode === 'slice') ? 'block' : 'none';
     $('ctl-streamline-group').style.display = (mode === 'streamlines') ? 'block' : 'none';
     
-    // Persistence: Keep post meshes alive for combined viewing
-    state.viz.needsUpdate = true;
+    // Layer visibility: each mode shows ONLY its own layers
+    if (state.viz.sliceMesh) state.viz.sliceMesh.visible = (mode === 'slice');
+    if (state.viz.streamlineLines) state.viz.streamlineLines.visible = (mode === 'streamlines');
+    
+    // Only mark needsUpdate for post modes
+    if (mode === 'slice' || mode === 'streamlines' || mode === 'surface') {
+        state.viz.needsUpdate = true;
+    }
+    
+    console.log(`[CFD-DIAG] applyVizMode: mode=${mode} showGeo=${state.viz.showGeo} meshVisible=${state.mesh.object ? state.mesh.object.visible : 'N/A'}`);
   }
 
   function updatePostVisuals() {
@@ -547,10 +803,12 @@
     
     if (!state.viz.post) {
       const gridAABB = { min: [-state.domain.x/2, -state.domain.y/2, -state.domain.z/2], max: [state.domain.x/2, state.domain.y/2, state.domain.z/2] };
+      // Pass voxel mask to PostProcessor for solid-aware sampling
       state.viz.post = new WindSimPost.PostProcessor(
         [state.solver.gridX, state.solver.gridY, state.solver.gridZ],
         gridAABB,
-        state.solverKernel.getFieldBuffers()
+        state.solverKernel.getFieldBuffers(),
+        state.voxelMask
       );
     } else {
       // Sync fresh field buffers from the solver kernel
@@ -559,41 +817,81 @@
 
     const mode = state.viz.mode;
     const post = state.viz.post;
+    const sceneBefore = state.scene.children.length;
 
     if (mode === 'slice') {
-        if (state.viz.sliceMesh) state.scene.remove(state.viz.sliceMesh);
+        if (state.viz.sliceMesh) {
+            state.scene.remove(state.viz.sliceMesh);
+            state.viz.sliceMesh.geometry.dispose();
+            state.viz.sliceMesh.material.dispose();
+        }
+        console.log(`[CFD-DIAG] Creating slice: axis=${state.viz.sliceAxis} pos=${state.viz.slicePos} field=${state.viz.field}`);
         state.viz.sliceMesh = post.createSlice(state.viz.sliceAxis, state.viz.slicePos, state.viz.field, state.viz.colormap, state.viz.range);
         state.scene.add(state.viz.sliceMesh);
     } 
     
     if (mode === 'streamlines') {
-        if (state.viz.streamlineLines) state.scene.remove(state.viz.streamlineLines);
-        const seeds = [];
-        const dimA = state.domain.y, dimB = state.domain.z;
-        const scount = Math.sqrt(state.viz.streamlineSeeds);
-        for(let i=0; i<scount; i++) for(let j=0; j<scount; j++) {
-            // Shift seeds to x=-1.2 to ensure they start in a fully developed flow zone
-            seeds.push(new THREE.Vector3(-1.2, -dimA/2 + (i+0.5)*(dimA/scount), -dimB/2 + (j+0.5)*(dimB/scount)));
+        if (state.viz.streamlineLines) {
+            state.scene.remove(state.viz.streamlineLines);
+            state.viz.streamlineLines.geometry.dispose();
+            state.viz.streamlineLines.material.dispose();
         }
+        
+        // Deterministic seeding on the inlet plane
+        const seeds = [];
+        const inletDir = state.solver.inletDir;
+        const scount = Math.round(Math.sqrt(state.viz.streamlineSeeds));
+        
+        // Seed at the inlet face position based on inlet direction
+        let seedX, seedY, seedZ;
+        const dx = state.domain.x, dy = state.domain.y, dz = state.domain.z;
+        
+        for (let i = 0; i < scount; i++) {
+            for (let j = 0; j < scount; j++) {
+                if (inletDir === '+x') {
+                    // Inlet at x = -domain/2, seed slightly inside
+                    seedX = -dx/2 + dx * 0.02;
+                    seedY = -dy/2 + (i + 0.5) * (dy / scount);
+                    seedZ = -dz/2 + (j + 0.5) * (dz / scount);
+                } else if (inletDir === '-x') {
+                    seedX = dx/2 - dx * 0.02;
+                    seedY = -dy/2 + (i + 0.5) * (dy / scount);
+                    seedZ = -dz/2 + (j + 0.5) * (dz / scount);
+                } else if (inletDir === '+z') {
+                    seedX = -dx/2 + (i + 0.5) * (dx / scount);
+                    seedY = -dy/2 + (j + 0.5) * (dy / scount);
+                    seedZ = -dz/2 + dz * 0.02;
+                } else {
+                    seedX = -dx/2 + (i + 0.5) * (dx / scount);
+                    seedY = -dy/2 + (j + 0.5) * (dy / scount);
+                    seedZ = dz/2 - dz * 0.02;
+                }
+                seeds.push(new THREE.Vector3(seedX, seedY, seedZ));
+            }
+        }
+        
+        console.log(`[CFD-DIAG] Creating streamlines: seeds=${seeds.length} maxSteps=${state.viz.streamlineSteps} inlet=${inletDir}`);
         state.viz.streamlineLines = post.createStreamlines(seeds, {
-            maxSteps: 1000,
-            stepSize: 1.5,
+            maxSteps: state.viz.streamlineSteps,
             colormapName: state.viz.colormap,
-            range: { min: 0, max: 0.12 },
-            fieldType: 'velocity_mag'
+            range: state.viz.field === 'pressure' ? state.viz.range : { min: 0, max: state.solver.inletSpeed * 1.5 },
+            fieldType: state.viz.field === 'pressure' ? 'velocity_mag' : state.viz.field
         });
         state.scene.add(state.viz.streamlineLines);
     } 
     
-    // Surface Mapping
-    if (mode === 'surface' || mode === 'slice' || mode === 'streamlines') {
-        const range = state.viz.field === 'pressure' ? state.viz.range : { min: 0, max: 0.12 };
+    // Surface Mapping: ONLY in surface mode
+    if (mode === 'surface' && state.mesh.object) {
+        const range = state.viz.field === 'pressure' ? state.viz.range : { min: 0, max: state.solver.inletSpeed * 1.5 };
         post.mapSurface(state.mesh.object, state.viz.field, state.viz.colormap, range);
     }
 
-    // Independent Visibility (Allowing persistence of layers)
-    if (state.viz.sliceMesh) state.viz.sliceMesh.visible = (mode === 'slice' || mode === 'surface' || mode === 'streamlines');
-    if (state.viz.streamlineLines) state.viz.streamlineLines.visible = (mode === 'streamlines' || mode === 'surface' || mode === 'slice');
+    // Layer visibility: each mode controls only its own layers
+    if (state.viz.sliceMesh) state.viz.sliceMesh.visible = (mode === 'slice');
+    if (state.viz.streamlineLines) state.viz.streamlineLines.visible = (mode === 'streamlines');
+
+    const sceneAfter = state.scene.children.length;
+    console.log(`[CFD-DIAG] Post update: scene children before=${sceneBefore} after=${sceneAfter}`);
 
     updateLegend();
     state.viz.needsUpdate = false;
@@ -601,22 +899,33 @@
 
   function updateLegend() {
     const legend = $('vp-legend');
+    if (!legend) return;
     if (state.viz.mode === 'solid' || state.viz.mode === 'wireframe' || state.viz.mode === 'voxel') {
         legend.style.display = 'none';
         return;
     }
     legend.style.display = 'block';
-    setText('l-field-name', state.viz.field.toUpperCase());
-    setText('l-min', state.viz.range.min.toFixed(3));
-    setText('l-max', state.viz.range.max.toFixed(3));
+    
+    // Fixed: Use correct element selectors
+    const titleEl = legend.querySelector('.cfd-legend-title');
+    const rangeEls = legend.querySelectorAll('.cfd-legend-range span');
+    
+    if (titleEl) titleEl.textContent = state.viz.field === 'pressure' ? 'Pressure (ρ−ρ₀)/3' : 'Velocity |u| (lu/ts)';
+    if (rangeEls.length >= 3) {
+        rangeEls[0].textContent = state.viz.range.min.toFixed(4);
+        rangeEls[1].textContent = ((state.viz.range.min + state.viz.range.max) / 2).toFixed(4);
+        rangeEls[2].textContent = state.viz.range.max.toFixed(4);
+    }
     
     // Update gradient bar CSS
     const cmName = state.viz.colormap;
     const bar = legend.querySelector('.cfd-legend-bar');
-    if (cmName === 'viridis') bar.style.background = 'linear-gradient(90deg, #440154, #3b528b, #21918c, #5ec962, #fde725)';
-    else if (cmName === 'coolwarm') bar.style.background = 'linear-gradient(90deg, #3b4cc0, #8db0fe, #dddcdc, #f49477, #b40426)';
-    else if (cmName === 'jet') bar.style.background = 'linear-gradient(90deg, #00008f, #0000ff, #00ffff, #ffff00, #ff0000, #800000)';
-    else bar.style.background = 'linear-gradient(90deg, #000, #fff)';
+    if (bar) {
+        if (cmName === 'viridis') bar.style.background = 'linear-gradient(90deg, #440154, #3b528b, #21918c, #5ec962, #fde725)';
+        else if (cmName === 'coolwarm') bar.style.background = 'linear-gradient(90deg, #3b4cc0, #8db0fe, #dddcdc, #f49477, #b40426)';
+        else if (cmName === 'jet') bar.style.background = 'linear-gradient(90deg, #00008f, #0000ff, #00ffff, #ffff00, #ff0000, #800000)';
+        else bar.style.background = 'linear-gradient(90deg, #000, #fff)';
+    }
   }
 
   function updateVoxelPoints() {
@@ -776,8 +1085,10 @@
                   // Auto-unlock workflow on some iterations
                   if (diag.iteration === 200) syncCFDUI();
                   
-                  // Force viz update if field changed
-                  if (state.viz.mode !== 'solid') state.viz.needsUpdate = true;
+                  // Force viz update if field changed (but don't force on every frame)
+                  if (state.viz.mode !== 'solid' && state.viz.mode !== 'wireframe' && state.viz.mode !== 'voxel') {
+                      if (diag.iteration % 50 === 0) state.viz.needsUpdate = true;
+                  }
               }
               state.solver.iteration = diag.iteration;
           }
@@ -799,8 +1110,16 @@
   }
 
   async function boot() {
-    initScene(); installInput(); bindUI(); await initWebGPU();
-    loadSimulationState();
+    console.log('[CFD-DIAG] Boot: Starting CFD Lab initialization...');
+    initScene(); installInput(); bindUI(); installNavigationGuards();
+    await initWebGPU();
+    
+    // Load session metadata only — do NOT auto-run
+    await loadSimulationState();
+    
+    // Verify: solver must NOT be running at this point
+    console.log('[CFD-DIAG] Boot complete: running=' + state.solver.running + ' paused=' + state.solver.paused + ' iteration=' + state.solver.iteration);
+    
     requestAnimationFrame(loop);
     if (window.lucide) lucide.createIcons();
   }
