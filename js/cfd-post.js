@@ -279,11 +279,16 @@
             const linePositions = [];
             const lineColors = [];
             
-            // Step size: 0.5 * minimum voxel size for accuracy
+            // Integration step size for RK4.
+            // Velocity from sampleField() is in lattice units (u_lu ~ 0.08 at inlet).
+            // Each RK4 step displaces by approximately: u_lu * stepSize (world meters).
+            // We want streamlines to span the domain (~6m) in the available maxSteps.
+            // With u_lu=0.08 and stepSize=1.0: displacement ≈ 0.08m/step, 200 steps ≈ 16m.
+            // Boundary termination naturally clips to domain extent.
             const h = Math.min(...this.vSize);
-            const stepSize = h * 0.5;
+            const stepSize = 1.0;
             
-            // Speed threshold for termination (lattice units converted)
+            // Speed threshold for termination (in lattice units)
             const speedThreshold = 1e-4;
             
             let totalTraveled = 0;

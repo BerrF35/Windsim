@@ -283,7 +283,12 @@
                 }
                 rhoArr[i] = rho;
                 presArr[i] = (rho - 1.0) / 3.0; // Linearized pressure
-                if (rho > 0) {
+
+                // Solid cells: zero velocity and pressure (bounce-back artifacts)
+                if (this.mask && this.mask[i] > 0) {
+                    velArr[i*3] = 0; velArr[i*3+1] = 0; velArr[i*3+2] = 0;
+                    presArr[i] = 0;
+                } else if (rho > 0) {
                     velArr[i*3] = ux/rho; velArr[i*3+1] = uy/rho; velArr[i*3+2] = uz/rho;
                 }
             }
