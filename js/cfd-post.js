@@ -1,5 +1,6 @@
 /**
  * WindSim CFD — Post-Processing & Visualization (Phase D)
+ * Phase D / Post layer enforcing strict mapping, no fake fields, and solid mask bounds.
  * 
  * Logic for field sampling, streamlines (RK4), cut-planes, and surface mapping.
  * Derived directly from solver FieldBuffers for ground-truth accuracy.

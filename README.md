@@ -9,7 +9,8 @@ The launcher at `index.html` routes between them.
 
 ## Source Of Truth
 
-The current CFD roadmap lives in [docs/CFD_MASTER_BLUEPRINT.md](./docs/CFD_MASTER_BLUEPRINT.md).
+docs/CFD_MASTER_BLUEPRINT.md → CFD implementation phases
+docs/WINDSIM_ENGINEERING_PLAN.md → full system architecture and requirements
 
 That blueprint is the active plan for the CFD side of the repo. The core rule is simple: the UI must not imply solved physics that the code does not actually compute.
 

@@ -1,5 +1,6 @@
 /**
  * WindSim CFD — Solver Core (Phase C)
+ * Phase C / Solver layer enforcing exact numerical consistency, deterministic behavior, and observability.
  * 
  * LBM D3Q19 CPU Implementation.
  * Focuses on ground-truth accuracy, observability, and deterministic execution.

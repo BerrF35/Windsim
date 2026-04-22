@@ -1,5 +1,6 @@
 /**
  * WindSim CFD Laboratory — Engine
+ * Phase A / Engine layer enforcing strict UI gating, no auto-resume, and no hidden behavior.
  * WebGPU initialization, Three.js scene setup, and Phase B Geometry pipeline.
  * 
  * Session management: Metadata-only restore on load, explicit modal for resume.
@@ -454,17 +455,14 @@
         state.solver.running = false;
         state.solver.paused = true;
         updateGPUStatus('ready', 'Solver Paused');
-    }
-    if (state.solver.iteration > 0) {
-        if (!confirm('You have simulation data. Save session before leaving?\n\nClick OK to save and leave, Cancel to stay.')) {
+        if (!confirm('The solver is running. Stop solver and return to Home?')) {
+            state.solver.running = true;
+            state.solver.paused = false;
+            updateGPUStatus('running', 'Solver Active');
             return;
         }
-        saveSimulationState().then(() => {
-            window.location.href = 'index.html';
-        });
-    } else {
-        window.location.href = 'index.html';
     }
+    window.location.href = 'index.html';
   }
 
   /* ─── Three.js Scene ─── */
@@ -760,6 +758,12 @@
     var mode = state.viz.mode;
     var isVoxel = mode === 'voxel';
     
+    // Gating visualization modes to inspect stage
+    if (!state.workflow.inspect && (mode === 'slice' || mode === 'streamlines' || mode === 'surface')) {
+        logValidation('Visualization requires reaching the inspect stage.', 'warning');
+        return;
+    }
+    
     if (state.mesh.object) state.mesh.object.visible = state.viz.showGeo && !isVoxel;
     if (state.mesh.wireframe) state.mesh.wireframe.visible = state.viz.showGeo && !isVoxel && (mode === 'wireframe' || mode === 'solid');
     if (state.mesh.voxelPoints) state.mesh.voxelPoints.visible = isVoxel;
@@ -968,6 +972,14 @@
   function formatMaybe(val, d) { return (val === null || val === undefined) ? '—' : val.toFixed(d); }
 
   async function initWebGPU() {
+    let cpuCores = navigator.hardwareConcurrency || 4;
+    let devMem = navigator.deviceMemory || 4;
+    let storageEst = { quota: 0, usage: 0 };
+    if (navigator.storage && navigator.storage.estimate) {
+        storageEst = await navigator.storage.estimate();
+    }
+    console.log(`[CFD-DIAG] HW Profile: ${cpuCores} cores, ~${devMem}GB RAM, Storage: ${(storageEst.usage/1024/1024).toFixed(1)}MB used`);
+
     if (!navigator.gpu) { 
         state.executionTier = 'demo';
         updateGPUStatus('error', 'WebGPU missing'); 
@@ -984,7 +996,7 @@
         const invocations = limits.maxComputeInvocationsPerWorkgroup || 0;
         const bufferSize = limits.maxStorageBufferBindingSize || 0;
         
-        if (invocations >= 256 && bufferSize >= 256 * 1024 * 1024) {
+        if (invocations >= 256 && bufferSize >= 256 * 1024 * 1024 && cpuCores >= 8 && devMem >= 8) {
             state.executionTier = 'full';
         } else {
             state.executionTier = 'reduced';
@@ -1076,10 +1088,11 @@
                   state.obs.log({
                       iter: diag.iteration,
                       drift: diag.massDrift,
+                      residual: diag.maxResidual,
                       uMax: diag.maxVelocity,
                       timeMs: res.computeTimeMs,
-                      config: { tau: state.solver.tau, grid: state.solver.gridX },
-                      meta: { tier: state.executionTier }
+                      config: { tau: state.solver.tau, grid: state.solver.gridX, inletDir: state.solver.inletDir, inletSpeed: state.solver.inletSpeed },
+                      meta: { tier: state.executionTier, cores: navigator.hardwareConcurrency, mem: navigator.deviceMemory }
                   });
                   
                   // Auto-unlock workflow on some iterations
