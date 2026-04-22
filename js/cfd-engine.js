@@ -738,16 +738,29 @@
     
     var gridSel = $('s-grid');
     if (gridSel) gridSel.addEventListener('change', () => {
-        var p = gridSel.value.split('x'); state.solver.gridX = parseInt(p[0]); state.solver.gridY = parseInt(p[1]); state.solver.gridZ = parseInt(p[2]);
+        var p = gridSel.value.split('x');
+        var px = parseInt(p[0]);
+        if ((state.executionTier === 'reduced' || state.executionTier === 'demo') && px > 64) {
+            logValidation('Hardware tier physically limits grid to 64³ max.', 'warning');
+            gridSel.value = '64x64x64';
+            p = ['64', '64', '64'];
+        }
+        state.solver.gridX = parseInt(p[0]); state.solver.gridY = parseInt(p[1]); state.solver.gridZ = parseInt(p[2]);
         invalidateWorkflowFrom('solver');
     });
 
     // Tau slider binding
-    bind('s-tau', 'v-tau', v => { state.solver.tau = parseFloat(v); return parseFloat(v).toFixed(3); });
+    bind('s-tau', 'v-tau', v => { state.solver.tau = parseFloat(v); invalidateWorkflowFrom('solver'); return parseFloat(v).toFixed(3); });
     // Steps per frame binding
     bind('s-steps', 'v-steps', v => { state.solver.stepsPerFrame = parseInt(v); return v; });
     // Inlet velocity binding
-    bind('s-inlet', 'v-inlet', v => { state.solver.inletSpeed = parseFloat(v); return parseFloat(v).toFixed(3) + ' lu/ts'; });
+    bind('s-inlet', 'v-inlet', v => { state.solver.inletSpeed = parseFloat(v); invalidateWorkflowFrom('boundary'); return parseFloat(v).toFixed(3) + ' lu/ts'; });
+    
+    const inletDir = $('s-inlet-dir');
+    if (inletDir) inletDir.addEventListener('change', e => {
+        state.solver.inletDir = e.target.value;
+        invalidateWorkflowFrom('boundary');
+    });
 
     updateSliderRanges();
     syncCFDUI();
