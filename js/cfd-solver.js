@@ -36,6 +36,9 @@
                 maxVel: 0,
                 maxResidual: 0,
                 initialMass: 0,
+                forceX: 0,
+                forceY: 0,
+                forceZ: 0,
                 rho_prev: null 
             };
             this.isInitialized = false;
@@ -106,11 +109,17 @@
             const tau = this.config.tau;
             const omega = 1.0 / tau;
             
+            let fx = 0, fy = 0, fz = 0;
+            
             // 1. Collision + Streaming to f_tmp
             for (let x = 0; x < nx; x++) {
                 for (let y = 0; y < ny; y++) {
                     for (let z = 0; z < nz; z++) {
                         const idx = x + nx * (y + ny * z);
+                        
+                        // Solid nodes do not participate in fluid collision/streaming
+                        if (this.mask && this.mask[idx] > 0) continue;
+
                         const base = idx * Q;
                         
                         // Calculate macroscopic (at source)
@@ -128,11 +137,16 @@
                         }
 
                         // Apply Boundary Conditions with Gradual Ramp for Stability
+                        const ramp = Math.min(1.0, this.stats.iteration / 100.0);
+                        const iSpeed = this.config.inletSpeed * ramp;
                         if (this.config.inletDir === '+x' && x === 0) {
-                            const ramp = Math.min(1.0, this.stats.iteration / 100.0);
-                            ux = this.config.inletSpeed * ramp; 
-                            uy = 0; uz = 0;
-                            rho = 1.0; 
+                            ux = iSpeed; uy = 0; uz = 0; rho = 1.0; 
+                        } else if (this.config.inletDir === '-x' && x === nx - 1) {
+                            ux = -iSpeed; uy = 0; uz = 0; rho = 1.0;
+                        } else if (this.config.inletDir === '+z' && z === 0) {
+                            ux = 0; uy = 0; uz = iSpeed; rho = 1.0;
+                        } else if (this.config.inletDir === '-z' && z === nz - 1) {
+                            ux = 0; uy = 0; uz = -iSpeed; rho = 1.0;
                         }
 
                         // Physical Stability Clamping
@@ -173,6 +187,10 @@
                             if (this.mask && this.mask[targetIdx] > 0) {
                                 // Reflect back to source cell in opposite direction
                                 this.f_tmp[base + OPP[q]] = f_post;
+                                // Momentum Exchange Method (MEM) force accumulation
+                                fx += 2 * f_post * E[q][0];
+                                fy += 2 * f_post * E[q][1];
+                                fz += 2 * f_post * E[q][2];
                             } else {
                                 this.f_tmp[targetBase + q] = f_post;
                             }
@@ -180,6 +198,10 @@
                     }
                 }
             }
+
+            this.stats.forceX = fx;
+            this.stats.forceY = fy;
+            this.stats.forceZ = fz;
 
             // Swap buffers
             const t = this.f;
@@ -263,6 +285,9 @@
                 massDrift: massDrift,
                 maxVelocity: this.stats.maxVel,
                 maxResidual: this.stats.maxResidual,
+                forceX: this.stats.forceX,
+                forceY: this.stats.forceY,
+                forceZ: this.stats.forceZ,
                 isDiverged: isNaN(this.stats.mass) || !isFinite(this.stats.mass) || massDrift > 0.05
             };
         }

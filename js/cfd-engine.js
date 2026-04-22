@@ -974,8 +974,32 @@
     if (state.solverKernel) {
         const diag = state.solverKernel.getDiagnostics();
         setText('sb-iter', diag.iteration);
-        setText('r-cd', formatMaybe(state.results.cd, 4));
-        setText('r-cl', formatMaybe(state.results.cl, 4));
+        
+        let drag = 0, lift = 0, side = 0;
+        switch(state.solver.inletDir) {
+            case '+x': drag = diag.forceX; lift = diag.forceY; side = diag.forceZ; break;
+            case '-x': drag = -diag.forceX; lift = diag.forceY; side = -diag.forceZ; break;
+            case '+y': drag = diag.forceY; lift = diag.forceZ; side = diag.forceX; break;
+            case '-y': drag = -diag.forceY; lift = diag.forceZ; side = -diag.forceX; break;
+            case '+z': drag = diag.forceZ; lift = diag.forceY; side = -diag.forceX; break;
+            case '-z': drag = -diag.forceZ; lift = diag.forceY; side = diag.forceX; break;
+        }
+        
+        state.results = state.results || {};
+        state.results.drag = drag;
+        state.results.lift = lift;
+        state.results.side = side;
+        
+        if (diag.iteration < 100) {
+            setText('r-cd', 'Dev...');
+            setText('r-cl', 'Dev...');
+            if ($('r-cs')) setText('r-cs', 'Dev...');
+        } else {
+            setText('r-cd', formatMaybe(drag, 6));
+            setText('r-cl', formatMaybe(lift, 6));
+            if ($('r-cs')) setText('r-cs', formatMaybe(side, 6));
+        }
+        
         setText('r-maxvel', diag.maxVelocity.toFixed(4));
         setText('r-mass-err', (diag.massDrift * 100).toFixed(4) + '%');
         setText('r-conv-status', state.solver.running ? 'Running' : (state.solver.paused ? 'Paused' : 'Ready'));
@@ -1103,8 +1127,14 @@
                       drift: diag.massDrift,
                       residual: diag.maxResidual,
                       uMax: diag.maxVelocity,
+                      forces: {
+                          method: 'MEM',
+                          drag: state.results ? state.results.drag : 0,
+                          lift: state.results ? state.results.lift : 0,
+                          side: state.results ? state.results.side : 0
+                      },
                       timeMs: res.computeTimeMs,
-                      config: { tau: state.solver.tau, grid: state.solver.gridX, inletDir: state.solver.inletDir, inletSpeed: state.solver.inletSpeed },
+                      config: { tau: state.solver.tau, grid: state.solver.gridX, inletDir: state.solver.inletDir, inletSpeed: state.solver.inletSpeed, mesh: state.mesh.active },
                       meta: { tier: state.executionTier, cores: navigator.hardwareConcurrency, mem: navigator.deviceMemory }
                   });
                   
