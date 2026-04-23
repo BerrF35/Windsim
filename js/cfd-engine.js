@@ -49,6 +49,7 @@
       drag: null, lift: null, side: null,
       cd: null, cl: null, cs: null,
       refArea: 0, areaMethod: 'none', dynamicPressure: 0,
+      charLengthPhys: 0, charLengthLat: 0,
       maxVel: null, massError: null
     },
     lastTs: 0, frameCount: 0,
@@ -191,6 +192,8 @@
             inletDir: state.solver.inletDir, 
             inletSpeed: state.solver.inletSpeed,
             refArea: state.results.refArea,
+            charLengthPhys: state.results.charLengthPhys,
+            charLengthLat: state.results.charLengthLat,
             // Calibration anchors
             uLattice: state.solver.inletSpeed,
             uPhysical: 10.0, // Fixed default anchor: 10 m/s
@@ -608,16 +611,20 @@
 
     updateVoxelPoints();
     
-    // Compute projected area for coefficients
+    // Compute projected area and characteristic length for coefficients
     if (window.WindSimCoefficients) {
-        state.results.refArea = WindSimCoefficients.CoefficientCalculator.computeProjectedArea(
+        const meta = WindSimCoefficients.CoefficientCalculator.computeGeometryMetadata(
             state.voxelMask, 
             [state.solver.gridX, state.solver.gridY, state.solver.gridZ],
             [state.domain.x, state.domain.y, state.domain.z],
             state.solver.inletDir
         );
+        state.results.refArea = meta.area;
+        state.results.charLengthPhys = meta.charLengthPhys;
+        state.results.charLengthLat = meta.charLengthLat;
         state.results.areaMethod = 'Projected Frontal';
         logValidation(`Reference Area: ${state.results.refArea.toFixed(4)} m² (${state.results.areaMethod})`, 'info');
+        logValidation(`Char Length: ${state.results.charLengthPhys.toFixed(4)} m (${state.results.charLengthLat} lu)`, 'info');
     }
 
     logValidation(`Voxelized in ${elapsed.toFixed(0)}ms. Hash: ${state.voxelHash}`, 'success');
@@ -1048,7 +1055,7 @@
             setText('r-re-actual', c.calibration.Re_actual.toFixed(1));
             const statusEl = document.getElementById('r-cal-status');
             if (statusEl) {
-                statusEl.textContent = c.calibration.calibrationReason;
+                statusEl.textContent = c.calibration.isFullyCalibrated ? 'Matched' : 'Re Mismatch';
                 statusEl.style.color = c.calibration.isFullyCalibrated ? 'var(--cfd-cyan)' : '#f59e0b';
             }
         }

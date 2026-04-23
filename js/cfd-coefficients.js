@@ -11,26 +11,30 @@
     class WindSimCalibration {
         /**
          * Derives lattice-to-physical mapping scales and computes Reynolds consistency.
-         * Strategy 2: Fixed Physical Geometry + Fixed Physical Viscosity + Fixed Physical Speed
-         * @param {Object} config {domainSize(m), resolution(lu), uLattice, uPhysical, rhoPhysical, nuPhysical, tau}
+         * @param {Object} config {uLattice, tau, uPhysical, rhoPhysical, nuPhysical, charLengthPhys, charLengthLat}
          */
         static deriveScales(config) {
             const { 
-                domainSize, resolution, 
                 uLattice, tau,
-                uPhysical = 10.0, rhoPhysical = 1.225, nuPhysical = 1.5e-5
+                uPhysical = 10.0, rhoPhysical = 1.225, nuPhysical = 1.5e-5,
+                charLengthPhys, charLengthLat
             } = config;
             
-            // Physical characteristic length (e.g., domain width)
-            const L_pu = domainSize[0];
-            const L_lu = resolution[0];
+            if (!charLengthPhys || !charLengthLat) {
+                return {
+                    isFullyCalibrated: false,
+                    calibrationReason: 'Incomplete Metadata (Missing Char Length)',
+                    forceScale: 0, velocityScale: 0, densityScale: 0,
+                    Re_target: 0, Re_actual: 0
+                };
+            }
 
-            // 1. Target Physical Reynolds Number
-            const Re_target = (uPhysical * L_pu) / nuPhysical;
+            // 1. Target Physical Reynolds Number (Object-based)
+            const Re_target = (uPhysical * charLengthPhys) / nuPhysical;
 
-            // 2. Actual Lattice Reynolds Number
+            // 2. Actual Lattice Reynolds Number (Object-based)
             const nu_lattice = (tau - 0.5) / 3.0;
-            const Re_actual = (uLattice * L_lu) / nu_lattice;
+            const Re_actual = (uLattice * charLengthLat) / nu_lattice;
 
             // 3. Evaluate Match (tolerance 5%)
             let isFullyCalibrated = true;
@@ -42,10 +46,10 @@
                 calibrationReason = 'Partially Calibrated (Reynolds Mismatch)';
             }
 
-            // Length scale (meters per lattice unit)
-            const dx = L_pu / L_lu;
+            // Physical dx (meters per lattice unit)
+            const dx = charLengthPhys / charLengthLat;
             
-            // Velocity scale (meters/sec per lattice unit/ts)
+            // Velocity scale (m/s per lu/ts)
             const cu = uPhysical / uLattice;
             
             // Time scale (seconds per timestep)
@@ -55,10 +59,11 @@
             const crho = rhoPhysical / 1.0;
             
             // Force scale (Newtons per lattice force)
+            // F_p = F_l * crho * cu^2 * dx^2 (for 3D force scaling)
             const cf = crho * (cu * cu) * (dx * dx);
 
             return {
-                strategy: 'Fixed Physical (Geometry, Viscosity, Speed)',
+                strategy: 'Object-based Reynolds Matching',
                 isFullyCalibrated,
                 calibrationReason,
                 Re_target,
@@ -68,26 +73,27 @@
                 uLattice,
                 uPhysical,
                 rhoPhysical,
-                physicalGeometryScale: dx,
-                latticeSpacing: dx,
-                timestep: dt,
-                densityScale: crho,
+                dx,
+                dt,
+                forceScale: cf,
                 velocityScale: cu,
-                forceScale: cf
+                densityScale: crho,
+                charLengthPhys,
+                charLengthLat
             };
         }
     }
 
     class CoefficientCalculator {
         /**
-         * Computes the projected frontal area of the solid geometry.
+         * Computes geometric metadata (projected area and characteristic length).
          * @param {Uint8Array} mask Voxel mask
          * @param {number[]} resolution [nx, ny, nz]
          * @param {number[]} domainSize [sx, sy, sz]
          * @param {string} direction Inlet direction ('+x', '-x', '+z', '-z')
-         * @returns {number} Projected area in square meters
+         * @returns {Object} {area, charLengthPhys, charLengthLat}
          */
-        static computeProjectedArea(mask, resolution, domainSize, direction) {
+        static computeGeometryMetadata(mask, resolution, domainSize, direction) {
             const [nx, ny, nz] = resolution;
             const [sx, sy, sz] = domainSize;
             const dx = sx / nx;
@@ -95,6 +101,27 @@
             const dz = sz / nz;
 
             let count = 0;
+            let minI = nx, maxI = -1, minJ = ny, maxJ = -1, minK = nz, maxK = -1;
+            let found = false;
+
+            for (let i = 0; i < nx; i++) {
+                for (let j = 0; j < ny; j++) {
+                    for (let k = 0; k < nz; k++) {
+                        if (mask[i + nx * (j + ny * k)] > 0) {
+                            if (i < minI) minI = i; if (i > maxI) maxI = i;
+                            if (j < minJ) minJ = j; if (j > maxJ) maxJ = j;
+                            if (k < minK) minK = k; if (k > maxK) maxK = k;
+                            found = true;
+                        }
+                    }
+                }
+            }
+
+            if (!found) return { area: 0, charLengthPhys: 0, charLengthLat: 0 };
+
+            let area = 0;
+            let charLengthLat = 0;
+            let charLengthPhys = 0;
 
             if (direction === '+x' || direction === '-x') {
                 for (let j = 0; j < ny; j++) {
@@ -109,7 +136,10 @@
                         if (hit) count++;
                     }
                 }
-                return count * dy * dz;
+                area = count * dy * dz;
+                // For flow along X, characteristic length is typically X-dimension (chord)
+                charLengthLat = (maxI - minI + 1);
+                charLengthPhys = charLengthLat * dx;
             } else if (direction === '+z' || direction === '-z') {
                 for (let i = 0; i < nx; i++) {
                     for (let j = 0; j < ny; j++) {
@@ -123,10 +153,13 @@
                         if (hit) count++;
                     }
                 }
-                return count * dx * dy;
+                area = count * dx * dy;
+                // For flow along Z, characteristic length is typically Z-dimension
+                charLengthLat = (maxK - minK + 1);
+                charLengthPhys = charLengthLat * dz;
             }
 
-            return 0;
+            return { area, charLengthPhys, charLengthLat };
         }
 
         /**

@@ -50,12 +50,7 @@
         init(domainSize, resolution, config, voxelMask) {
             const [nx, ny, nz] = resolution;
             this.res = resolution;
-            this.config = {
-                tau: config.tau || 0.6,
-                inletSpeed: config.inletSpeed || 0.1,
-                inletDir: config.inletDir || '+x',
-                refArea: config.refArea || 0
-            };
+            this.config = { ...config }; // Store full config for calibration anchors
             this.mask = voxelMask;
 
             const size = nx * ny * nz * Q;
