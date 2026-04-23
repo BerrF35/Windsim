@@ -498,24 +498,53 @@
 
       <!-- Force Coefficients -->
       <div class="cfd-result-card">
-        <div class="cfd-result-title">Aerodynamic Forces (lu)</div>
+        <div class="cfd-result-title">Aerodynamic Performance</div>
         <div class="cfd-result-grid">
+          <!-- Raw Forces -->
           <div class="cfd-result-item">
-            <div class="cfd-result-label">Drag Fd</div>
-            <div class="cfd-result-value" id="r-cd">—</div>
+            <div class="cfd-result-label">Drag (lu)</div>
+            <div class="cfd-result-value" id="r-raw-drag" style="font-size: 11px; color: var(--cfd-txt3);">—</div>
           </div>
           <div class="cfd-result-item">
-            <div class="cfd-result-label">Lift Fl</div>
-            <div class="cfd-result-value" id="r-cl">—</div>
+            <div class="cfd-result-label">Lift (lu)</div>
+            <div class="cfd-result-value" id="r-raw-lift" style="font-size: 11px; color: var(--cfd-txt3);">—</div>
           </div>
           <div class="cfd-result-item">
-            <div class="cfd-result-label">Side Fs</div>
-            <div class="cfd-result-value" id="r-cs">—</div>
+            <div class="cfd-result-label">Side (lu)</div>
+            <div class="cfd-result-value" id="r-raw-side" style="font-size: 11px; color: var(--cfd-txt3);">—</div>
           </div>
-          <div class="cfd-result-item">
-            <div class="cfd-result-label">Max |u|</div>
-            <div class="cfd-result-value"><span id="r-maxvel">—</span><span class="cfd-result-unit">lu/ts</span></div>
+          <!-- Physical Forces -->
+          <div class="cfd-result-item" style="border-top: 1px solid var(--cfd-bg2); padding-top: 8px;">
+            <div class="cfd-result-label">Drag (N)</div>
+            <div class="cfd-result-value" id="r-force-drag">—</div>
           </div>
+          <div class="cfd-result-item" style="border-top: 1px solid var(--cfd-bg2); padding-top: 8px;">
+            <div class="cfd-result-label">Lift (N)</div>
+            <div class="cfd-result-value" id="r-force-lift">—</div>
+          </div>
+          <div class="cfd-result-item" style="border-top: 1px solid var(--cfd-bg2); padding-top: 8px;">
+            <div class="cfd-result-label">Side (N)</div>
+            <div class="cfd-result-value" id="r-force-side">—</div>
+          </div>
+          <!-- Coefficients -->
+          <div class="cfd-result-item" style="border-top: 1px solid var(--cfd-bg2); padding-top: 8px;">
+            <div class="cfd-result-label">Cd</div>
+            <div class="cfd-result-value" id="r-coeff-drag" style="color: var(--cfd-cyan);">—</div>
+          </div>
+          <div class="cfd-result-item" style="border-top: 1px solid var(--cfd-bg2); padding-top: 8px;">
+            <div class="cfd-result-label">Cl</div>
+            <div class="cfd-result-value" id="r-coeff-lift" style="color: var(--cfd-cyan);">—</div>
+          </div>
+          <div class="cfd-result-item" style="border-top: 1px solid var(--cfd-bg2); padding-top: 8px;">
+            <div class="cfd-result-label">Cs</div>
+            <div class="cfd-result-value" id="r-coeff-side" style="color: var(--cfd-cyan);">—</div>
+          </div>
+        </div>
+        <div style="margin-top: 10px; font-family: var(--cfd-mono); font-size: 9px; color: var(--cfd-txt3); border-top: 1px solid var(--cfd-bg2); padding-top: 6px;">
+          Ref Area: <span id="r-ref-area">—</span> m² (<span id="r-ref-method">—</span>)<br/>
+          Dyn Pres: <span id="r-dyn-pres">—</span> Pa<br/>
+          Force Scale ($C_F$): <span id="r-cf-scale">—</span> N/lu<br/>
+          Anchors: <span id="r-anchors">10 m/s, 1.225 kg/m³</span>
         </div>
       </div>
 
@@ -596,6 +625,7 @@
     lucide.createIcons();
   </script>
   <script src="js/cfd-geometry.js"></script>
+  <script src="js/cfd-coefficients.js"></script>
   <script src="js/cfd-solver.js"></script>
   <script src="js/cfd-observability.js"></script>
   <script src="js/cfd-post.js"></script>

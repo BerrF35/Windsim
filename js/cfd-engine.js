@@ -46,7 +46,10 @@
       _lastSolverHash: null // For integrity checks
     },
     results: {
-      cd: null, cl: null, cs: null, maxVel: null, massError: null
+      drag: null, lift: null, side: null,
+      cd: null, cl: null, cs: null,
+      refArea: 0, areaMethod: 'none', dynamicPressure: 0,
+      maxVel: null, massError: null
     },
     lastTs: 0, frameCount: 0,
     voxelMask: null, voxelHash: '',
@@ -183,7 +186,18 @@
     state.solverKernel.init(
         [state.domain.x, state.domain.y, state.domain.z],
         [state.solver.gridX, state.solver.gridY, state.solver.gridZ],
-        { tau: state.solver.tau, inletDir: state.solver.inletDir, inletSpeed: state.solver.inletSpeed },
+        { 
+            tau: state.solver.tau, 
+            inletDir: state.solver.inletDir, 
+            inletSpeed: state.solver.inletSpeed,
+            refArea: state.results.refArea,
+            // Calibration anchors
+            uLattice: state.solver.inletSpeed,
+            uPhysical: 10.0, // Fixed default anchor: 10 m/s
+            rhoPhysical: 1.225, // Fixed default anchor: air at sea level (kg/m^3)
+            domainSize: [state.domain.x, state.domain.y, state.domain.z],
+            resolution: [state.solver.gridX, state.solver.gridY, state.solver.gridZ]
+        },
         state.voxelMask
     );
 
@@ -592,6 +606,19 @@
     const elapsed = performance.now() - start;
 
     updateVoxelPoints();
+    
+    // Compute projected area for coefficients
+    if (window.WindSimCoefficients) {
+        state.results.refArea = WindSimCoefficients.CoefficientCalculator.computeProjectedArea(
+            state.voxelMask, 
+            [state.solver.gridX, state.solver.gridY, state.solver.gridZ],
+            [state.domain.x, state.domain.y, state.domain.z],
+            state.solver.inletDir
+        );
+        state.results.areaMethod = 'Projected Frontal';
+        logValidation(`Reference Area: ${state.results.refArea.toFixed(4)} m² (${state.results.areaMethod})`, 'info');
+    }
+
     logValidation(`Voxelized in ${elapsed.toFixed(0)}ms. Hash: ${state.voxelHash}`, 'success');
     return true;
   }
@@ -975,29 +1002,35 @@
         const diag = state.solverKernel.getDiagnostics();
         setText('sb-iter', diag.iteration);
         
-        let drag = 0, lift = 0, side = 0;
-        switch(state.solver.inletDir) {
-            case '+x': drag = diag.forceX; lift = diag.forceY; side = diag.forceZ; break;
-            case '-x': drag = -diag.forceX; lift = diag.forceY; side = -diag.forceZ; break;
-            case '+y': drag = diag.forceY; lift = diag.forceZ; side = diag.forceX; break;
-            case '-y': drag = -diag.forceY; lift = diag.forceZ; side = -diag.forceX; break;
-            case '+z': drag = diag.forceZ; lift = diag.forceY; side = -diag.forceX; break;
-            case '-z': drag = -diag.forceZ; lift = diag.forceY; side = diag.forceX; break;
-        }
-        
-        state.results = state.results || {};
-        state.results.drag = drag;
-        state.results.lift = lift;
-        state.results.side = side;
-        
-        if (diag.iteration < 100) {
-            setText('r-cd', 'Dev...');
-            setText('r-cl', 'Dev...');
-            if ($('r-cs')) setText('r-cs', 'Dev...');
-        } else {
-            setText('r-cd', formatMaybe(drag, 6));
-            setText('r-cl', formatMaybe(lift, 6));
-            if ($('r-cs')) setText('r-cs', formatMaybe(side, 6));
+        if (diag.coefficients) {
+            const c = diag.coefficients;
+            state.results.drag = c.dragForce;
+            state.results.lift = c.liftForce;
+            state.results.side = c.sideForce;
+            state.results.cd = c.cd;
+            state.results.cl = c.cl;
+            state.results.cs = c.cs;
+            state.results.dynamicPressure = c.dynamicPressure;
+
+            const settling = diag.iteration < 100;
+
+            setText('r-raw-drag', formatMaybe(c.rawDrag, 6));
+            setText('r-raw-lift', formatMaybe(c.rawLift, 6));
+            setText('r-raw-side', formatMaybe(c.rawSide, 6));
+
+            setText('r-force-drag', formatMaybe(state.results.drag, 3));
+            setText('r-force-lift', formatMaybe(state.results.lift, 3));
+            setText('r-force-side', formatMaybe(state.results.side, 3));
+            
+            setText('r-coeff-drag', settling ? 'Settling...' : formatMaybe(state.results.cd, 4));
+            setText('r-coeff-lift', settling ? 'Settling...' : formatMaybe(state.results.cl, 4));
+            setText('r-coeff-side', settling ? 'Settling...' : formatMaybe(state.results.cs, 4));
+            
+            setText('r-ref-area', state.results.refArea.toFixed(4));
+            setText('r-ref-method', state.results.areaMethod);
+            setText('r-dyn-pres', state.results.dynamicPressure.toFixed(2));
+            setText('r-cf-scale', c.calibration.forceScale.toExponential(3));
+            setText('r-anchors', `${c.calibration.uPhysical} m/s, ${c.calibration.rhoPhysical} kg/m³`);
         }
         
         setText('r-maxvel', diag.maxVelocity.toFixed(4));
@@ -1129,9 +1162,18 @@
                       uMax: diag.maxVelocity,
                       forces: {
                           method: 'MEM',
+                          rawDrag: diag.coefficients ? diag.coefficients.rawDrag : 0,
+                          rawLift: diag.coefficients ? diag.coefficients.rawLift : 0,
+                          rawSide: diag.coefficients ? diag.coefficients.rawSide : 0,
                           drag: state.results ? state.results.drag : 0,
                           lift: state.results ? state.results.lift : 0,
-                          side: state.results ? state.results.side : 0
+                          side: state.results ? state.results.side : 0,
+                          cd: state.results ? state.results.cd : null,
+                          cl: state.results ? state.results.cl : null,
+                          cs: state.results ? state.results.cs : null,
+                          refArea: state.results ? state.results.refArea : 0,
+                          dynPres: state.results ? state.results.dynamicPressure : 0,
+                          calibration: diag.coefficients ? diag.coefficients.calibration : null
                       },
                       timeMs: res.computeTimeMs,
                       config: { tau: state.solver.tau, grid: state.solver.gridX, inletDir: state.solver.inletDir, inletSpeed: state.solver.inletSpeed, mesh: state.mesh.active },

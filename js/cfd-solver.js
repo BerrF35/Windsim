@@ -50,7 +50,12 @@
         init(domainSize, resolution, config, voxelMask) {
             const [nx, ny, nz] = resolution;
             this.res = resolution;
-            this.config = config;
+            this.config = {
+                tau: config.tau || 0.6,
+                inletSpeed: config.inletSpeed || 0.1,
+                inletDir: config.inletDir || '+x',
+                refArea: config.refArea || 0
+            };
             this.mask = voxelMask;
 
             const size = nx * ny * nz * Q;
@@ -279,6 +284,11 @@
             const massDrift = this.stats.initialMass > 0 ? 
                 Math.abs(this.stats.mass - this.stats.initialMass) / this.stats.initialMass : 0;
             
+            const rawForces = { x: this.stats.forceX, y: this.stats.forceY, z: this.stats.forceZ };
+            const coeffs = (window.WindSimCoefficients && this.config.refArea > 0) 
+                ? WindSimCoefficients.CoefficientCalculator.calculate(rawForces, this.config)
+                : null;
+
             return {
                 iteration: this.stats.iteration,
                 massConservation: 1.0 - massDrift,
@@ -288,6 +298,7 @@
                 forceX: this.stats.forceX,
                 forceY: this.stats.forceY,
                 forceZ: this.stats.forceZ,
+                coefficients: coeffs,
                 isDiverged: isNaN(this.stats.mass) || !isFinite(this.stats.mass) || massDrift > 0.05
             };
         }
