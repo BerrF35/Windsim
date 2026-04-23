@@ -195,6 +195,7 @@
             uLattice: state.solver.inletSpeed,
             uPhysical: 10.0, // Fixed default anchor: 10 m/s
             rhoPhysical: 1.225, // Fixed default anchor: air at sea level (kg/m^3)
+            nuPhysical: 1.5e-5, // Fixed default anchor: air kinematic viscosity (m^2/s)
             domainSize: [state.domain.x, state.domain.y, state.domain.z],
             resolution: [state.solver.gridX, state.solver.gridY, state.solver.gridZ]
         },
@@ -1022,15 +1023,34 @@
             setText('r-force-lift', formatMaybe(state.results.lift, 3));
             setText('r-force-side', formatMaybe(state.results.side, 3));
             
-            setText('r-coeff-drag', settling ? 'Settling...' : formatMaybe(state.results.cd, 4));
-            setText('r-coeff-lift', settling ? 'Settling...' : formatMaybe(state.results.cl, 4));
-            setText('r-coeff-side', settling ? 'Settling...' : formatMaybe(state.results.cs, 4));
+            let coeffValDrag = '—', coeffValLift = '—', coeffValSide = '—';
+            if (c.calibration && !c.calibration.isFullyCalibrated) {
+                coeffValDrag = coeffValLift = coeffValSide = 'Unavailable (Re Mismatch)';
+            } else if (settling) {
+                coeffValDrag = coeffValLift = coeffValSide = 'Settling...';
+            } else {
+                coeffValDrag = formatMaybe(state.results.cd, 4);
+                coeffValLift = formatMaybe(state.results.cl, 4);
+                coeffValSide = formatMaybe(state.results.cs, 4);
+            }
+
+            setText('r-coeff-drag', coeffValDrag);
+            setText('r-coeff-lift', coeffValLift);
+            setText('r-coeff-side', coeffValSide);
             
             setText('r-ref-area', state.results.refArea.toFixed(4));
             setText('r-ref-method', state.results.areaMethod);
             setText('r-dyn-pres', state.results.dynamicPressure.toFixed(2));
             setText('r-cf-scale', c.calibration.forceScale.toExponential(3));
             setText('r-anchors', `${c.calibration.uPhysical} m/s, ${c.calibration.rhoPhysical} kg/m³`);
+
+            setText('r-re-target', c.calibration.Re_target.toExponential(3));
+            setText('r-re-actual', c.calibration.Re_actual.toFixed(1));
+            const statusEl = document.getElementById('r-cal-status');
+            if (statusEl) {
+                statusEl.textContent = c.calibration.calibrationReason;
+                statusEl.style.color = c.calibration.isFullyCalibrated ? 'var(--cfd-cyan)' : '#f59e0b';
+            }
         }
         
         setText('r-maxvel', diag.maxVelocity.toFixed(4));

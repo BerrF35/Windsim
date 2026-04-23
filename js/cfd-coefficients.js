@@ -10,15 +10,40 @@
 
     class WindSimCalibration {
         /**
-         * Derives lattice-to-physical mapping scales.
-         * @param {Object} config {domainSize(m), resolution(lu), uLattice(lu/ts), uPhysical(m/s), rhoPhysical(kg/m3)}
+         * Derives lattice-to-physical mapping scales and computes Reynolds consistency.
+         * Strategy 2: Fixed Physical Geometry + Fixed Physical Viscosity + Fixed Physical Speed
+         * @param {Object} config {domainSize(m), resolution(lu), uLattice, uPhysical, rhoPhysical, nuPhysical, tau}
          */
         static deriveScales(config) {
-            const { domainSize, resolution, uLattice, uPhysical = 10.0, rhoPhysical = 1.225 } = config;
+            const { 
+                domainSize, resolution, 
+                uLattice, tau,
+                uPhysical = 10.0, rhoPhysical = 1.225, nuPhysical = 1.5e-5
+            } = config;
             
+            // Physical characteristic length (e.g., domain width)
+            const L_pu = domainSize[0];
+            const L_lu = resolution[0];
+
+            // 1. Target Physical Reynolds Number
+            const Re_target = (uPhysical * L_pu) / nuPhysical;
+
+            // 2. Actual Lattice Reynolds Number
+            const nu_lattice = (tau - 0.5) / 3.0;
+            const Re_actual = (uLattice * L_lu) / nu_lattice;
+
+            // 3. Evaluate Match (tolerance 5%)
+            let isFullyCalibrated = true;
+            let calibrationReason = 'Fully Calibrated';
+            
+            const reRatio = Math.abs(Re_actual - Re_target) / Re_target;
+            if (reRatio > 0.05) {
+                isFullyCalibrated = false;
+                calibrationReason = 'Partially Calibrated (Reynolds Mismatch)';
+            }
+
             // Length scale (meters per lattice unit)
-            // Assuming cubic cells, we can use the X-axis for scaling
-            const dx = domainSize[0] / resolution[0];
+            const dx = L_pu / L_lu;
             
             // Velocity scale (meters/sec per lattice unit/ts)
             const cu = uPhysical / uLattice;
@@ -27,23 +52,28 @@
             const dt = dx / cu;
             
             // Density scale (kg/m3 per lattice density)
-            // LBM density is typically around 1.0
             const crho = rhoPhysical / 1.0;
             
             // Force scale (Newtons per lattice force)
-            // F = m * a = (rho * L^3) * (L / T^2) = rho * L^4 / T^2 = rho * (L/T)^2 * L^2
-            // CF = C_rho * C_u^2 * dx^2
             const cf = crho * (cu * cu) * (dx * dx);
 
             return {
+                strategy: 'Fixed Physical (Geometry, Viscosity, Speed)',
+                isFullyCalibrated,
+                calibrationReason,
+                Re_target,
+                Re_actual,
+                nu_lattice,
+                nuPhysical,
+                uLattice,
+                uPhysical,
+                rhoPhysical,
                 physicalGeometryScale: dx,
                 latticeSpacing: dx,
                 timestep: dt,
                 densityScale: crho,
                 velocityScale: cu,
-                forceScale: cf,
-                uPhysical: uPhysical,
-                rhoPhysical: rhoPhysical
+                forceScale: cf
             };
         }
     }
@@ -174,7 +204,8 @@
                 calibration: scales
             };
 
-            if (refArea > 0 && dynPressure > 0) {
+            // Only compute physical coefficients if the calibration is fully consistent
+            if (scales.isFullyCalibrated && refArea > 0 && dynPressure > 0) {
                 result.cd = physicalForces.drag / (dynPressure * refArea);
                 result.cl = physicalForces.lift / (dynPressure * refArea);
                 result.cs = physicalForces.side / (dynPressure * refArea);
