@@ -175,35 +175,35 @@
     }
     
     syncCFDUI();
-  }
+}
 
-  /* ─── Solver Management (Phase C) ─── */
-  function initSolver() {
-    if (!state.voxelMask) return;
-    logValidation('Initializing LBM D3Q19 kernel...', 'info');
-    
-    state.solverKernel = new WindSimSolver.LBMSolver();
-    // FIX BUG 1: Pass inletDir and inletSpeed in config so the solver can access them
-    state.solverKernel.init(
-        [state.domain.x, state.domain.y, state.domain.z],
-        [state.solver.gridX, state.solver.gridY, state.solver.gridZ],
-        { 
-            tau: state.solver.tau, 
-            inletDir: state.solver.inletDir, 
-            inletSpeed: state.solver.inletSpeed,
-            refArea: state.results.refArea,
-            charLengthPhys: state.results.charLengthPhys,
-            charLengthLat: state.results.charLengthLat,
-            // Calibration anchors
-            uLattice: state.solver.inletSpeed,
-            uPhysical: 10.0, // Fixed default anchor: 10 m/s
-            rhoPhysical: 1.225, // Fixed default anchor: air at sea level (kg/m^3)
-            nuPhysical: 1.5e-5, // Fixed default anchor: air kinematic viscosity (m^2/s)
-            domainSize: [state.domain.x, state.domain.y, state.domain.z],
-            resolution: [state.solver.gridX, state.solver.gridY, state.solver.gridZ]
-        },
-        state.voxelMask
-    );
+/* ─── Solver Management (Phase C) ─── */
+function initSolver() {
+  if (!state.voxelMask) return;
+  logValidation('Initializing LBM D3Q19 kernel...', 'info');
+  
+  state.solverKernel = new WindSimSolver.LBMSolver();
+  state.solverKernel.init(
+      [state.domain.x, state.domain.y, state.domain.z],
+      [state.solver.gridX, state.solver.gridY, state.solver.gridZ],
+      { 
+          tau: state.solver.tau, 
+          inletDir: state.solver.inletDir, 
+          inletSpeed: state.solver.inletSpeed,
+          refArea: state.results.refArea,
+          charLengthPhys: state.results.charLengthPhys,
+          charLengthLat: state.results.charLengthLat,
+          meshType: state.mesh.active,
+          // Calibration anchors
+          uLattice: state.solver.inletSpeed,
+          uPhysical: 10.0,
+          rhoPhysical: 1.225,
+          nuPhysical: 1.5e-5,
+          domainSize: [state.domain.x, state.domain.y, state.domain.z],
+          resolution: [state.solver.gridX, state.solver.gridY, state.solver.gridZ]
+      },
+      state.voxelMask
+  );
 
     // Apply strict BCs
     state.solverKernel.setBoundaryConditions([
@@ -617,7 +617,8 @@
             state.voxelMask, 
             [state.solver.gridX, state.solver.gridY, state.solver.gridZ],
             [state.domain.x, state.domain.y, state.domain.z],
-            state.solver.inletDir
+            state.solver.inletDir,
+            state.mesh.active
         );
         state.results.refArea = meta.area;
         state.results.charLengthPhys = meta.charLengthPhys;
@@ -1031,8 +1032,8 @@
             setText('r-force-side', formatMaybe(state.results.side, 3));
             
             let coeffValDrag = '—', coeffValLift = '—', coeffValSide = '—';
-            if (c.calibration && !c.calibration.isFullyCalibrated) {
-                coeffValDrag = coeffValLift = coeffValSide = 'Unavailable (Re Mismatch)';
+            if (c.calibration && c.calibration.status !== 'MATCH') {
+                coeffValDrag = coeffValLift = coeffValSide = `Unavailable (${c.calibration.status})`;
             } else if (settling) {
                 coeffValDrag = coeffValLift = coeffValSide = 'Settling...';
             } else {
@@ -1053,10 +1054,17 @@
 
             setText('r-re-target', c.calibration.Re_target.toExponential(3));
             setText('r-re-actual', c.calibration.Re_actual.toFixed(1));
+            
             const statusEl = document.getElementById('r-cal-status');
+            const reasonEl = document.getElementById('r-cal-reason');
             if (statusEl) {
-                statusEl.textContent = c.calibration.isFullyCalibrated ? 'Matched' : 'Re Mismatch';
-                statusEl.style.color = c.calibration.isFullyCalibrated ? 'var(--cfd-cyan)' : '#f59e0b';
+                statusEl.textContent = c.calibration.status;
+                if (c.calibration.status === 'MATCH') statusEl.style.color = 'var(--cfd-cyan)';
+                else if (c.calibration.status === 'NEAR') statusEl.style.color = '#f59e0b';
+                else statusEl.style.color = '#ef4444';
+            }
+            if (reasonEl) {
+                reasonEl.textContent = c.calibration.reason || '—';
             }
         }
         

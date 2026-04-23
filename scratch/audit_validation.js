@@ -1,9 +1,9 @@
 /**
- * WindSim Aerodynamic Coefficient Validation Suite (Audit Pass)
+ * WindSim Aerodynamic Coefficient Validation Suite (Final Audit Pass)
  * To be run in the browser console of cfd.html
  */
 (async function() {
-    console.log("%c--- WINDSIM COEFFICIENT VALIDATION (AUDIT) START ---", "color: #22cded; font-weight: bold; font-size: 14px;");
+    console.log("%c--- WINDSIM FINAL CALIBRATION AUDIT START ---", "color: #22cded; font-weight: bold; font-size: 14px;");
 
     const results = [];
 
@@ -34,7 +34,6 @@
             geometry.center();
             geometry.rotateX(Math.PI/2);
             if (angleDeg !== 0) {
-                // Rotation around Y (span-wise axis) to change AoA
                 geometry.rotateY(angleDeg * Math.PI / 180);
             }
         }
@@ -48,7 +47,7 @@
         const mask = await voxelizer.voxelize();
 
         // 2. Compute Geometry Metadata
-        const meta = WindSimCoefficients.CoefficientCalculator.computeGeometryMetadata(mask, resolution, [6,6,6], inletDir);
+        const meta = WindSimCoefficients.CoefficientCalculator.computeGeometryMetadata(mask, resolution, [6,6,6], inletDir, meshType);
 
         // 3. Setup Solver
         const solver = new WindSimSolver.LBMSolver();
@@ -56,6 +55,7 @@
             tau: 0.6, 
             inletSpeed, 
             inletDir, 
+            meshType,
             refArea: meta.area,
             charLengthPhys: meta.charLengthPhys,
             charLengthLat: meta.charLengthLat,
@@ -83,61 +83,41 @@
         const c = diag.coefficients;
         console.log(`  Raw Forces: Fx=${diag.forceX.toFixed(6)}, Fy=${diag.forceY.toFixed(6)}, Fz=${diag.forceZ.toFixed(6)}`);
         if (c) {
+            console.log(`  Mapping: ${c.mapping.drag}, ${c.mapping.lift}, ${c.mapping.side}`);
             console.log(`  Physical Forces: Drag=${c.dragForce.toFixed(6)}N, Lift=${c.liftForce.toFixed(6)}N, Side=${c.sideForce.toFixed(6)}N`);
             console.log(`  Reynolds: Target=${c.calibration.Re_target.toExponential(2)}, Actual=${c.calibration.Re_actual.toExponential(2)}`);
-            console.log(`  Status: ${c.calibration.calibrationReason}`);
-            console.log(`  Coeffs: Cd=${c.cd !== null ? c.cd.toFixed(4) : 'null'}, Cl=${c.cl !== null ? c.cl.toFixed(4) : 'null'}, Cs=${c.cs !== null ? c.cs.toFixed(4) : 'null'}`);
+            console.log(`  Status: ${c.calibration.status} (${c.calibration.reason})`);
+            console.log(`  Coeffs: Cd=${c.cd !== null ? c.cd.toFixed(4) : 'Unavailable'}, Cl=${c.cl !== null ? c.cl.toFixed(4) : 'Unavailable'}, Cs=${c.cs !== null ? c.cs.toFixed(4) : 'Unavailable'}`);
         }
         
         return testResult;
     }
 
     // --- TEST MATRIX ---
+    await runTest("Sphere (+x)", { meshType: 'sphere', resolution: [48, 48, 48], inletSpeed: 0.1, inletDir: '+x', iterations: 1000 });
+    await runTest("Sphere (-z)", { meshType: 'sphere', resolution: [48, 48, 48], inletSpeed: 0.1, inletDir: '-z', iterations: 1000 });
+    await runTest("Airfoil 0 deg", { meshType: 'airfoil', resolution: [48, 48, 48], inletSpeed: 0.1, inletDir: '+x', iterations: 1000, angleDeg: 0 });
+    await runTest("Airfoil 10 deg", { meshType: 'airfoil', resolution: [48, 48, 48], inletSpeed: 0.1, inletDir: '+x', iterations: 1000, angleDeg: 10 });
+    await runTest("Sphere (+x, U=0.05)", { meshType: 'sphere', resolution: [48, 48, 48], inletSpeed: 0.05, inletDir: '+x', iterations: 1000 });
 
-    // 1. Sphere tests
-    await runTest("Sphere (+x)", {
-        meshType: 'sphere', resolution: [48, 48, 48],
-        inletSpeed: 0.1, inletDir: '+x', iterations: 200
-    });
-    
-    await runTest("Sphere (-z)", {
-        meshType: 'sphere', resolution: [48, 48, 48],
-        inletSpeed: 0.1, inletDir: '-z', iterations: 200
-    });
-
-    await runTest("Sphere (+x, U=0.15)", {
-        meshType: 'sphere', resolution: [48, 48, 48],
-        inletSpeed: 0.15, inletDir: '+x', iterations: 200
-    });
-
-    // 2. Airfoil tests
-    await runTest("Airfoil 0 deg", {
-        meshType: 'airfoil', resolution: [48, 48, 48],
-        inletSpeed: 0.1, inletDir: '+x', iterations: 200, angleDeg: 0
-    });
-
-    await runTest("Airfoil 10 deg", {
-        meshType: 'airfoil', resolution: [48, 48, 48],
-        inletSpeed: 0.1, inletDir: '+x', iterations: 200, angleDeg: 10
-    });
-
-    console.log("%c--- COEFFICIENT AUDIT SUMMARY ---", "color: #22cded; font-weight: bold; font-size: 14px;");
+    console.log("%c--- FINAL AUDIT SUMMARY ---", "color: #22cded; font-weight: bold; font-size: 14px;");
     console.table(results.map(r => {
         const c = r.final.coefficients;
         const cal = c?.calibration;
         return {
             Name: r.name,
+            Inlet: r.config.inletDir,
             "Re Target": cal?.Re_target?.toExponential(2),
             "Re Actual": cal?.Re_actual?.toExponential(2),
-            "Status": cal?.isFullyCalibrated ? 'FULL' : 'PARTIAL',
+            "Status": cal?.status,
+            "Reason": cal?.reason?.substring(0, 20) + "...",
             "Cd": c?.cd !== null ? c.cd.toFixed(4) : '—',
             "Cl": c?.cl !== null ? c.cl.toFixed(4) : '—',
             "Drag (N)": c?.dragForce?.toFixed(6),
             "Lift (N)": c?.liftForce?.toFixed(6),
-            "Raw Fx": r.final.forceX.toFixed(4)
+            "Raw Drag": c?.rawDrag?.toFixed(6)
         };
     }));
 
-    window.COEFF_AUDIT_RESULTS = results;
-
+    window.FINAL_AUDIT_RESULTS = results;
 })();

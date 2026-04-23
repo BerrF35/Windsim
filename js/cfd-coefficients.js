@@ -11,19 +11,20 @@
     class WindSimCalibration {
         /**
          * Derives lattice-to-physical mapping scales and computes Reynolds consistency.
-         * @param {Object} config {uLattice, tau, uPhysical, rhoPhysical, nuPhysical, charLengthPhys, charLengthLat}
+         * @param {Object} config {uLattice, tau, uPhysical, rhoPhysical, nuPhysical, charLengthPhys, charLengthLat, inletDir, meshType}
          */
         static deriveScales(config) {
             const { 
                 uLattice, tau,
                 uPhysical = 10.0, rhoPhysical = 1.225, nuPhysical = 1.5e-5,
-                charLengthPhys, charLengthLat
+                charLengthPhys, charLengthLat, inletDir, meshType
             } = config;
             
             if (!charLengthPhys || !charLengthLat) {
                 return {
                     isFullyCalibrated: false,
-                    calibrationReason: 'Incomplete Metadata (Missing Char Length)',
+                    status: 'MISMATCH',
+                    reason: 'Incomplete Metadata (Missing Char Length)',
                     forceScale: 0, velocityScale: 0, densityScale: 0,
                     Re_target: 0, Re_actual: 0
                 };
@@ -36,14 +37,24 @@
             const nu_lattice = (tau - 0.5) / 3.0;
             const Re_actual = (uLattice * charLengthLat) / nu_lattice;
 
-            // 3. Evaluate Match (tolerance 5%)
-            let isFullyCalibrated = true;
-            let calibrationReason = 'Fully Calibrated';
-            
-            const reRatio = Math.abs(Re_actual - Re_target) / Re_target;
-            if (reRatio > 0.05) {
-                isFullyCalibrated = false;
-                calibrationReason = 'Partially Calibrated (Reynolds Mismatch)';
+            // 3. Evaluate Status
+            let status = 'MISMATCH';
+            let reason = 'Reynolds Mismatch';
+            let isFullyCalibrated = false;
+
+            const reRatio = Re_actual / Re_target;
+            const diffPercent = Math.abs(Re_actual - Re_target) / Re_target;
+
+            if (diffPercent <= 0.05) {
+                status = 'MATCH';
+                reason = 'Reynolds Consistent (within 5%)';
+                isFullyCalibrated = true;
+            } else if (reRatio >= 0.1 && reRatio <= 10.0) {
+                status = 'NEAR';
+                reason = 'Reynolds Same-Order (Partial Match)';
+            } else {
+                status = 'MISMATCH';
+                reason = 'Reynolds Order-of-Magnitude Mismatch';
             }
 
             // Physical dx (meters per lattice unit)
@@ -64,8 +75,9 @@
 
             return {
                 strategy: 'Object-based Reynolds Matching',
+                status,
+                reason,
                 isFullyCalibrated,
-                calibrationReason,
                 Re_target,
                 Re_actual,
                 nu_lattice,
@@ -73,13 +85,17 @@
                 uLattice,
                 uPhysical,
                 rhoPhysical,
+                rhoLattice: 1.0,
                 dx,
                 dt,
                 forceScale: cf,
                 velocityScale: cu,
                 densityScale: crho,
                 charLengthPhys,
-                charLengthLat
+                charLengthLat,
+                inletDir,
+                meshType,
+                worldAxes: { lift: 'Y', vertical: 'Y' }
             };
         }
     }
@@ -91,9 +107,10 @@
          * @param {number[]} resolution [nx, ny, nz]
          * @param {number[]} domainSize [sx, sy, sz]
          * @param {string} direction Inlet direction ('+x', '-x', '+z', '-z')
-         * @returns {Object} {area, charLengthPhys, charLengthLat}
+         * @param {string} meshType Type of mesh for L rule selection
+         * @returns {Object} {area, charLengthPhys, charLengthLat, rule}
          */
-        static computeGeometryMetadata(mask, resolution, domainSize, direction) {
+        static computeGeometryMetadata(mask, resolution, domainSize, direction, meshType = 'other') {
             const [nx, ny, nz] = resolution;
             const [sx, sy, sz] = domainSize;
             const dx = sx / nx;
@@ -117,12 +134,50 @@
                 }
             }
 
-            if (!found) return { area: 0, charLengthPhys: 0, charLengthLat: 0 };
+            if (!found) return { area: 0, charLengthPhys: 0, charLengthLat: 0, rule: 'none' };
 
-            let area = 0;
+            // 1. Calculate bounding dimensions
+            const dimLat = {
+                x: maxI - minI + 1,
+                y: maxJ - minJ + 1,
+                z: maxK - minK + 1
+            };
+            const dimPhys = {
+                x: dimLat.x * dx,
+                y: dimLat.y * dy,
+                z: dimLat.z * dz
+            };
+
+            // 2. Select characteristic length based on rules
             let charLengthLat = 0;
             let charLengthPhys = 0;
+            let rule = 'main_body';
 
+            if (meshType === 'sphere') {
+                // Sphere uses diameter (dimension perp to flow, or any dimension)
+                charLengthLat = Math.max(dimLat.x, dimLat.y, dimLat.z);
+                charLengthPhys = charLengthLat * Math.max(dx, dy, dz);
+                rule = 'diameter';
+            } else if (meshType === 'airfoil') {
+                // Airfoil uses chord (dimension along flow)
+                if (direction === '+x' || direction === '-x') {
+                    charLengthLat = dimLat.x;
+                    charLengthPhys = dimPhys.x;
+                } else {
+                    charLengthLat = dimLat.z;
+                    charLengthPhys = dimPhys.z;
+                }
+                rule = 'chord';
+            } else {
+                // Default: main body length (max bounding dimension)
+                charLengthLat = Math.max(dimLat.x, dimLat.y, dimLat.z);
+                charLengthPhys = Math.max(dimPhys.x, dimPhys.y, dimPhys.z);
+                rule = 'main_body';
+            }
+
+            // 3. Compute projected area
+            let areaCount = 0;
+            let area = 0;
             if (direction === '+x' || direction === '-x') {
                 for (let j = 0; j < ny; j++) {
                     for (let k = 0; k < nz; k++) {
@@ -133,13 +188,10 @@
                                 break;
                             }
                         }
-                        if (hit) count++;
+                        if (hit) areaCount++;
                     }
                 }
-                area = count * dy * dz;
-                // For flow along X, characteristic length is typically X-dimension (chord)
-                charLengthLat = (maxI - minI + 1);
-                charLengthPhys = charLengthLat * dx;
+                area = areaCount * dy * dz;
             } else if (direction === '+z' || direction === '-z') {
                 for (let i = 0; i < nx; i++) {
                     for (let j = 0; j < ny; j++) {
@@ -150,16 +202,13 @@
                                 break;
                             }
                         }
-                        if (hit) count++;
+                        if (hit) areaCount++;
                     }
                 }
-                area = count * dx * dy;
-                // For flow along Z, characteristic length is typically Z-dimension
-                charLengthLat = (maxK - minK + 1);
-                charLengthPhys = charLengthLat * dz;
+                area = areaCount * dx * dy;
             }
 
-            return { area, charLengthPhys, charLengthLat };
+            return { area, charLengthPhys, charLengthLat, rule };
         }
 
         /**
@@ -202,29 +251,27 @@
         static calculate(rawForces, config) {
             const { inletDir, refArea } = config;
             
-            // Derive unit mapping
-            const scales = WindSimCalibration.deriveScales(config);
+            // Derive unit mapping and status
+            const cal = WindSimCalibration.deriveScales(config);
             
             // Map raw lattice forces to drag/lift/side
             const latticeMapped = this.mapForces(rawForces, inletDir);
             
             // Convert to physical forces (Newtons)
             const physicalForces = {
-                drag: latticeMapped.drag * scales.forceScale,
-                lift: latticeMapped.lift * scales.forceScale,
-                side: latticeMapped.side * scales.forceScale
+                drag: latticeMapped.drag * cal.forceScale,
+                lift: latticeMapped.lift * cal.forceScale,
+                side: latticeMapped.side * cal.forceScale
             };
 
             // Physical dynamic pressure (q = 0.5 * rho * U^2) in Pascals
-            const dynPressure = 0.5 * scales.rhoPhysical * (scales.uPhysical ** 2);
+            const dynPressure = 0.5 * cal.rhoPhysical * (cal.uPhysical ** 2);
 
             const result = {
-                // Return physical forces
                 dragForce: physicalForces.drag,
                 liftForce: physicalForces.lift,
                 sideForce: physicalForces.side,
                 
-                // Keep raw forces available for transparency
                 rawDrag: latticeMapped.drag,
                 rawLift: latticeMapped.lift,
                 rawSide: latticeMapped.side,
@@ -234,11 +281,11 @@
                 dynamicPressure: dynPressure,
                 refArea: refArea,
                 mapping: latticeMapped.mapping,
-                calibration: scales
+                calibration: cal
             };
 
-            // Only compute physical coefficients if the calibration is fully consistent
-            if (scales.isFullyCalibrated && refArea > 0 && dynPressure > 0) {
+            // Gating: Only compute coefficients if status is MATCH
+            if (cal.status === 'MATCH' && refArea > 0 && dynPressure > 0) {
                 result.cd = physicalForces.drag / (dynPressure * refArea);
                 result.cl = physicalForces.lift / (dynPressure * refArea);
                 result.cs = physicalForces.side / (dynPressure * refArea);
