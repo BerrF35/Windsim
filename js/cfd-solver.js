@@ -21,11 +21,32 @@
         1/36, 1/36, 1/36, 1/36
     ];
     const OPP = [0, 2, 1, 4, 3, 6, 5, 8, 7, 10, 9, 12, 11, 14, 13, 16, 15, 18, 17];
+    const SOLVER_MODES = {
+        LAMINAR: 'laminar',
+        LES: 'les',
+        UNSUPPORTED: 'unsupported'
+    };
+    const LES_DEFAULTS = {
+        // Smagorinsky constant in the common engineering range 0.1-0.2.
+        smagorinskyCs: 0.12,
+        // Lattice spacing is one voxel in this CPU LBM reference kernel.
+        delta: 1.0,
+        tauMin: 0.500001,
+        tauMax: 2.0
+    };
 
     class LBMSolver {
         constructor() {
             this.res = [0, 0, 0];
             this.config = null;
+            this.domainSize = [0, 0, 0];
+            this.mode = SOLVER_MODES.LAMINAR;
+            this.lesSettings = { ...LES_DEFAULTS };
+            this._lesSamples = {
+                xp: new Float64Array(3), xm: new Float64Array(3),
+                yp: new Float64Array(3), ym: new Float64Array(3),
+                zp: new Float64Array(3), zm: new Float64Array(3)
+            };
             this.f = null;     
             this.f_tmp = null; 
             this.mask = null;
@@ -39,9 +60,45 @@
                 forceX: 0,
                 forceY: 0,
                 forceZ: 0,
-                rho_prev: null 
+                rho_prev: null,
+                effectiveViscosity: this.createViscosityStats(SOLVER_MODES.LAMINAR, 0.0, 0.5)
             };
             this.isInitialized = false;
+        }
+
+        createViscosityStats(mode, nu, tau) {
+            return {
+                mode,
+                nuMin: nu,
+                nuMax: nu,
+                nuMean: nu,
+                tauMin: tau,
+                tauMax: tau,
+                tauMean: tau,
+                tauClampCount: 0,
+                totalTauClampCount: 0,
+                lastStepClampCount: 0,
+                cellCount: 0,
+                smagorinskyCs: LES_DEFAULTS.smagorinskyCs,
+                delta: LES_DEFAULTS.delta
+            };
+        }
+
+        normalizeMode(mode) {
+            if (mode === SOLVER_MODES.LES) return SOLVER_MODES.LES;
+            if (!mode || mode === SOLVER_MODES.LAMINAR) return SOLVER_MODES.LAMINAR;
+            return SOLVER_MODES.UNSUPPORTED;
+        }
+
+        configureMode(config) {
+            this.mode = this.normalizeMode(config.solverMode || config.mode);
+            this.config.solverMode = this.mode;
+            this.lesSettings = {
+                smagorinskyCs: Number.isFinite(config.smagorinskyCs) ? config.smagorinskyCs : LES_DEFAULTS.smagorinskyCs,
+                delta: Number.isFinite(config.lesDelta) && config.lesDelta > 0 ? config.lesDelta : LES_DEFAULTS.delta,
+                tauMin: Number.isFinite(config.lesTauMin) ? config.lesTauMin : LES_DEFAULTS.tauMin,
+                tauMax: Number.isFinite(config.lesTauMax) ? config.lesTauMax : LES_DEFAULTS.tauMax
+            };
         }
 
         /**
@@ -51,6 +108,8 @@
             const [nx, ny, nz] = resolution;
             this.res = resolution;
             this.config = { ...config }; // Store full config for calibration anchors
+            this.domainSize = domainSize || [nx, ny, nz];
+            this.configureMode(this.config);
             this.mask = voxelMask;
 
             const size = nx * ny * nz * Q;
@@ -68,6 +127,10 @@
             this.stats.iteration = 0;
             this.stats.initialMass = this.calculateTotalMass();
             this.stats.mass = this.stats.initialMass;
+            const nu = this.baseLatticeViscosity();
+            this.stats.effectiveViscosity = this.createViscosityStats(this.mode, nu, this.config.tau);
+            this.stats.effectiveViscosity.smagorinskyCs = this.lesSettings.smagorinskyCs;
+            this.stats.effectiveViscosity.delta = this.lesSettings.delta;
             this.isInitialized = true;
         }
 
@@ -86,6 +149,14 @@
 
         step(numSubSteps) {
             if (!this.isInitialized) return { status: 'error', message: 'Not initialized' };
+            if (this.mode === SOLVER_MODES.UNSUPPORTED) {
+                return {
+                    status: 'error',
+                    message: 'Unsupported solver mode',
+                    mode: this.mode,
+                    computeTimeMs: 0
+                };
+            }
             
             const start = performance.now();
             for (let s = 0; s < numSubSteps; s++) {
@@ -107,9 +178,14 @@
         collisionAndStreaming() {
             const [nx, ny, nz] = this.res;
             const tau = this.config.tau;
-            const omega = 1.0 / tau;
+            const baseNu = this.baseLatticeViscosity();
             
             let fx = 0, fy = 0, fz = 0;
+            let nuMin = Infinity, nuMax = -Infinity, nuSum = 0;
+            let tauMin = Infinity, tauMax = -Infinity, tauSum = 0;
+            let rawTauMax = -Infinity;
+            let clampCount = 0;
+            let fluidCellCount = 0;
             
             // 1. Collision + Streaming to f_tmp
             for (let x = 0; x < nx; x++) {
@@ -158,6 +234,36 @@
                         }
 
                         const u2 = ux*ux + uy*uy + uz*uz;
+                        let tauEff = tau;
+                        let nuEff = baseNu;
+
+                        if (this.mode === SOLVER_MODES.LES) {
+                            const strainMag = this.computeStrainMagnitude(x, y, z, ux, uy, uz);
+                            const csDelta = this.lesSettings.smagorinskyCs * this.lesSettings.delta;
+                            const eddyNu = csDelta * csDelta * strainMag;
+                            const rawNuEff = baseNu + eddyNu;
+                            const rawTauEff = 3.0 * rawNuEff + 0.5;
+                            rawTauMax = Math.max(rawTauMax, rawTauEff);
+                            tauEff = rawTauEff;
+
+                            if (tauEff < this.lesSettings.tauMin) {
+                                tauEff = this.lesSettings.tauMin;
+                                clampCount++;
+                            } else if (tauEff > this.lesSettings.tauMax) {
+                                tauEff = this.lesSettings.tauMax;
+                                clampCount++;
+                            }
+                            nuEff = Math.max(0.0, (tauEff - 0.5) / 3.0);
+                        }
+
+                        fluidCellCount++;
+                        nuMin = Math.min(nuMin, nuEff);
+                        nuMax = Math.max(nuMax, nuEff);
+                        nuSum += nuEff;
+                        tauMin = Math.min(tauMin, tauEff);
+                        tauMax = Math.max(tauMax, tauEff);
+                        tauSum += tauEff;
+                        const omega = 1.0 / tauEff;
 
                         for (let q = 0; q < Q; q++) {
                             const f_val = this.f[base + q];
@@ -202,11 +308,108 @@
             this.stats.forceX = fx;
             this.stats.forceY = fy;
             this.stats.forceZ = fz;
+            this.updateViscosityStats({
+                nuMin,
+                nuMax,
+                nuMean: fluidCellCount > 0 ? nuSum / fluidCellCount : baseNu,
+                tauMin,
+                tauMax,
+                tauMean: fluidCellCount > 0 ? tauSum / fluidCellCount : tau,
+                rawTauMax,
+                clampCount,
+                fluidCellCount
+            });
 
             // Swap buffers
             const t = this.f;
             this.f = this.f_tmp;
             this.f_tmp = t;
+        }
+
+        baseLatticeViscosity() {
+            return Math.max(0.0, ((this.config && this.config.tau ? this.config.tau : 0.5) - 0.5) / 3.0);
+        }
+
+        updateViscosityStats(stepStats) {
+            const prevTotal = this.stats.effectiveViscosity ? this.stats.effectiveViscosity.totalTauClampCount : 0;
+            const nu = this.baseLatticeViscosity();
+            const fallbackTau = this.config ? this.config.tau : 0.5;
+            const cellCount = stepStats.fluidCellCount || 0;
+            this.stats.effectiveViscosity = {
+                mode: this.mode,
+                nuMin: Number.isFinite(stepStats.nuMin) ? stepStats.nuMin : nu,
+                nuMax: Number.isFinite(stepStats.nuMax) ? stepStats.nuMax : nu,
+                nuMean: Number.isFinite(stepStats.nuMean) ? stepStats.nuMean : nu,
+                tauMin: Number.isFinite(stepStats.tauMin) ? stepStats.tauMin : fallbackTau,
+                tauMax: Number.isFinite(stepStats.tauMax) ? stepStats.tauMax : fallbackTau,
+                tauMean: Number.isFinite(stepStats.tauMean) ? stepStats.tauMean : fallbackTau,
+                rawTauMax: Number.isFinite(stepStats.rawTauMax) ? stepStats.rawTauMax : fallbackTau,
+                tauClampCount: stepStats.clampCount || 0,
+                totalTauClampCount: prevTotal + (stepStats.clampCount || 0),
+                lastStepClampCount: stepStats.clampCount || 0,
+                cellCount,
+                smagorinskyCs: this.lesSettings.smagorinskyCs,
+                delta: this.lesSettings.delta
+            };
+        }
+
+        computeStrainMagnitude(x, y, z, ux, uy, uz) {
+            const s = this._lesSamples;
+            const xp = this.sampleVelocityInto(x + 1, y, z, ux, uy, uz, s.xp);
+            const xm = this.sampleVelocityInto(x - 1, y, z, ux, uy, uz, s.xm);
+            const yp = this.sampleVelocityInto(x, y + 1, z, ux, uy, uz, s.yp);
+            const ym = this.sampleVelocityInto(x, y - 1, z, ux, uy, uz, s.ym);
+            const zp = this.sampleVelocityInto(x, y, z + 1, ux, uy, uz, s.zp);
+            const zm = this.sampleVelocityInto(x, y, z - 1, ux, uy, uz, s.zm);
+            const inv2d = 1.0 / (2.0 * this.lesSettings.delta);
+
+            const dudx = (xp[0] - xm[0]) * inv2d;
+            const dudy = (yp[0] - ym[0]) * inv2d;
+            const dudz = (zp[0] - zm[0]) * inv2d;
+            const dvdx = (xp[1] - xm[1]) * inv2d;
+            const dvdy = (yp[1] - ym[1]) * inv2d;
+            const dvdz = (zp[1] - zm[1]) * inv2d;
+            const dwdx = (xp[2] - xm[2]) * inv2d;
+            const dwdy = (yp[2] - ym[2]) * inv2d;
+            const dwdz = (zp[2] - zm[2]) * inv2d;
+
+            const sxx = dudx;
+            const syy = dvdy;
+            const szz = dwdz;
+            const sxy = 0.5 * (dudy + dvdx);
+            const sxz = 0.5 * (dudz + dwdx);
+            const syz = 0.5 * (dvdz + dwdy);
+            const s2 = sxx*sxx + syy*syy + szz*szz + 2.0 * (sxy*sxy + sxz*sxz + syz*syz);
+            return Math.sqrt(Math.max(0.0, 2.0 * s2));
+        }
+
+        sampleVelocityInto(x, y, z, fallbackUx, fallbackUy, fallbackUz, out) {
+            const [nx, ny, nz] = this.res;
+            if (x < 0) x = nx - 1; else if (x >= nx) x = 0;
+            if (y < 0) y = ny - 1; else if (y >= ny) y = 0;
+            if (z < 0) z = nz - 1; else if (z >= nz) z = 0;
+
+            const idx = x + nx * (y + ny * z);
+            if (this.mask && this.mask[idx] > 0) {
+                out[0] = 0; out[1] = 0; out[2] = 0;
+                return out;
+            }
+
+            const base = idx * Q;
+            let rho = 0, ux = 0, uy = 0, uz = 0;
+            for (let q = 0; q < Q; q++) {
+                const val = this.f[base + q];
+                rho += val;
+                ux += val * E[q][0];
+                uy += val * E[q][1];
+                uz += val * E[q][2];
+            }
+            if (rho <= 1e-12 || !Number.isFinite(rho)) {
+                out[0] = fallbackUx; out[1] = fallbackUy; out[2] = fallbackUz;
+                return out;
+            }
+            out[0] = ux / rho; out[1] = uy / rho; out[2] = uz / rho;
+            return out;
         }
 
         /**
@@ -293,6 +496,9 @@
                 forceX: this.stats.forceX,
                 forceY: this.stats.forceY,
                 forceZ: this.stats.forceZ,
+                mode: this.mode,
+                solverMode: this.mode,
+                effectiveViscosity: { ...this.stats.effectiveViscosity },
                 coefficients: coeffs,
                 isDiverged: isNaN(this.stats.mass) || !isFinite(this.stats.mass) || massDrift > 0.05
             };
@@ -354,6 +560,8 @@
         loadStateSnapshot(snapshot) {
             this.res = snapshot.res;
             this.config = snapshot.config || { tau: 0.8 };
+            this.domainSize = this.config.domainSize || this.res;
+            this.configureMode(this.config);
             this.stats.iteration = snapshot.iteration;
             this.stats.initialMass = snapshot.initialMass;
             
@@ -361,12 +569,17 @@
             const size = nx * ny * nz * Q;
             this.f = new Float32Array(snapshot.f);
             this.f_tmp = new Float32Array(size);
+            const nu = this.baseLatticeViscosity();
+            this.stats.effectiveViscosity = this.createViscosityStats(this.mode, nu, this.config.tau);
+            this.stats.effectiveViscosity.smagorinskyCs = this.lesSettings.smagorinskyCs;
+            this.stats.effectiveViscosity.delta = this.lesSettings.delta;
             this.isInitialized = true;
         }
     }
 
     window.WindSimSolver = {
-        LBMSolver: LBMSolver
+        LBMSolver: LBMSolver,
+        SOLVER_MODES: SOLVER_MODES
     };
 
 })();

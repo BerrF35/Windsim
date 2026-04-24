@@ -44,7 +44,10 @@
             if (this.logs.length > this.maxLogs) this.logs.shift();
             
             if (window.CFDEngine && window.CFDEngine.state.diagnosticMode) {
-                console.log(`[CFD-LOG] Iter:${entry.iter} MassDrift:${(entry.drift*100).toFixed(4)}%`);
+                const mode = entry.mode || 'unknown';
+                const clamps = Number.isFinite(entry.tauClampCount) ? entry.tauClampCount : 0;
+                const re = Number.isFinite(entry.Re_actual) ? entry.Re_actual.toFixed(1) : 'n/a';
+                console.log(`[CFD-LOG] Iter:${entry.iter} Mode:${mode} MassDrift:${(entry.drift*100).toFixed(4)}% TauClamps:${clamps} Re_actual:${re}`);
             }
         }
 

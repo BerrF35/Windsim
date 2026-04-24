@@ -26,6 +26,7 @@
       running: false, paused: false, iteration: 0,
       gridX: 64, gridY: 64, gridZ: 64,
       tau: 0.6, inletSpeed: 0.08, inletDir: '+x',
+      mode: 'laminar', smagorinskyCs: 0.12,
       stepsPerFrame: 4,
       divergenceHalt: false
     },
@@ -144,6 +145,8 @@
     setText('vp-grid', state.solver.gridX + ' × ' + state.solver.gridY + ' × ' + state.solver.gridZ);
     setText('vp-domain', formatDomainViewport());
     setText('domain-badge', formatDomainSummary());
+    var solverModeSelect = $('s-solver-mode');
+    if (solverModeSelect && solverModeSelect.value !== state.solver.mode) solverModeSelect.value = state.solver.mode;
     
     // Check if we can unlock Inspect
     if (state.solver.iteration > 100 && !state.workflow.inspect) {
@@ -188,6 +191,8 @@ function initSolver() {
       [state.solver.gridX, state.solver.gridY, state.solver.gridZ],
       { 
           tau: state.solver.tau, 
+          solverMode: state.solver.mode,
+          smagorinskyCs: state.solver.smagorinskyCs,
           inletDir: state.solver.inletDir, 
           inletSpeed: state.solver.inletSpeed,
           refArea: state.results.refArea,
@@ -221,7 +226,7 @@ function initSolver() {
     
     syncCFDUI();
     logValidation(`Solver ready. Run ID: ${state.runId}`, 'success');
-    logValidation(`Solver config: tau=${state.solver.tau}, inletDir=${state.solver.inletDir}, inletSpeed=${state.solver.inletSpeed}`, 'info');
+    logValidation(`Solver config: mode=${state.solver.mode}, tau=${state.solver.tau}, inletDir=${state.solver.inletDir}, inletSpeed=${state.solver.inletSpeed}`, 'info');
     saveSimulationState();
   }
 
@@ -787,6 +792,12 @@ function initSolver() {
 
     // Tau slider binding
     bind('s-tau', 'v-tau', v => { state.solver.tau = parseFloat(v); invalidateWorkflowFrom('solver'); return parseFloat(v).toFixed(3); });
+    const solverMode = $('s-solver-mode');
+    if (solverMode) solverMode.addEventListener('change', e => {
+        state.solver.mode = e.target.value;
+        invalidateWorkflowFrom('solver');
+        syncCFDUI();
+    });
     // Steps per frame binding
     bind('s-steps', 'v-steps', v => { state.solver.stepsPerFrame = parseInt(v); return v; });
     // Inlet velocity binding
@@ -1006,10 +1017,21 @@ function initSolver() {
     setText('sb-grid', state.solver.gridX + '×' + state.solver.gridY + '×' + state.solver.gridZ);
     setText('sb-tau', state.solver.tau.toFixed(3));
     setText('sb-inlet', state.solver.inletSpeed.toFixed(3));
+    setText('sb-mode', state.solver.mode.toUpperCase());
     
     if (state.solverKernel) {
         const diag = state.solverKernel.getDiagnostics();
         setText('sb-iter', diag.iteration);
+        state.solver.mode = diag.mode || state.solver.mode;
+        setText('sb-mode', state.solver.mode.toUpperCase());
+        setText('r-solver-mode', (diag.mode || state.solver.mode).toUpperCase());
+        if (diag.effectiveViscosity) {
+            const ev = diag.effectiveViscosity;
+            setText('r-nu-eff', `${ev.nuMean.toExponential(3)} (${ev.nuMin.toExponential(2)}-${ev.nuMax.toExponential(2)})`);
+            setText('r-tau-eff', `${ev.tauMean.toFixed(4)} (${ev.tauMin.toFixed(4)}-${ev.tauMax.toFixed(4)})`);
+            setText('r-les-clamps', `${ev.lastStepClampCount} step / ${ev.totalTauClampCount} total`);
+            setText('r-les-cs', ev.mode === 'les' ? ev.smagorinskyCs.toFixed(3) : '--');
+        }
         
         if (diag.coefficients) {
             const c = diag.coefficients;
@@ -1066,6 +1088,9 @@ function initSolver() {
             if (reasonEl) {
                 reasonEl.textContent = c.calibration.reason || '—';
             }
+        } else {
+            setText('r-cal-status', 'UNAVAILABLE');
+            setText('r-cal-reason', 'Reference area or calibration metadata unavailable.');
         }
         
         setText('r-maxvel', diag.maxVelocity.toFixed(4));
@@ -1182,6 +1207,14 @@ function initSolver() {
     if (state.renderer && state.scene && state.camera) {
       if (state.solver.running && state.solverKernel) {
           const res = state.solverKernel.step(state.solver.stepsPerFrame);
+          if (res.status !== 'ok') {
+              state.solver.running = false;
+              state.solver.paused = true;
+              updateGPUStatus('error', res.message || 'Solver step failed');
+              logValidation(`Solver halted: ${res.message || 'step failed'}`, 'error');
+              syncCFDUI();
+              return;
+          }
           const diag = state.solverKernel.getDiagnostics();
           
           if (diag.isDiverged) {
@@ -1195,6 +1228,10 @@ function initSolver() {
                       drift: diag.massDrift,
                       residual: diag.maxResidual,
                       uMax: diag.maxVelocity,
+                      mode: diag.mode,
+                      effectiveViscosity: diag.effectiveViscosity,
+                      tauClampCount: diag.effectiveViscosity ? diag.effectiveViscosity.lastStepClampCount : 0,
+                      Re_actual: diag.coefficients && diag.coefficients.calibration ? diag.coefficients.calibration.Re_actual : null,
                       forces: {
                           method: 'MEM',
                           rawDrag: diag.coefficients ? diag.coefficients.rawDrag : 0,
@@ -1211,7 +1248,7 @@ function initSolver() {
                           calibration: diag.coefficients ? diag.coefficients.calibration : null
                       },
                       timeMs: res.computeTimeMs,
-                      config: { tau: state.solver.tau, grid: state.solver.gridX, inletDir: state.solver.inletDir, inletSpeed: state.solver.inletSpeed, mesh: state.mesh.active },
+                      config: { mode: state.solver.mode, tau: state.solver.tau, grid: state.solver.gridX, inletDir: state.solver.inletDir, inletSpeed: state.solver.inletSpeed, mesh: state.mesh.active },
                       meta: { tier: state.executionTier, cores: navigator.hardwareConcurrency, mem: navigator.deviceMemory }
                   });
                   

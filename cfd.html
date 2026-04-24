@@ -340,6 +340,17 @@
 
             <div class="cfd-ctl">
               <div class="cfd-ctl-row">
+                <span class="cfd-ctl-lbl">Solver Mode</span>
+              </div>
+              <select class="cfd-select" id="s-solver-mode">
+                <option value="laminar" selected>Laminar BGK</option>
+                <option value="les">Smagorinsky LES</option>
+              </select>
+              <div class="cfd-ctl-note">LES adds deterministic eddy viscosity inside the existing LBM step. It does not change bounce-back or MEM force logic.</div>
+            </div>
+
+            <div class="cfd-ctl">
+              <div class="cfd-ctl-row">
                 <span class="cfd-ctl-lbl">Relaxation Time (τ)</span>
                 <span class="cfd-ctl-val" id="v-tau">0.600</span>
               </div>
@@ -584,6 +595,11 @@
           System Grade: <span style="color: var(--cfd-cyan);" id="r-tier">Standard Performance</span><br/>
           Target Method: <span style="color: var(--cfd-cyan);">LBM D3Q19</span><br/>
           Solver: <span style="color: var(--cfd-cyan);" id="r-kernel">CPU LBM Reference (JS)</span><br/>
+          Mode: <span style="color: var(--cfd-cyan);" id="r-solver-mode">LAMINAR</span><br/>
+          Effective ν: <span style="color: var(--cfd-cyan);" id="r-nu-eff">--</span><br/>
+          Effective τ: <span style="color: var(--cfd-cyan);" id="r-tau-eff">--</span><br/>
+          LES Clamps: <span style="color: var(--cfd-cyan);" id="r-les-clamps">0 step / 0 total</span><br/>
+          Smagorinsky Cs: <span style="color: var(--cfd-cyan);" id="r-les-cs">--</span><br/>
           Graphics: <span style="color: var(--cfd-cyan);">WebGPU (Visualization Only)</span><br/>
           Geometry Path: <span style="color: var(--cfd-cyan);">CPU Voxelization</span><br/>
           Exportability: <span style="color: var(--cfd-cyan);" id="r-export">JSON Logs / Field Buffers</span>
@@ -614,6 +630,8 @@
     <div class="cfd-sb-item"><span class="cfd-sb-label">GRID</span> <span class="cfd-sb-val" id="sb-grid">64×64×64</span></div>
     <div class="cfd-sb-sep"></div>
     <div class="cfd-sb-item"><span class="cfd-sb-label">τ</span> <span class="cfd-sb-val" id="sb-tau">0.600</span></div>
+    <div class="cfd-sb-sep"></div>
+    <div class="cfd-sb-item"><span class="cfd-sb-label">MODE</span> <span class="cfd-sb-val" id="sb-mode">LAMINAR</span></div>
     <div class="cfd-sb-sep"></div>
     <div class="cfd-sb-item"><span class="cfd-sb-label">INLET</span> <span class="cfd-sb-val" id="sb-inlet">0.080</span></div>
     <div class="cfd-sb-sep"></div>
