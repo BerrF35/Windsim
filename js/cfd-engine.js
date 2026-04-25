@@ -58,6 +58,9 @@
     solverKernel: null,
     obs: null, // ObservabilityManager instance
     runId: '',
+    hardware: { cpuCores: 0, memoryGB: 0, gpuReady: false, rendererTier: 'detecting', storage: null },
+    regime: null,
+    capability: null,
     diagnosticMode: false,
     _pendingSession: null // Loaded session metadata (not yet restored)
   };
@@ -86,6 +89,101 @@
     entry.textContent = `[${new Date().toLocaleTimeString()}] ${msg}`;
     log.appendChild(entry);
     log.scrollTop = log.scrollHeight;
+  }
+
+  function currentSolverGrid() {
+    return [state.solver.gridX, state.solver.gridY, state.solver.gridZ];
+  }
+
+  function getHardwareProfile() {
+    return {
+      ...state.hardware,
+      executionTier: state.executionTier,
+      rendererTier: state.executionTier,
+      gpuReady: state.gpuReady
+    };
+  }
+
+  function getRegimeAssessment(diag) {
+    if (!window.WindSimRegime) return { regime: null, capability: null };
+    return WindSimRegime.assess({
+      solverMode: state.solver.mode,
+      diagnostics: diag || {},
+      coefficients: diag ? diag.coefficients : null,
+      effectiveViscosity: diag ? diag.effectiveViscosity : null,
+      solverConfig: {
+        mode: state.solver.mode,
+        grid: currentSolverGrid(),
+        tau: state.solver.tau,
+        inletSpeed: state.solver.inletSpeed,
+        inletDir: state.solver.inletDir
+      },
+      hardware: getHardwareProfile(),
+      geometryName: state.mesh.active
+    });
+  }
+
+  function updateRegimeState(diag) {
+    const assessment = getRegimeAssessment(diag);
+    if (assessment.regime) state.regime = assessment.regime;
+    if (assessment.capability) state.capability = assessment.capability;
+    updateRegimeUI(assessment);
+    return assessment;
+  }
+
+  function updateRegimeUI(assessment) {
+    const regime = assessment && assessment.regime;
+    const capability = assessment && assessment.capability;
+    if (regime) {
+      setText('r-regime-state', regime.classification.toUpperCase());
+      setText('r-cal-regime', regime.calibrationRegime.toUpperCase());
+      setText('r-re-class', regime.reynolds.class.toUpperCase());
+      setText('r-coeff-availability', regime.coefficientAvailability.status.toUpperCase());
+      setText('r-coeff-reason', regime.coefficientAvailability.reason);
+    }
+    if (capability) {
+      setText('r-capability-summary', capability.summary);
+      setText('r-capability-grid', capability.recommendedGrid);
+      setText('r-capability-modes', capability.recommendedModes.join(', '));
+      setText('r-capability-blocks', capability.blocks.length ? capability.blocks.map(b => b.code).join(', ') : 'none');
+    }
+  }
+
+  function getCapabilityFor(mode, grid) {
+    if (!window.WindSimRegime) return { actions: { run: { supported: true, reason: 'No capability advisor loaded.' } }, blocks: [] };
+    return WindSimRegime.CapabilityAdvisor.evaluate({
+      hardware: getHardwareProfile(),
+      regime: state.regime || { solverRegime: mode, stable: true, rawForcesAvailable: false, physicalForcesAvailable: false, coefficientAvailability: { available: false, reason: 'No run diagnostics yet.' } },
+      solverConfig: { mode, grid }
+    });
+  }
+
+  function exportCurrentRun() {
+    const payload = {
+      runId: state.runId,
+      exportedAt: new Date().toISOString(),
+      mesh: { active: state.mesh.active },
+      domain: { ...state.domain },
+      solver: { ...state.solver },
+      workflow: { ...state.workflow },
+      voxelHash: state.voxelHash,
+      results: { ...state.results },
+      regime: state.regime,
+      capability: state.capability,
+      calibration: state.regime ? state.regime.calibration : null,
+      reynolds: state.regime ? state.regime.reynolds : null,
+      logs: state.obs ? state.obs.logs.slice(-100) : []
+    };
+    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `windsim-cfd-${state.runId || 'run'}.json`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+    logValidation('Exported run JSON with regime and capability state.', 'success');
   }
 
   /* ─── UI Syncing Logic ─── */
@@ -223,6 +321,9 @@ function initSolver() {
     // IMPORTANT: Do NOT set solver.running = true here. User must click Run.
     state.solver.running = false;
     state.solver.paused = false;
+    
+    // Set initial regime assessment
+    updateRegimeState(state.solverKernel.getDiagnostics());
     
     syncCFDUI();
     logValidation(`Solver ready. Run ID: ${state.runId}`, 'success');
@@ -433,6 +534,12 @@ function initSolver() {
         
         logValidation(`Session restored (Iter: ${state.solver.iteration}). Run ID: ${state.runId}. State: PAUSED.`, 'success');
         updateGPUStatus('ready', 'Session Restored — Paused');
+        
+        // Restore regime/capability if present
+        if (snapshot.regime) state.regime = snapshot.regime;
+        if (snapshot.capability) state.capability = snapshot.capability;
+        updateRegimeUI({ regime: state.regime, capability: state.capability });
+
         syncCFDUI();
         applyVizMode();
     } catch (e) {
@@ -1053,15 +1160,16 @@ function initSolver() {
             setText('r-force-lift', formatMaybe(state.results.lift, 3));
             setText('r-force-side', formatMaybe(state.results.side, 3));
             
+            const regime = state.regime;
+            const coeffAvail = regime ? regime.coefficientAvailability : { available: false, status: 'unavailable', reason: 'No regime assessment.' };
+
             let coeffValDrag = '—', coeffValLift = '—', coeffValSide = '—';
-            if (c.calibration && c.calibration.status !== 'MATCH') {
-                coeffValDrag = coeffValLift = coeffValSide = `Unavailable (${c.calibration.status})`;
-            } else if (settling) {
-                coeffValDrag = coeffValLift = coeffValSide = 'Settling...';
-            } else {
+            if (coeffAvail.available) {
                 coeffValDrag = formatMaybe(state.results.cd, 4);
                 coeffValLift = formatMaybe(state.results.cl, 4);
                 coeffValSide = formatMaybe(state.results.cs, 4);
+            } else {
+                coeffValDrag = coeffValLift = coeffValSide = coeffAvail.status.toUpperCase();
             }
 
             setText('r-coeff-drag', coeffValDrag);
@@ -1080,17 +1188,19 @@ function initSolver() {
             const statusEl = document.getElementById('r-cal-status');
             const reasonEl = document.getElementById('r-cal-reason');
             if (statusEl) {
-                statusEl.textContent = c.calibration.status;
-                if (c.calibration.status === 'MATCH') statusEl.style.color = 'var(--cfd-cyan)';
-                else if (c.calibration.status === 'NEAR') statusEl.style.color = '#f59e0b';
+                statusEl.textContent = coeffAvail.status.toUpperCase();
+                if (coeffAvail.available) statusEl.style.color = 'var(--cfd-cyan)';
+                else if (coeffAvail.status === 'settling') statusEl.style.color = '#f59e0b';
                 else statusEl.style.color = '#ef4444';
             }
             if (reasonEl) {
-                reasonEl.textContent = c.calibration.reason || '—';
+                reasonEl.textContent = coeffAvail.reason || '—';
             }
         } else {
-            setText('r-cal-status', 'UNAVAILABLE');
-            setText('r-cal-reason', 'Reference area or calibration metadata unavailable.');
+            const regime = state.regime;
+            const coeffAvail = regime ? regime.coefficientAvailability : { available: false, status: 'unavailable', reason: 'No regime assessment.' };
+            setText('r-cal-status', coeffAvail.status.toUpperCase());
+            setText('r-cal-reason', coeffAvail.reason || 'Reference area or calibration metadata unavailable.');
         }
         
         setText('r-maxvel', diag.maxVelocity.toFixed(4));
@@ -1247,6 +1357,8 @@ function initSolver() {
                           dynPres: state.results ? state.results.dynamicPressure : 0,
                           calibration: diag.coefficients ? diag.coefficients.calibration : null
                       },
+                      regime: state.regime,
+                      capability: state.capability,
                       timeMs: res.computeTimeMs,
                       config: { mode: state.solver.mode, tau: state.solver.tau, grid: state.solver.gridX, inletDir: state.solver.inletDir, inletSpeed: state.solver.inletSpeed, mesh: state.mesh.active },
                       meta: { tier: state.executionTier, cores: navigator.hardwareConcurrency, mem: navigator.deviceMemory }
@@ -1261,6 +1373,7 @@ function initSolver() {
                   }
               }
               state.solver.iteration = diag.iteration;
+              updateRegimeState(diag);
           }
           updateStatusBar();
       }

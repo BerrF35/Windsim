@@ -587,6 +587,36 @@
         </div>
       </div>
 
+      <!-- Regime & Capability Advisor -->
+      <div class="cfd-result-card" id="p-regime-advisor">
+        <div class="cfd-result-title">Simulation Regime & Advice</div>
+        <div class="cfd-result-grid">
+          <div class="cfd-result-item">
+            <div class="cfd-result-label">Regime</div>
+            <div class="cfd-result-value" id="r-regime-state" style="color: var(--cfd-cyan);">LAMINAR</div>
+          </div>
+          <div class="cfd-result-item">
+            <div class="cfd-result-label">Calibration</div>
+            <div class="cfd-result-value" id="r-cal-regime">—</div>
+          </div>
+          <div class="cfd-result-item">
+            <div class="cfd-result-label">Re Class</div>
+            <div class="cfd-result-value" id="r-re-class">—</div>
+          </div>
+          <div class="cfd-result-item" style="grid-column: span 3; border-top: 1px solid var(--cfd-bg2); padding-top: 8px;">
+            <div class="cfd-result-label">Coefficient Capability</div>
+            <div class="cfd-result-value" id="r-coeff-availability" style="font-size: 11px;">SETTLING</div>
+            <div class="cfd-result-hint" id="r-coeff-reason" style="font-size: 9px; margin-top: 2px; color: var(--cfd-txt3);">—</div>
+          </div>
+        </div>
+        <div style="margin-top: 10px; font-family: var(--cfd-mono); font-size: 9px; color: var(--cfd-txt3); border-top: 1px solid var(--cfd-bg2); padding-top: 6px;">
+          Summary: <span id="r-capability-summary">—</span><br/>
+          Rec. Grid: <span id="r-capability-grid">—</span><br/>
+          Rec. Modes: <span id="r-capability-modes">—</span><br/>
+          Blocks: <span id="r-capability-blocks" style="color: #ef4444;">none</span>
+        </div>
+      </div>
+
       <!-- Solver Info -->
       <div class="cfd-result-card">
         <div class="cfd-result-title">Solver Info</div>

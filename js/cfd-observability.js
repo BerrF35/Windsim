@@ -47,7 +47,8 @@
                 const mode = entry.mode || 'unknown';
                 const clamps = Number.isFinite(entry.tauClampCount) ? entry.tauClampCount : 0;
                 const re = Number.isFinite(entry.Re_actual) ? entry.Re_actual.toFixed(1) : 'n/a';
-                console.log(`[CFD-LOG] Iter:${entry.iter} Mode:${mode} MassDrift:${(entry.drift*100).toFixed(4)}% TauClamps:${clamps} Re_actual:${re}`);
+                const regime = entry.regime ? entry.regime.classification : 'unknown';
+                console.log(`[CFD-LOG] Iter:${entry.iter} Mode:${mode} Regime:${regime} MassDrift:${(entry.drift*100).toFixed(4)}% TauClamps:${clamps} Re_actual:${re}`);
             }
         }
 
@@ -69,6 +70,8 @@
                     mesh: { active: engineState.mesh.active },
                     voxelHash: engineState.voxelHash
                 },
+                regime: engineState.regime,
+                capability: engineState.capability,
                 solverState: solver ? solver.getStateSnapshot() : null,
                 logs: this.logs.slice(-100) 
             };
