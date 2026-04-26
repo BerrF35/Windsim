@@ -60,7 +60,14 @@
     runId: '',
     hardware: { cpuCores: 0, memoryGB: 0, gpuReady: false, rendererTier: 'detecting', storage: null },
     regime: null,
-    capability: null,
+    capability: {
+      recommendedGrid: '',
+      maxSafeGrid: '',
+      solverModeAdvice: '',
+      coefficientSupport: '',
+      warnings: [],
+      canRun: true
+    },
     diagnosticMode: false,
     _pendingSession: null // Loaded session metadata (not yet restored)
   };
@@ -126,14 +133,17 @@
   function updateRegimeState(diag) {
     const assessment = getRegimeAssessment(diag);
     if (assessment.regime) state.regime = assessment.regime;
-    if (assessment.capability) state.capability = assessment.capability;
+    
+    // Compute capability using the new advisor layer
+    state.capability = computeCapability(state);
+    
     updateRegimeUI(assessment);
     return assessment;
   }
 
   function updateRegimeUI(assessment) {
     const regime = assessment && assessment.regime;
-    const capability = assessment && assessment.capability;
+    const capability = state.capability;
     if (regime) {
       setText('r-regime-state', regime.classification.toUpperCase());
       setText('r-cal-regime', regime.calibrationRegime.toUpperCase());
@@ -141,12 +151,97 @@
       setText('r-coeff-availability', regime.coefficientAvailability.status.toUpperCase());
       setText('r-coeff-reason', regime.coefficientAvailability.reason);
     }
+    
+    // Update New Simulation Capability UI
     if (capability) {
-      setText('r-capability-summary', capability.summary);
-      setText('r-capability-grid', capability.recommendedGrid);
-      setText('r-capability-modes', capability.recommendedModes.join(', '));
-      setText('r-capability-blocks', capability.blocks.length ? capability.blocks.map(b => b.code).join(', ') : 'none');
+      setText('r-cap-grid', capability.recommendedGrid);
+      setText('r-cap-max', capability.maxSafeGrid);
+      setText('r-cap-advice', capability.solverModeAdvice);
+      setText('r-cap-coeff', capability.coefficientSupport);
+      
+      const warnEl = $('r-cap-warnings');
+      if (warnEl) {
+          warnEl.textContent = capability.warnings.length ? capability.warnings.join(', ') : 'none';
+          warnEl.style.color = capability.warnings.length ? '#ef4444' : 'var(--cfd-txt3)';
+      }
+      
+      // Update Run button based on canRun
+      setDisabled('btn-run', !state.workflow.solver || !state.supportsKernel || state.solver.divergenceHalt || !capability.canRun);
     }
+
+    // Keep existing Regime/Capability section for backward compatibility
+    const oldCap = assessment && assessment.capability;
+    if (oldCap) {
+      setText('r-capability-summary', oldCap.summary);
+      setText('r-capability-grid', oldCap.recommendedGrid);
+      setText('r-capability-modes', oldCap.recommendedModes.join(', '));
+      setText('r-capability-blocks', oldCap.blocks.length ? oldCap.blocks.map(b => b.code).join(', ') : 'none');
+    }
+  }
+
+  function computeCapability(state) {
+    const regime = state.regime;
+    const tier = state.executionTier; // 'full', 'reduced', 'demo'
+    const diag = state.solverKernel ? state.solverKernel.getDiagnostics() : {};
+    
+    const cap = {
+      recommendedGrid: '64³',
+      maxSafeGrid: '64³',
+      solverModeAdvice: 'Stable, low-Re only',
+      coefficientSupport: 'Not physically valid (low Reynolds)',
+      warnings: [],
+      canRun: true
+    };
+
+    // 1. GRID LIMITS
+    if (tier === 'demo') {
+      cap.recommendedGrid = '32³';
+      cap.maxSafeGrid = '32³';
+    } else if (tier === 'reduced') {
+      cap.recommendedGrid = '64³';
+      cap.maxSafeGrid = '64³';
+    } else {
+      cap.recommendedGrid = '128³';
+      cap.maxSafeGrid = 'Current Selection';
+    }
+
+    // 2. REYNOLDS / PHYSICS
+    if (regime) {
+      const calStatus = regime.calibrationStatus;
+      if (calStatus === 'MISMATCH') {
+        cap.coefficientSupport = "Not physically valid (low Reynolds)";
+      } else if (calStatus === 'NEAR') {
+        cap.coefficientSupport = "Partial validity";
+      } else if (calStatus === 'MATCH') {
+        cap.coefficientSupport = "Engineering valid";
+      }
+    }
+
+    // 3. SOLVER MODE
+    const mode = state.solver.mode;
+    if (mode === 'laminar') {
+      cap.solverModeAdvice = "Stable, low-Re only";
+    } else if (mode === 'les') {
+      cap.solverModeAdvice = "Damped turbulence approximation";
+    } else {
+      cap.solverModeAdvice = "unsupported";
+      cap.canRun = false;
+    }
+
+    // 4. STABILITY
+    const massDrift = diag.massDrift || 0;
+    const maxVel = diag.maxVelocity || 0;
+    const isDiverged = diag.isDiverged || false;
+    
+    if (isDiverged || massDrift > 0.05 || maxVel > 0.25) {
+      cap.warnings.push("Simulation unstable");
+      cap.canRun = false;
+    }
+
+    // 5. FINAL DECISION
+    // handled by mode/stability checks above
+
+    return cap;
   }
 
   function getCapabilityFor(mode, grid) {
@@ -237,7 +332,7 @@
     setDisabled('btn-confirm-domain', !state.workflow.geometry);
     setDisabled('btn-confirm-boundary', !state.workflow.domain);
     setDisabled('btn-confirm-solver', !state.workflow.boundary);
-    setDisabled('btn-run', !state.workflow.solver || !state.supportsKernel || state.solver.divergenceHalt);
+    setDisabled('btn-run', !state.workflow.solver || !state.supportsKernel || state.solver.divergenceHalt || !state.capability.canRun);
     setDisabled('btn-pause', !state.workflow.run || state.solver.divergenceHalt);
 
     setText('vp-grid', state.solver.gridX + ' × ' + state.solver.gridY + ' × ' + state.solver.gridZ);
