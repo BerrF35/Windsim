@@ -106,7 +106,7 @@
     return {
       ...state.hardware,
       executionTier: state.executionTier,
-      rendererTier: state.executionTier,
+      rendererTier: state.hardware.rendererTier || state.executionTier,
       gpuReady: state.gpuReady
     };
   }
@@ -134,8 +134,20 @@
     const assessment = getRegimeAssessment(diag);
     if (assessment.regime) state.regime = assessment.regime;
     
-    // Compute capability using the new advisor layer
-    state.capability = computeCapability(state);
+    // Map Advisor output to state.capability if available
+    if (assessment.capability) {
+        const cap = assessment.capability;
+        state.capability = {
+            recommendedGrid: cap.recommendedGrid,
+            maxSafeGrid: `${cap.hardware.maxGrid}³`,
+            solverModeAdvice: cap.actions.run.supported ? "Safe for current hardware" : "Performance/Limit Warning",
+            coefficientSupport: cap.actions.coefficients.reason,
+            warnings: cap.blocks.map(b => b.reason),
+            canRun: cap.actions.run.supported
+        };
+    } else {
+        state.capability = computeCapability(state);
+    }
     
     updateRegimeUI(assessment);
     return assessment;
@@ -378,28 +390,29 @@ function initSolver() {
   if (!state.voxelMask) return;
   logValidation('Initializing LBM D3Q19 kernel...', 'info');
   
+  const config = {
+      tau: state.solver.tau,
+      solverMode: state.solver.mode,
+      smagorinskyCs: state.solver.smagorinskyCs,
+      inletDir: state.solver.inletDir,
+      inletSpeed: state.solver.inletSpeed,
+      refArea: state.results.refArea,
+      charLengthPhys: state.results.charLengthPhys,
+      charLengthLat: state.results.charLengthLat,
+      meshType: state.mesh.active,
+      uLattice: state.solver.inletSpeed,
+      uPhysical: 10.0,
+      rhoPhysical: 1.225,
+      nuPhysical: 1.5e-5,
+      domainSize: [state.domain.x, state.domain.y, state.domain.z],
+      resolution: [state.solver.gridX, state.solver.gridY, state.solver.gridZ]
+  };
+
   state.solverKernel = new WindSimSolver.LBMSolver();
   state.solverKernel.init(
       [state.domain.x, state.domain.y, state.domain.z],
       [state.solver.gridX, state.solver.gridY, state.solver.gridZ],
-      { 
-          tau: state.solver.tau, 
-          solverMode: state.solver.mode,
-          smagorinskyCs: state.solver.smagorinskyCs,
-          inletDir: state.solver.inletDir, 
-          inletSpeed: state.solver.inletSpeed,
-          refArea: state.results.refArea,
-          charLengthPhys: state.results.charLengthPhys,
-          charLengthLat: state.results.charLengthLat,
-          meshType: state.mesh.active,
-          // Calibration anchors
-          uLattice: state.solver.inletSpeed,
-          uPhysical: 10.0,
-          rhoPhysical: 1.225,
-          nuPhysical: 1.5e-5,
-          domainSize: [state.domain.x, state.domain.y, state.domain.z],
-          resolution: [state.solver.gridX, state.solver.gridY, state.solver.gridZ]
-      },
+      config,
       state.voxelMask
   );
 
@@ -407,6 +420,12 @@ function initSolver() {
     state.solverKernel.setBoundaryConditions([
         { type: 'inlet', dir: state.solver.inletDir, speed: state.solver.inletSpeed }
     ]);
+
+    // Reset visualization post-processor to match the new solver grid.
+    if (state.viz.post) {
+        state.viz.post = null;
+        state.viz.needsUpdate = true;
+    }
 
     state.obs = state.obs || new WindSimObservability.ObservabilityManager(state.runId);
     state.runId = state.obs.runId;
@@ -1066,7 +1085,7 @@ function initSolver() {
   function updatePostVisuals() {
     if (!state.solverKernel || !state.workflow.inspect) return;
     if (!state.viz.needsUpdate) return;
-    
+
     if (!state.viz.post) {
       const gridAABB = { min: [-state.domain.x/2, -state.domain.y/2, -state.domain.z/2], max: [state.domain.x/2, state.domain.y/2, state.domain.z/2] };
       // Pass voxel mask to PostProcessor for solid-aware sampling
@@ -1084,6 +1103,9 @@ function initSolver() {
     const mode = state.viz.mode;
     const post = state.viz.post;
     const sceneBefore = state.scene.children.length;
+
+    // Reset update flag to prevent redundant re-processing
+    state.viz.needsUpdate = false;
 
     if (mode === 'slice') {
         if (state.viz.sliceMesh) {
@@ -1313,10 +1335,16 @@ function initSolver() {
     if (navigator.storage && navigator.storage.estimate) {
         storageEst = await navigator.storage.estimate();
     }
+    state.hardware.cpuCores = cpuCores;
+    state.hardware.memoryGB = devMem;
+    state.hardware.storage = storageEst;
+    state.hardware.gpuReady = false;
+    state.hardware.rendererTier = 'detecting';
     console.log(`[CFD-DIAG] HW Profile: ${cpuCores} cores, ~${devMem}GB RAM, Storage: ${(storageEst.usage/1024/1024).toFixed(1)}MB used`);
 
     if (!navigator.gpu) { 
         state.executionTier = 'demo';
+        state.hardware.rendererTier = 'demo';
         updateGPUStatus('error', 'WebGPU missing'); 
         enforceTierLimits();
         return false; 
@@ -1338,9 +1366,13 @@ function initSolver() {
         }
         
         state.gpuReady = true;
+        state.hardware.gpuReady = true;
+        state.hardware.rendererTier = state.executionTier;
         updateGPUStatus('ready', `WebGPU Visualization Active`);
     } catch (e) {
         state.executionTier = 'demo';
+        state.hardware.gpuReady = false;
+        state.hardware.rendererTier = 'demo';
         updateGPUStatus('error', 'WebGPU Driver Error');
     }
     
