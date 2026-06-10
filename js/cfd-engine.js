@@ -6,7 +6,7 @@
   var state = {
     gpu: null, adapter: null, gpuReady: false, gpuError: '',
     executionTier: 'detecting',
-    phaseLabel: 'Phase C — Solver',
+    phaseLabel: 'Phase D — Post-Processing',
     supportsKernel: false,
     scene: null, camera: null, renderer: null,
     controls: {
@@ -313,7 +313,7 @@
       note = 'Apply boundary conditions to unlock solver routing.';
       vpWorkflow = 'Boundary pending';
     } else if (state.workflow.boundary && !state.workflow.solver) {
-      note = 'Lock the solver settings to finish Phase B setup.';
+      note = 'Lock the solver settings to finish Phase C solver setup.';
       vpWorkflow = 'Solver pending';
     } else if (state.workflow.solver) {
       note = 'Pipeline set. CPU Voxelization confirmed.';

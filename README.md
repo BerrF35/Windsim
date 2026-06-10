@@ -3,7 +3,7 @@
 WindSim is a browser-native aerodynamics project with two distinct surfaces:
 
 - `sandbox.html`: the working reduced-order 3D wind sandbox
-- `cfd.html`: the Phase A CFD laboratory shell for the future WebGPU solver stack
+- `cfd.html`: the Phase D CFD laboratory workbench with a deterministic LBM solver stack and post-processing visualization
 
 The launcher at `index.html` routes between them.
 
@@ -27,20 +27,21 @@ The sandbox is the mature part of the project. It currently provides:
 
 ### CFD Lab
 
-The CFD surface is not a finished solver yet.
+The CFD surface is currently in Phase D (Post-Processing & Visualization).
 
 What is real today:
 
 - WebGPU capability detection and hardware-tier routing
-- a strict Phase A workflow shell for geometry, domain, boundary, and solver setup
-- a Three.js viewport and domain visualization for the CFD surface
-- a dedicated blueprint and project direction for the full solver stack
+- A complete workflow guiding you through geometry, domain, boundary, solver setup, execution, and inspection
+- A Three.js viewport rendering domain boundary, voxelized mesh geometry, slices, and streamlines
+- A deterministic D3Q19 Lattice Boltzmann Method (LBM) solver core running on the CPU
+- Drag, lift, and side force calculations with dynamic calibration and capability advising
+- Session persistence (state saving and recovery) via IndexedDB
+- Live post-processing visualization (pressure/velocity slice maps, streamline seeding, color mapping)
 
 What is not real yet:
 
-- a production LBM D3Q19 kernel running inside `cfd.html`
-- validated drag, lift, pressure, or streamline outputs from the CFD surface
-- full geometry import, voxelization, observability logging, and post-processing from the blueprint
+- Full WebGPU-based solver computing layer (currently using CPU reference kernel; WebGPU is used for visualization only)
 
 ## Experimental Solver Work
 
@@ -53,15 +54,15 @@ What is not real yet:
 - `sandbox.html`
   Working reduced-order simulator surface.
 - `cfd.html`
-  Phase A CFD shell.
+  Phase D CFD workbench.
 - `css/windsim-entry.css`
   Entry and landing system styling for the sandbox experience.
 - `css/cfd-entry.css`
   CFD lab styling.
 - `js/windsim-*.js`
   Sandbox modules.
-- `js/cfd-engine.js`
-  CFD shell engine, hardware detection, viewport setup, and workflow gating.
+- `js/cfd-*.js`
+  CFD workbench modules (geometry, coefficients, solver, observability, post-processing, regime, and engine).
 - `js/windsim-cfd.js`
   Experimental sandbox-side grid solver work.
 - `docs/CFD_MASTER_BLUEPRINT.md`

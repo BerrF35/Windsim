@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>WindSim - CFD Laboratory</title>
-  <meta name="description" content="WindSim CFD Laboratory Phase A shell. Hardware routing, geometry setup, domain sizing, and workflow gating for the upcoming WebGPU solver stack." />
+  <meta name="description" content="WindSim CFD Laboratory Phase D. LBM D3Q19 solver core, geometry voxelization, and post-processing visualization." />
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2322cded' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M2 12h4l2-2 4 4 4-4 2 2h4'/></svg>" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -172,14 +172,14 @@
       <div class="cfd-sidebar-scroll">
 
         <div class="cfd-phase-banner">
-          <div class="cfd-phase-eyebrow">Phase C / Solver Core & Observability</div>
+          <div class="cfd-phase-eyebrow">Phase D / Post-Processing & Visualization</div>
           <div class="cfd-phase-copy">
             This lab executes a deterministic <strong>LBM D3Q19 CPU Reference Kernel</strong>.
             Voxelization is handled on CPU for ground-truth consistency. 
             Runs are persistent across reloads.
           </div>
           <div class="cfd-phase-meta">
-            <span class="cfd-panel-badge" id="wf-phase-badge">Phase C active</span>
+            <span class="cfd-panel-badge" id="wf-phase-badge">Phase D active</span>
             <span class="cfd-panel-badge" id="wf-tier-badge">Performance Grade: Standard</span>
           </div>
           <div class="cfd-phase-steps">
@@ -240,7 +240,7 @@
             <div style="margin-top: 10px;">
               <div class="cfd-upload-zone" id="upload-zone">
                 <div class="cfd-upload-label">+ Import Custom Mesh</div>
-                <div class="cfd-upload-hint">Phase B ready - STL, GLB, or Three.js Geometry</div>
+                <div class="cfd-upload-hint">Phase D ready - STL, GLB, or Three.js Geometry</div>
               </div>
               <input type="file" id="file-upload" accept=".glb,.gltf,.stl" style="display:none" />
             </div>
@@ -278,7 +278,7 @@
                 <span class="cfd-ctl-val" id="v-domain-z">6.0 m</span>
               </div>
               <input type="range" class="cfd-range" id="s-domain-z" min="3" max="18" step="0.5" value="6" />
-              <div class="cfd-ctl-note">Domain sizing is live in Phase A and drives the viewport shell immediately.</div>
+              <div class="cfd-ctl-note">Domain sizing is live in Phase D and drives the viewport shell immediately.</div>
             </div>
             <div class="cfd-step-actions">
               <button id="btn-confirm-domain" class="cfd-step-btn">Confirm domain</button>
@@ -648,7 +648,7 @@
       <div class="cfd-result-card">
         <div class="cfd-result-title">Solver Info</div>
         <div style="font-family: var(--cfd-mono); font-size: 10px; line-height: 2; color: var(--cfd-txt2);">
-          Phase: <span style="color: var(--cfd-cyan);" id="r-phase">Phase C — Solver</span><br/>
+          Phase: <span style="color: var(--cfd-cyan);" id="r-phase">Phase D — Post-Processing</span><br/>
           System Grade: <span style="color: var(--cfd-cyan);" id="r-tier">Standard Performance</span><br/>
           Target Method: <span style="color: var(--cfd-cyan);">LBM D3Q19</span><br/>
           Solver: <span style="color: var(--cfd-cyan);" id="r-kernel">CPU LBM Reference (JS)</span><br/>
@@ -667,7 +667,7 @@
       <div class="cfd-result-card" style="border-bottom: none;">
         <div class="cfd-result-title">About</div>
         <div style="font-size: 11px; line-height: 1.8; color: var(--cfd-txt3);">
-          This page is currently the <strong style="color: var(--cfd-cyan);">Phase C CFD Lab</strong>.
+          This page is currently the <strong style="color: var(--cfd-cyan);">Phase D CFD Lab</strong>.
           It implements a deterministic LBM solver core with full observability, 
           divergence checks, and state persistence.
         </div>
@@ -678,7 +678,7 @@
 
   
   <div class="cfd-statusbar">
-    <div class="cfd-sb-item"><span class="cfd-sb-label">PHASE</span> <span class="cfd-sb-val" id="sb-phase">Phase C — Solver</span></div>
+    <div class="cfd-sb-item"><span class="cfd-sb-label">PHASE</span> <span class="cfd-sb-val" id="sb-phase">Phase D — Post-Processing</span></div>
     <div class="cfd-sb-sep"></div>
     <div class="cfd-sb-item"><span class="cfd-sb-label">GRADE</span> <span class="cfd-sb-val" id="sb-tier">STANDARD</span></div>
     <div class="cfd-sb-sep"></div>
