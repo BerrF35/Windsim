@@ -1,14 +1,8 @@
-/**
- * WindSim CFD — Solver Core (Phase C)
- * Phase C / Solver layer enforcing exact numerical consistency, deterministic behavior, and observability.
- * 
- * LBM D3Q19 CPU Implementation.
- * Focuses on ground-truth accuracy, observability, and deterministic execution.
- */
+
 (function () {
     'use strict';
 
-    // D3Q19 Constants
+
     const Q = 19;
     const E = [
         [0,0,0], [1,0,0], [-1,0,0], [0,1,0], [0,-1,0], [0,0,1], [0,0,-1],
@@ -29,7 +23,7 @@
     const LES_DEFAULTS = {
         // Smagorinsky constant in the common engineering range 0.1-0.2.
         smagorinskyCs: 0.12,
-        // Lattice spacing is one voxel in this CPU LBM reference kernel.
+
         delta: 1.0,
         tauMin: 0.500001,
         tauMax: 2.0
@@ -101,9 +95,7 @@
             };
         }
 
-        /**
-         * ISolverKernel implementation
-         */
+        
         init(domainSize, resolution, config, voxelMask) {
             const [nx, ny, nz] = resolution;
             this.res = resolution;
@@ -198,7 +190,7 @@
 
                         const base = idx * Q;
                         
-                        // Calculate macroscopic (at source)
+
                         let rho = 0, ux = 0, uy = 0, uz = 0;
                         for (let q = 0; q < Q; q++) {
                             const val = this.f[base + q];
@@ -320,7 +312,7 @@
                 fluidCellCount
             });
 
-            // Swap buffers
+
             const t = this.f;
             this.f = this.f_tmp;
             this.f_tmp = t;
@@ -520,7 +512,7 @@
                     ux += v * E[q][0]; uy += v * E[q][1]; uz += v * E[q][2];
                 }
                 rhoArr[i] = rho;
-                presArr[i] = (rho - 1.0) / 3.0; // Linearized pressure
+                presArr[i] = (rho - 1.0) / 3.0;
 
                 // Solid cells: zero velocity and pressure (bounce-back artifacts)
                 if (this.mask && this.mask[i] > 0) {

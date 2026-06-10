@@ -207,7 +207,7 @@ body.entry-entering #main canvas{
   box-shadow: 0 16px 32px rgba(236,114,90,.32), inset 0 1px 1px rgba(255,255,255,0.6);
 }
 
-/* Shine Sweep Effect */
+
 .entry-pill-btn::after,
 .entry-ghost-btn::after,
 .entry-primary-btn::after{

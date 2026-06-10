@@ -1,7 +1,4 @@
-/* ═══════════════════════════════════════════════════════════
-   WindSim CFD Laboratory — Visual System
-   Dark aerospace theme, SimScale-inspired professional layout
-   ═══════════════════════════════════════════════════════════ */
+
 
 :root {
   --cfd-bg: #0a0e13;
@@ -55,7 +52,7 @@ body {
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: rgba(90, 209, 255, .18); border-radius: 3px; }
 
-/* ── Toolbar ── */
+
 .cfd-toolbar {
   flex: 0 0 var(--cfd-toolbar-h);
   display: flex;
@@ -188,13 +185,13 @@ body {
   0%, 100% { opacity: 1; } 50% { opacity: .5; }
 }
 
-/* ── Layout Body ── */
+
 .cfd-body {
   flex: 1; display: flex;
   min-height: 0;
 }
 
-/* ── Sidebar ── */
+
 .cfd-sidebar {
   flex: 0 0 var(--cfd-sidebar-w);
   width: var(--cfd-sidebar-w);
@@ -381,7 +378,7 @@ body {
   background: rgba(255,255,255,0.03);
 }
 
-/* ── Controls ── */
+
 .cfd-ctl {
   margin-bottom: 10px;
 }
@@ -450,7 +447,7 @@ select.cfd-select {
 select.cfd-select:focus { border-color: var(--cfd-cyan); }
 select.cfd-select option { background: var(--cfd-surf); }
 
-/* ── Mesh list items ── */
+
 .cfd-mesh-item {
   display: flex; align-items: center; gap: 10px;
   padding: 8px 10px;
@@ -489,7 +486,7 @@ select.cfd-select option { background: var(--cfd-surf); }
   margin-top: 2px;
 }
 
-/* ── Viewport ── */
+
 .cfd-viewport-wrap {
   flex: 1; position: relative;
   min-width: 0;
@@ -507,7 +504,7 @@ select.cfd-select option { background: var(--cfd-surf); }
   inset: 0; touch-action: none;
 }
 
-/* ── Viewport overlays ── */
+
 .cfd-vp-overlay {
   position: absolute; z-index: 5; pointer-events: none;
 }
@@ -561,7 +558,7 @@ select.cfd-select option { background: var(--cfd-surf); }
   width: 64px; height: 64px;
 }
 
-/* ── Viz mode switcher ── */
+
 .cfd-viz-bar {
   top: 12px; right: 12px;
   display: flex; gap: 3px;
@@ -600,7 +597,7 @@ select.cfd-select option { background: var(--cfd-surf); }
   opacity: .55;
 }
 
-/* ── Results panel (right) ── */
+
 .cfd-results {
   flex: 0 0 var(--cfd-results-w);
   width: var(--cfd-results-w);
@@ -656,7 +653,7 @@ select.cfd-select option { background: var(--cfd-surf); }
   margin-left: 2px;
 }
 
-/* ── Convergence graph ── */
+
 .cfd-conv-canvas {
   width: 100%; height: 100px;
   background: var(--cfd-surf2);
@@ -664,7 +661,7 @@ select.cfd-select option { background: var(--cfd-surf); }
   border: 1px solid var(--cfd-bdr);
 }
 
-/* ── Status Bar ── */
+
 .cfd-statusbar {
   flex: 0 0 var(--cfd-statusbar-h);
   display: flex; align-items: center;
@@ -684,7 +681,7 @@ select.cfd-select option { background: var(--cfd-surf); }
 .cfd-sb-val { color: var(--cfd-txt2); font-weight: 600; }
 .cfd-sb-sep { width: 1px; height: 16px; background: var(--cfd-bdr); }
 
-/* ── WebGPU error overlay ── */
+
 .cfd-gpu-error {
   position: absolute; inset: 0;
   display: flex; align-items: center; justify-content: center;
@@ -718,7 +715,7 @@ select.cfd-select option { background: var(--cfd-surf); }
   border-radius: 999px;
 }
 
-/* ── Upload zone ── */
+
 .cfd-upload-zone {
   border: 2px dashed var(--cfd-bdr2);
   border-radius: var(--cfd-radius);
@@ -755,7 +752,7 @@ select.cfd-select option { background: var(--cfd-surf); }
   margin-top: 4px;
 }
 
-/* ── Responsive ── */
+
 @media (max-width: 1024px) {
   .cfd-results { display: none; }
   :root { --cfd-sidebar-w: 260px; }
@@ -766,7 +763,7 @@ select.cfd-select option { background: var(--cfd-surf); }
   .cfd-toolbar { padding: 0 10px; }
 }
 
-/* ── Phase D Additions ── */
+
 .cfd-ctl-sep {
   height: 1px;
   background: var(--cfd-bdr);
@@ -842,7 +839,7 @@ select.cfd-select option { background: var(--cfd-surf); }
   display: none; /* Hide instead of just disabling to keep UI clean */
 }
 
-/* ── Home Button ── */
+
 .cfd-home-btn {
   padding: 0 8px !important;
   min-width: 32px;
@@ -856,7 +853,7 @@ select.cfd-select option { background: var(--cfd-surf); }
   color: var(--cfd-cyan) !important;
 }
 
-/* ── Session Restore Modal ── */
+
 .cfd-modal-overlay {
   position: fixed;
   inset: 0;

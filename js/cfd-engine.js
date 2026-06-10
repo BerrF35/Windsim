@@ -1,19 +1,11 @@
-/**
- * WindSim CFD Laboratory — Engine
- * Phase A / Engine layer enforcing strict UI gating, no auto-resume, and no hidden behavior.
- * WebGPU initialization, Three.js scene setup, and Phase B Geometry pipeline.
- * 
- * Session management: Metadata-only restore on load, explicit modal for resume.
- * Visualization: Solid-mask-aware, deterministic streamlines, proper layer isolation.
- * Navigation: Home button with confirmation, beforeunload guard, full reset.
- */
+
 (function () {
   'use strict';
 
-  /* ─── State ─── */
+  
   var state = {
     gpu: null, adapter: null, gpuReady: false, gpuError: '',
-    executionTier: 'detecting', // 'full', 'reduced', 'demo'
+    executionTier: 'detecting',
     phaseLabel: 'Phase C — Solver',
     supportsKernel: false,
     scene: null, camera: null, renderer: null,
@@ -44,7 +36,7 @@
       streamlineSeeds: 64, streamlineSteps: 200, streamlineLines: null,
       range: { min: -0.005, max: 0.005 }, showGeo: true, 
       needsUpdate: false,
-      _lastSolverHash: null // For integrity checks
+      _lastSolverHash: null
     },
     results: {
       drag: null, lift: null, side: null,
@@ -56,7 +48,7 @@
     lastTs: 0, frameCount: 0,
     voxelMask: null, voxelHash: '',
     solverKernel: null,
-    obs: null, // ObservabilityManager instance
+    obs: null,
     runId: '',
     hardware: { cpuCores: 0, memoryGB: 0, gpuReady: false, rendererTier: 'detecting', storage: null },
     regime: null,
@@ -72,7 +64,7 @@
     _pendingSession: null // Loaded session metadata (not yet restored)
   };
 
-  /* ─── DOM Helpers ─── */
+  
   function $(id) { return document.getElementById(id); }
   function setText(id, txt) { var el = (typeof id === 'string') ? $(id) : id; if (el) el.textContent = txt; }
   function clamp(v, lo, hi) { return Math.max(lo, Math.min(hi, v)); }
@@ -193,7 +185,7 @@
 
   function computeCapability(state) {
     const regime = state.regime;
-    const tier = state.executionTier; // 'full', 'reduced', 'demo'
+    const tier = state.executionTier;
     const diag = state.solverKernel ? state.solverKernel.getDiagnostics() : {};
     
     const cap = {
@@ -205,7 +197,7 @@
       canRun: true
     };
 
-    // 1. GRID LIMITS
+
     if (tier === 'demo') {
       cap.recommendedGrid = '32³';
       cap.maxSafeGrid = '32³';
@@ -229,7 +221,7 @@
       }
     }
 
-    // 3. SOLVER MODE
+
     const mode = state.solver.mode;
     if (mode === 'laminar') {
       cap.solverModeAdvice = "Stable, low-Re only";
@@ -250,7 +242,7 @@
       cap.canRun = false;
     }
 
-    // 5. FINAL DECISION
+
     // handled by mode/stability checks above
 
     return cap;
@@ -293,7 +285,7 @@
     logValidation('Exported run JSON with regime and capability state.', 'success');
   }
 
-  /* ─── UI Syncing Logic ─── */
+  
   function syncCFDUI() {
     var order = ['geometry', 'domain', 'boundary', 'solver', 'run', 'inspect'];
     var firstPending = null;
@@ -301,7 +293,7 @@
         if (!state.workflow[order[i]]) { firstPending = order[i]; break; }
     }
 
-    // Update Pills
+
     order.forEach(key => {
         var el = $('wf-' + key);
         if (!el) return;
@@ -311,7 +303,7 @@
         else el.classList.add('is-locked');
     });
 
-    // Update Text Notes
+
     var note = 'Select and confirm a geometry to unlock the domain stage.';
     var vpWorkflow = 'Geometry pending';
     if (state.workflow.geometry && !state.workflow.domain) {
@@ -330,7 +322,7 @@
     setText('wf-status-note', note);
     setText('vp-workflow', vpWorkflow);
 
-    // Update Panel Locks
+
     var locks = { 'p-domain': !state.workflow.geometry, 'p-boundary': !state.workflow.domain, 'p-solver': !state.workflow.boundary, 'p-viz': !state.workflow.inspect };
     Object.keys(locks).forEach(id => {
       var panel = $(id);
@@ -340,7 +332,7 @@
       }
     });
 
-    // Toolbar Locks
+
     setDisabled('btn-confirm-domain', !state.workflow.geometry);
     setDisabled('btn-confirm-boundary', !state.workflow.domain);
     setDisabled('btn-confirm-solver', !state.workflow.boundary);
@@ -377,7 +369,7 @@
     state.workflow[stepKey] = true;
     if (message) updateGPUStatus(state.gpuReady ? 'ready' : 'error', message);
     
-    // Auto-unlock solver on Phase B completion
+
     if (stepKey === 'solver') {
         initSolver();
     }
@@ -385,7 +377,7 @@
     syncCFDUI();
 }
 
-/* ─── Solver Management (Phase C) ─── */
+
 function initSolver() {
   if (!state.voxelMask) return;
   logValidation('Initializing LBM D3Q19 kernel...', 'info');
@@ -416,7 +408,7 @@ function initSolver() {
       state.voxelMask
   );
 
-    // Apply strict BCs
+
     state.solverKernel.setBoundaryConditions([
         { type: 'inlet', dir: state.solver.inletDir, speed: state.solver.inletSpeed }
     ]);
@@ -436,7 +428,7 @@ function initSolver() {
     state.solver.running = false;
     state.solver.paused = false;
     
-    // Set initial regime assessment
+
     updateRegimeState(state.solverKernel.getDiagnostics());
     
     syncCFDUI();
@@ -465,13 +457,13 @@ function initSolver() {
    * Full reset: stop solver, clear buffers, clear viz, clear session, return to initial state.
    */
   function resetSimulation() {
-    // Stop solver
+
     state.solver.running = false;
     state.solver.paused = false;
     state.solver.iteration = 0;
     state.solver.divergenceHalt = false;
     
-    // Clear solver kernel
+
     if (state.solverKernel) {
         state.solverKernel.reset();
         state.solverKernel = null;
@@ -484,12 +476,12 @@ function initSolver() {
     state.viz.needsUpdate = false;
     state.viz.mode = 'solid';
     
-    // Reset viz button state
+
     document.querySelectorAll('.cfd-viz-btn').forEach(b => b.classList.remove('is-active'));
     const solidBtn = document.querySelector('.cfd-viz-btn[data-mode="solid"]');
     if (solidBtn) solidBtn.classList.add('is-active');
     
-    // Reset mesh appearance
+
     if (state.mesh.object && state.mesh.object.geometry.attributes.color) {
         state.mesh.object.geometry.deleteAttribute('color');
         state.mesh.object.material.vertexColors = false;
@@ -501,7 +493,7 @@ function initSolver() {
     if (state.mesh.object) state.mesh.object.visible = true;
     if (state.mesh.wireframe) state.mesh.wireframe.visible = true;
     
-    // Clear persisted session
+
     if (state.obs) {
         state.obs.clearSession();
         logValidation('Session data cleared from IndexedDB.', 'warning');
@@ -511,7 +503,7 @@ function initSolver() {
     state.workflow = { geometry: false, domain: false, boundary: false, solver: false, run: false, inspect: false };
     state.results = { cd: null, cl: null, cs: null, maxVel: null, massError: null };
     
-    // Clear validation log
+
     const log = $('validation-log');
     if (log) log.innerHTML = '';
     
@@ -610,7 +602,7 @@ function initSolver() {
         // Restore basic state with fallbacks — but NEVER restore running=true
         const savedRunning = savedSolver.running;
         Object.assign(state.solver, savedSolver);
-        state.solver.running = false; // NEVER auto-run
+        state.solver.running = false;
         state.solver.paused = savedRunning; // If was running, mark as paused
         
         Object.assign(state.workflow, engine.workflow || {});
@@ -618,7 +610,7 @@ function initSolver() {
         state.voxelHash = engine.voxelHash || '';
         state.runId = snapshot.runId || state.runId;
         
-        // Restore Mesh Context
+
         if (engine.mesh && engine.mesh.active && engine.mesh.active !== state.mesh.active) {
             setMesh(engine.mesh.active, true);
         }
@@ -632,7 +624,7 @@ function initSolver() {
             state.solverKernel.loadStateSnapshot(snapshot.solverState);
             state.supportsKernel = true;
         } else if (state.workflow.solver) {
-            // Re-init if metadata exists but buffers don't (fallback)
+
             initSolver();
             state.solver.iteration = savedSolver.iteration || 0;
         }
@@ -642,14 +634,14 @@ function initSolver() {
             state.voxelMask = state.solverKernel.getMask();
         }
         
-        // Update domain visuals
+
         buildDomainBox();
         updateSliderRanges();
         
         logValidation(`Session restored (Iter: ${state.solver.iteration}). Run ID: ${state.runId}. State: PAUSED.`, 'success');
         updateGPUStatus('ready', 'Session Restored — Paused');
         
-        // Restore regime/capability if present
+
         if (snapshot.regime) state.regime = snapshot.regime;
         if (snapshot.capability) state.capability = snapshot.capability;
         updateRegimeUI({ regime: state.regime, capability: state.capability });
@@ -682,7 +674,7 @@ function initSolver() {
     if (modal) modal.style.display = 'none';
   }
 
-  /* ─── Navigation Guards ─── */
+  
   function installNavigationGuards() {
     // Beforeunload: warn if simulation has data
     window.addEventListener('beforeunload', function(e) {
@@ -709,7 +701,7 @@ function initSolver() {
     window.location.href = 'index.html';
   }
 
-  /* ─── Three.js Scene ─── */
+  
   function initScene() {
     var viewport = $('cfd-viewport');
     if (!viewport) return;
@@ -736,14 +728,14 @@ function initSolver() {
     window.addEventListener('resize', resize);
   }
 
-  /* ─── Mesh Logic ─── */
+  
   var MESHES = {
     sphere: { label: 'Sphere', build: () => new THREE.SphereGeometry(0.6, 32, 32), meta: 'r=0.6' },
     cube: { label: 'Cube', build: () => new THREE.BoxGeometry(1, 1, 1, 4, 4, 4), meta: '1x1x1' },
     cylinder: { label: 'Cylinder', build: () => new THREE.CylinderGeometry(0.4, 0.4, 1.2, 32), meta: 'r=0.4, h=1.2' },
     airfoil: { label: 'Airfoil', build: () => {
         var shape = new THREE.Shape();
-        // Upper surface
+
         for (var i = 0; i <= 30; i++) {
             var t = i / 30; var x = 2 * t;
             var yt = 0.12 / 0.2 * 2 * (0.2969 * Math.sqrt(t) - 0.126 * t - 0.3516 * t**2 + 0.2843 * t**3 - 0.1015 * t**4);
@@ -751,7 +743,7 @@ function initSolver() {
         }
         // Explicitly close trailing edge to zero thickness for manifold voxelization
         shape.lineTo(1.0, 0.0); 
-        // Lower surface
+
         for (var i = 30; i >= 0; i--) {
             var t = i / 30; var x = 2 * t;
             var yt = 0.12 / 0.2 * 2 * (0.2969 * Math.sqrt(t) - 0.126 * t - 0.3516 * t**2 + 0.2843 * t**3 - 0.1015 * t**4);
@@ -858,7 +850,7 @@ function initSolver() {
     return true;
   }
 
-  /* ─── Domain ─── */
+  
   function buildDomainBox() {
     if (!state.scene) return;
     if (state.domainVisuals.group) state.scene.remove(state.domainVisuals.group);
@@ -893,7 +885,7 @@ function initSolver() {
     setText('v-slice-pos', state.viz.slicePos.toFixed(2) + ' m');
   }
 
-  /* ─── UI Binding ─── */
+  
   function bindUI() {
     document.querySelectorAll('.cfd-mesh-item').forEach(el => el.addEventListener('click', () => setMesh(el.dataset.mesh)));
     document.querySelectorAll('.cfd-panel-head').forEach(el => el.addEventListener('click', () => { if (!el.parentElement.classList.contains('is-locked')) el.parentElement.classList.toggle('is-open'); }));
@@ -943,13 +935,13 @@ function initSolver() {
         resetSimulation();
     });
     
-    // Home button
+
     if ($('btn-home')) $('btn-home').addEventListener('click', (e) => {
         e.preventDefault();
         navigateHome();
     });
     
-    // Session modal buttons
+
     if ($('btn-session-resume')) $('btn-session-resume').addEventListener('click', () => {
         hideSessionModal();
         applyPendingSession();
@@ -961,7 +953,7 @@ function initSolver() {
         logValidation('Starting fresh. Previous session discarded.', 'info');
     });
 
-    // Phase D Bindings
+
     $('s-field').addEventListener('change', e => { state.viz.field = e.target.value; state.viz.needsUpdate = true; });
     $('s-colormap').addEventListener('change', e => { state.viz.colormap = e.target.value; state.viz.needsUpdate = true; });
     $('s-slice-pos').addEventListener('input', e => { 
@@ -1011,7 +1003,7 @@ function initSolver() {
         invalidateWorkflowFrom('solver');
     });
 
-    // Tau slider binding
+
     bind('s-tau', 'v-tau', v => { state.solver.tau = parseFloat(v); invalidateWorkflowFrom('solver'); return parseFloat(v).toFixed(3); });
     const solverMode = $('s-solver-mode');
     if (solverMode) solverMode.addEventListener('change', e => {
@@ -1019,7 +1011,7 @@ function initSolver() {
         invalidateWorkflowFrom('solver');
         syncCFDUI();
     });
-    // Steps per frame binding
+
     bind('s-steps', 'v-steps', v => { state.solver.stepsPerFrame = parseInt(v); return v; });
     // Inlet velocity binding
     bind('s-inlet', 'v-inlet', v => { state.solver.inletSpeed = parseFloat(v); invalidateWorkflowFrom('boundary'); return parseFloat(v).toFixed(3) + ' lu/ts'; });
@@ -1066,7 +1058,7 @@ function initSolver() {
         state.mesh.object.visible = true;
     }
 
-    // Toggle control panel visibility
+
     $('ctl-slice-group').style.display = (mode === 'slice') ? 'block' : 'none';
     $('ctl-streamline-group').style.display = (mode === 'streamlines') ? 'block' : 'none';
     
@@ -1205,7 +1197,7 @@ function initSolver() {
         rangeEls[2].textContent = state.viz.range.max.toFixed(4);
     }
     
-    // Update gradient bar CSS
+
     const cmName = state.viz.colormap;
     const bar = legend.querySelector('.cfd-legend-bar');
     if (bar) {
@@ -1354,7 +1346,7 @@ function initSolver() {
         if (!state.adapter) throw new Error('No adapter');
         state.gpu = await state.adapter.requestDevice();
         
-        // Detect Tier
+
         const limits = state.adapter.limits;
         const invocations = limits.maxComputeInvocationsPerWorkgroup || 0;
         const bufferSize = limits.maxStorageBufferBindingSize || 0;

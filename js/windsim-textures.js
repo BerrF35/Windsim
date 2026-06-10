@@ -3,7 +3,7 @@
 
   var D = window.WindSimData;
 
-  /* ---- shared colour / seed utilities ---- */
+  
 
   function clamp(v, min, max) { return Math.min(max, Math.max(min, v)); }
 
@@ -46,12 +46,12 @@
     return 'rgba(' + rgb.r + ',' + rgb.g + ',' + rgb.b + ',' + alpha + ')';
   }
 
-  /* ---- constants ---- */
+  
 
   var SURFACE_WORLD_TILE = 32;
   var GRID_WORLD_TILE = 40;
 
-  /* ---- texture caches ---- */
+  
 
   var _renderer = null;
   var _surfaceCache = new Map();
@@ -61,7 +61,7 @@
     _renderer = renderer;
   }
 
-  /* ---- texture generation engine ---- */
+  
 
   function makeCanvasTexture(cache, key, painter) {
     if (cache.has(key)) return cache.get(key);
@@ -574,7 +574,7 @@
     });
   }
 
-  /* ---- public API ---- */
+  
 
   window.WindSimTextures = {
     SURFACE_WORLD_TILE: SURFACE_WORLD_TILE,

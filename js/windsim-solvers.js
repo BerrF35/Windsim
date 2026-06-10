@@ -25,7 +25,7 @@
   var D = window.WindSimData;
   var P = window.WindSimPhysics;
 
-  /* ---- contract definition ---- */
+  
 
   var REQUIRED_METHODS = [
     'key', 'getProfile', 'makeConfigFromPreset', 'defaultScenarioSnapshot',
@@ -59,7 +59,7 @@
     return caps;
   }
 
-  /* ---- sandbox solver (built-in) ---- */
+  
 
   function createSandboxSolver() {
     var profile = Object.freeze(Object.assign({ key: 'sandbox' }, D.SOLVER_PROFILES.sandbox || {}));
@@ -78,7 +78,7 @@
     });
   }
 
-  /* ---- kinematic solver (test) ---- */
+  
 
   function createKinematicSolver() {
     var profile = Object.freeze(Object.assign({ key: 'kinematic' }, D.SOLVER_PROFILES.kinematic || {}));
@@ -116,7 +116,7 @@
         if (r.pos.y > 0 || r.v.y > 0) {
           r.v.y -= 9.81 * dt;
           r.pos.addScaledVector(r.v, dt);
-          if (r.pos.y < 0) r.pos.y = 0; // stop at ground
+          if (r.pos.y < 0) r.pos.y = 0;
         }
         r.forces.net.set(0, -9.81 * P.resolveObjectDef(app.cfg.objKey, app.cfg).mass, 0);
         r.forces.drag.set(0,0,0);
@@ -126,7 +126,7 @@
     });
   }
 
-  /* ---- registry ---- */
+  
 
   var SOLVERS = {};
   var CAPABILITIES = {};
@@ -163,12 +163,12 @@
     return CAPABILITIES[key] || {};
   }
 
-  /* ---- boot: register built-in solver ---- */
+  
 
   registerSolver(createSandboxSolver());
   registerSolver(createKinematicSolver());
 
-  /* ---- public API ---- */
+  
 
   window.WindSimSolvers = {
     hasSolver: hasSolver,

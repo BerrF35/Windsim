@@ -1,10 +1,4 @@
-/**
- * WindSim CFD — Aerodynamic Coefficients Module (Phase C)
- * 
- * Provides utilities for calculating Drag, Lift, and Side coefficients
- * from raw Momentum Exchange Method (MEM) force vectors, using explicit
- * physical unit calibration.
- */
+
 (function () {
     'use strict';
 
@@ -37,7 +31,7 @@
             const nu_lattice = (tau - 0.5) / 3.0;
             const Re_actual = (uLattice * charLengthLat) / nu_lattice;
 
-            // 3. Evaluate Status
+
             let status = 'MISMATCH';
             let reason = 'Reynolds Mismatch';
             let isFullyCalibrated = false;
@@ -136,7 +130,7 @@
 
             if (!found) return { area: 0, charLengthPhys: 0, charLengthLat: 0, rule: 'none' };
 
-            // 1. Calculate bounding dimensions
+
             const dimLat = {
                 x: maxI - minI + 1,
                 y: maxJ - minJ + 1,
@@ -175,7 +169,7 @@
                 rule = 'main_body';
             }
 
-            // 3. Compute projected area
+
             let areaCount = 0;
             let area = 0;
             if (direction === '+x' || direction === '-x') {

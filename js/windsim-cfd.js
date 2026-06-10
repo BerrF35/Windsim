@@ -12,7 +12,7 @@
     var N = size;
     var ds = 1.0; 
 
-    // Fluid fields
+
     var u = new Float32Array((N + 2) * (N + 2));
     var v = new Float32Array((N + 2) * (N + 2));
     var u_prev = new Float32Array((N + 2) * (N + 2));
@@ -20,7 +20,7 @@
     var dens = new Float32Array((N + 2) * (N + 2));
     var dens_prev = new Float32Array((N + 2) * (N + 2));
     
-    // Bounds tracking
+
     var boundMinX = -20;
     var boundMaxX = 20;
     var boundMinZ = -20;
@@ -160,7 +160,7 @@
       },
 
       step: function (app, dt) {
-        // Feed ambient wind
+
         var dir = app.cfg.wind.azim;
         var spd = app.cfg.wind.speed;
         var envX = Math.cos(dir) * spd;
@@ -178,7 +178,7 @@
         
         // Temporarily couple Sandbox physics to move the body
         P.substepIntegrate(app.state.body, app.cfg, dt, function(time, pos) {
-          _tmpWind.set(envX, 0, envZ); // Fallback to analytic wind for now to prevent breaking app
+          _tmpWind.set(envX, 0, envZ);
           return _tmpWind;
         }, app.state.experiment.sweepActive);
         

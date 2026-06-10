@@ -10,7 +10,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="css/cfd-entry.css" />
-  <!-- Transition Overlay -->
+  
   <canvas id="page-transition-canvas" style="position:fixed; inset:0; z-index:10000; pointer-events:none;"></canvas>
 
   <style>
@@ -18,7 +18,7 @@
       transform-origin: center center;
       will-change: transform, filter;
     }
-    /* Removed WIP Watermark for Phase D compliance */
+    
   </style>
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
@@ -121,7 +121,7 @@
 </head>
 <body>
 
-  <!-- ═══ Toolbar ═══ -->
+  
   <div class="cfd-toolbar">
     <button id="btn-home" class="cfd-tb-btn cfd-home-btn" title="Return to landing page">
       <span class="ico"><i data-lucide="arrow-left" width="16" height="16"></i></span>
@@ -164,10 +164,10 @@
     </div>
   </div>
 
-  <!-- ═══ Body ═══ -->
+  
   <div class="cfd-body">
 
-    <!-- ── Left Sidebar ── -->
+    
     <div class="cfd-sidebar">
       <div class="cfd-sidebar-scroll">
 
@@ -193,7 +193,7 @@
           <div class="cfd-phase-note" id="wf-status-note">Select and confirm a geometry to unlock the domain stage.</div>
         </div>
 
-        <!-- Geometry Panel -->
+        
         <div class="cfd-panel is-open" id="p-geometry">
           <div class="cfd-panel-head">
             <span class="cfd-panel-chevron">&gt;</span>
@@ -250,7 +250,7 @@
           </div>
         </div>
 
-        <!-- Domain -->
+        
         <div class="cfd-panel" id="p-domain">
           <div class="cfd-panel-head">
             <span class="cfd-panel-chevron">&gt;</span>
@@ -319,7 +319,7 @@
           </div>
         </div>
 
-        <!-- Solver Settings -->
+        
         <div class="cfd-panel" id="p-solver">
           <div class="cfd-panel-head">
             <span class="cfd-panel-chevron">&gt;</span>
@@ -372,7 +372,7 @@
           </div>
         </div>
 
-        <!-- Visualization -->
+        
         <div class="cfd-panel" id="p-viz">
           <div class="cfd-panel-head">
             <span class="cfd-panel-chevron">></span>
@@ -462,11 +462,11 @@
       </div>
     </div>
 
-    <!-- ── Viewport ── -->
+    
     <div class="cfd-viewport-wrap">
       <div class="cfd-viewport" id="cfd-viewport">
 
-        <!-- GPU Error Overlay -->
+        
         <div id="gpu-error-overlay" class="cfd-gpu-error" style="display:none;">
           <div class="cfd-gpu-error-ico"><i data-lucide="triangle-alert" width="48" height="48"></i></div>
           <div class="cfd-gpu-error-title">WebGPU Not Available</div>
@@ -474,7 +474,7 @@
           <div class="cfd-gpu-error-hint">chrome://flags → #enable-unsafe-webgpu</div>
         </div>
 
-        <!-- Viewport info overlay -->
+        
         <div class="cfd-vp-overlay cfd-vp-info" id="vp-info">
           Domain: <span id="vp-domain">6.0 × 6.0 × 6.0 m</span><br/>
           Object: <span id="vp-object">Sphere (r=0.6)</span><br/>
@@ -482,7 +482,7 @@
           Workflow: <span id="vp-workflow">Geometry pending</span>
         </div>
 
-        <!-- Viz mode switcher -->
+        
         <div class="cfd-vp-overlay cfd-viz-bar">
           <button class="cfd-viz-btn is-active" data-mode="solid">Solid</button>
           <button class="cfd-viz-btn" data-mode="wireframe">Wire</button>
@@ -492,7 +492,7 @@
           <button class="cfd-viz-btn" data-mode="surface">Surface</button>
         </div>
 
-        <!-- Colormap legend -->
+        
         <div class="cfd-vp-overlay cfd-vp-legend" id="vp-legend" style="display:none;">
           <div class="cfd-legend-title">Pressure (Pa)</div>
           <div class="cfd-legend-bar"></div>
@@ -504,7 +504,7 @@
       </div>
     </div>
 
-    <!-- ── Right Results Panel ── -->
+    
     <div class="cfd-results">
 
       <!-- Force Coefficients -->
@@ -537,7 +537,7 @@
             <div class="cfd-result-label">Side (N)</div>
             <div class="cfd-result-value" id="r-force-side">—</div>
           </div>
-          <!-- Coefficients -->
+          
           <div class="cfd-result-item" style="border-top: 1px solid var(--cfd-bg2); padding-top: 8px;">
             <div class="cfd-result-label">Cd</div>
             <div class="cfd-result-value" id="r-coeff-drag" style="color: var(--cfd-cyan);">—</div>
@@ -563,7 +563,7 @@
         </div>
       </div>
 
-      <!-- Convergence -->
+      
       <div class="cfd-result-card">
         <div class="cfd-result-title">Convergence</div>
         <canvas class="cfd-conv-canvas" id="conv-graph" width="280" height="100"></canvas>
@@ -579,7 +579,7 @@
         </div>
       </div>
 
-      <!-- Validation Log -->
+      
       <div class="cfd-result-card" id="validation-log-card" style="display:none;">
         <div class="cfd-result-title">Validation Log</div>
         <div id="validation-log" style="font-family: var(--cfd-mono); font-size: 10px; max-height: 120px; overflow-y: auto; color: var(--cfd-txt3); line-height: 1.6;">
@@ -587,7 +587,7 @@
         </div>
       </div>
 
-      <!-- Regime & Capability Advisor -->
+      
       <div class="cfd-result-card" id="p-regime-advisor">
         <div class="cfd-result-title">Simulation Regime & Advice</div>
         <div class="cfd-result-grid">
@@ -617,7 +617,7 @@
         </div>
       </div>
 
-      <!-- Simulation Capability Advisor (New) -->
+      
       <div class="cfd-result-card" id="p-capability-advisor">
         <div class="cfd-result-title">Simulation Capability</div>
         <div class="cfd-result-grid">
@@ -644,7 +644,7 @@
         </div>
       </div>
 
-      <!-- Solver Info -->
+      
       <div class="cfd-result-card">
         <div class="cfd-result-title">Solver Info</div>
         <div style="font-family: var(--cfd-mono); font-size: 10px; line-height: 2; color: var(--cfd-txt2);">
@@ -663,7 +663,7 @@
         </div>
       </div>
 
-      <!-- About -->
+      
       <div class="cfd-result-card" style="border-bottom: none;">
         <div class="cfd-result-title">About</div>
         <div style="font-size: 11px; line-height: 1.8; color: var(--cfd-txt3);">
@@ -676,7 +676,7 @@
     </div>
   </div>
 
-  <!-- ═══ Status Bar ═══ -->
+  
   <div class="cfd-statusbar">
     <div class="cfd-sb-item"><span class="cfd-sb-label">PHASE</span> <span class="cfd-sb-val" id="sb-phase">Phase C — Solver</span></div>
     <div class="cfd-sb-sep"></div>
@@ -697,7 +697,7 @@
     <div class="cfd-sb-item"><span class="cfd-sb-label">FPS</span> <span class="cfd-sb-val" id="sb-fps">—</span></div>
   </div>
 
-  <!-- ═══ Scripts ═══ -->
+  
   <script src="https://unpkg.com/lucide@latest"></script>
   <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/STLLoader.js"></script>
   <script>
@@ -711,7 +711,7 @@
   <script src="js/cfd-regime.js"></script>
   <script src="js/cfd-engine.js"></script>
 
-  <!-- ═══ Session Restore Modal ═══ -->
+  
   <div id="session-modal" class="cfd-modal-overlay" style="display:none;">
     <div class="cfd-modal">
       <div class="cfd-modal-title">Previous Session Found</div>

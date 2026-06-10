@@ -1,26 +1,17 @@
-/**
- * WindSim CFD — Post-Processing & Visualization (Phase D)
- * Phase D / Post layer enforcing strict mapping, no fake fields, and solid mask bounds.
- * 
- * Logic for field sampling, streamlines (RK4), cut-planes, and surface mapping.
- * Derived directly from solver FieldBuffers for ground-truth accuracy.
- * 
- * All sampling respects the solid voxel mask.
- * Streamlines terminate on solid entry, low speed, or domain exit.
- */
+
 (function () {
     'use strict';
 
     const COLORMAPS = {
         coolwarm: (t) => {
-            // Diverging Red-Blue
+
             const r = t < 0.5 ? 0.2 + 1.6 * t : 1.0;
             const g = t < 0.5 ? 0.2 + 1.6 * t : 1.2 - 1.6 * (t - 0.5);
             const b = t < 0.5 ? 1.0 : 1.2 - 1.6 * (t - 0.5);
             return new THREE.Color(r, g, b);
         },
         viridis: (t) => {
-            // Simplified Viridis
+
             return new THREE.Color().setHSL(0.8 - t * 0.8, 0.8, 0.5);
         },
         jet: (t) => {
@@ -40,7 +31,7 @@
          * @param {Uint8Array|null} voxelMask - solid mask (0=fluid, 1=surface, 2=interior)
          */
         constructor(res, domainAABB, fieldBuffers, voxelMask) {
-            this.res = res; // [nx, ny, nz]
+            this.res = res;
             this.aabb = domainAABB;
             this.fields = fieldBuffers;
             this.mask = voxelMask || null;
@@ -78,11 +69,7 @@
             return this.isSolidCell(gi, gj, gk);
         }
 
-        /**
-         * Trilinear interpolation for field sampling.
-         * Respects solid mask: if any of the 8 interpolation neighbors is solid,
-         * only fluid neighbors contribute (inverse-distance weighted fallback).
-         */
+        
         sampleField(pos, type = 'pressure') {
             const [nx, ny, nz] = this.res;
             const { min } = this.aabb;
@@ -246,7 +233,7 @@
 
             geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
             
-            // Non-emissive, data-driven material
+
             const material = new THREE.MeshBasicMaterial({ 
                 vertexColors: true, 
                 side: THREE.DoubleSide, 
@@ -324,7 +311,7 @@
                         break;
                     }
 
-                    // RK4 Integration
+
                     const k1 = v_at_pos.clone().multiplyScalar(stepSize);
                     
                     const p2 = currentPos.clone().addScaledVector(k1, 0.5);
@@ -349,7 +336,7 @@
                         break;
                     }
 
-                    // Check domain boundaries
+
                     if (nextPos.x < this.aabb.min[0] || nextPos.x > this.aabb.max[0] ||
                         nextPos.y < this.aabb.min[1] || nextPos.y > this.aabb.max[1] ||
                         nextPos.z < this.aabb.min[2] || nextPos.z > this.aabb.max[2]) {
@@ -358,7 +345,7 @@
                         break;
                     }
 
-                    // Segment: current -> next
+
                     linePositions.push(currentPos.x, currentPos.y, currentPos.z);
                     linePositions.push(nextPos.x, nextPos.y, nextPos.z);
 
@@ -394,7 +381,7 @@
                 totalSegments += streamSteps;
             }
 
-            // Diagnostics
+
             const vertexCount = linePositions.length / 3;
             console.log(`[PostD] Streamlines: seeds=${seeds.length} stepSize=${stepSize.toFixed(4)} maxSteps=${maxSteps}`);
             console.log(`[PostD] Streamlines: totalSegments=${totalSegments} vertexCount=${vertexCount} avgLength=${(seeds.length > 0 ? totalTraveled/seeds.length : 0).toFixed(3)}m`);

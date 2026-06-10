@@ -498,7 +498,7 @@ body.layout-dragging,body.layout-dragging *{user-select:none}
   #status-pill,#scale-pill{right:8px}
 }
 </style>
-  <!-- Transition Overlay -->
+  
   <canvas id="page-transition-canvas" style="position:fixed; inset:0; z-index:10000; pointer-events:none;"></canvas>
 
   <style>
@@ -523,7 +523,7 @@ body.layout-dragging,body.layout-dragging *{user-select:none}
       sessionStorage.removeItem('windsim_transition_color');
 
       document.body.classList.add('transition-scaling');
-      // Start hidden and scaled
+
       gsap.set(document.body, { scale: 1.05, filter: 'blur(10px) brightness(0.7)' });
 
       const canvas = document.getElementById('page-transition-canvas');
@@ -589,8 +589,8 @@ body.layout-dragging,body.layout-dragging *{user-select:none}
         time: { value: 1.0 },
         resolution: { value: new THREE.Vector2(window.innerWidth * window.devicePixelRatio, window.innerHeight * window.devicePixelRatio) },
         mouse: { value: new THREE.Vector2(x * window.devicePixelRatio, (window.innerHeight - y) * window.devicePixelRatio) },
-        uRadius: { value: 3.5 }, // Start fully covering
-        uStarMix: { value: 0.0 }, // Start star hidden
+        uRadius: { value: 3.5 },
+        uStarMix: { value: 0.0 },
         color_mode: { value: color === 'coral' ? new THREE.Vector3(0.95, 0.45, 0.35) : new THREE.Vector3(0.35, 0.85, 1.0) }
       };
 
@@ -612,7 +612,7 @@ body.layout-dragging,body.layout-dragging *{user-select:none}
 
       const tl = gsap.timeline();
       
-      // Phase 1: Star Flash
+
       tl.to(uniforms.uStarMix, { 
         value: 1.0, 
         duration: 0.8, 
@@ -624,7 +624,7 @@ body.layout-dragging,body.layout-dragging *{user-select:none}
         ease: "power2.in" 
       });
 
-      // Phase 2: Shrink Reveal
+
       tl.to(uniforms.uRadius, { 
         value: 0.0, 
         duration: 1.4, 

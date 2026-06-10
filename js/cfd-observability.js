@@ -1,8 +1,4 @@
-/**
- * WindSim CFD — Observability & Persistence Module (Phase C)
- * 
- * Handles structured logging, runtime diagnostics history, and persistent session recovery.
- */
+
 (function () {
     'use strict';
 

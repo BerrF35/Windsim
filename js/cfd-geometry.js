@@ -1,9 +1,4 @@
-/**
- * WindSim CFD — Geometry Handling & Voxelization (Phase B)
- * 
- * Strict, deterministic geometry pipeline for mesh validation and CPU-first voxelization.
- * Prioritizes correctness and repeatability over raw performance.
- */
+
 (function () {
     'use strict';
 
@@ -12,7 +7,7 @@
         SAT: 1e-12,
         DEDUP: 1e-8,
         WINDING: 0.5,
-        DET: 1e-15 // Determinism threshold
+        DET: 1e-15
     };
 
     /**
@@ -89,7 +84,7 @@
                 vertCount: this.positions.length / 3
             };
 
-            // 1. Check for NaNs/Infs
+
             for (let i = 0; i < this.positions.length; i++) {
                 if (!isFinite(this.positions[i])) {
                     results.errors.push("Invalid vertex data: NaN or Infinity detected.");
@@ -154,7 +149,7 @@
                 const i0 = this.indices[i], i1 = this.indices[i+1], i2 = this.indices[i+2];
                 const tris = [[i0, i1], [i1, i2], [i2, i0]];
                 
-                // Normal sanity check
+
                 const v0 = [this.positions[i0*3], this.positions[i0*3+1], this.positions[i0*3+2]];
                 const v1 = [this.positions[i1*3], this.positions[i1*3+1], this.positions[i1*3+2]];
                 const v2 = [this.positions[i2*3], this.positions[i2*3+1], this.positions[i2*3+2]];
@@ -209,7 +204,7 @@
         constructor() {
             this.min = [Infinity, Infinity, Infinity];
             this.max = [-Infinity, -Infinity, -Infinity];
-            this.children = null; // [left, right]
+            this.children = null;
             this.triIndices = null; // indices of triangles in this leaf
         }
     }
@@ -254,7 +249,7 @@
                     center: (this.mesh.positions[i0 + splitAxis] + this.mesh.positions[i1 + splitAxis] + this.mesh.positions[i2 + splitAxis]) / 3
                 };
             });
-            centroids.sort((a, b) => a.center - b.center || a.idx - b.idx); // Tie-break for determinism
+            centroids.sort((a, b) => a.center - b.center || a.idx - b.idx);
 
             const mid = Math.floor(centroids.length / 2);
             node.children = [
@@ -293,7 +288,7 @@
     class Voxelizer {
         constructor(mesh, resolution, gridAABB) {
             this.mesh = mesh;
-            this.res = resolution; // [nx, ny, nz]
+            this.res = resolution;
             this.gridAABB = gridAABB;
             this.voxelSize = [
                 (gridAABB.max[0] - gridAABB.min[0]) / resolution[0],
@@ -307,7 +302,7 @@
             const [nx, ny, nz] = this.res;
             const mask = new Uint8Array(nx * ny * nz); // 0: EMPTY, 1: SURFACE, 2: INTERIOR
 
-            // Phase 1: Surface Detection (SAT)
+
             for (let i = 0; i < nx; i++) {
                 for (let j = 0; j < ny; j++) {
                     for (let k = 0; k < nz; k++) {
@@ -339,7 +334,7 @@
                 }
             }
 
-            // Phase 2: Interior Detection (GWN)
+
             // Note: Only check for voxels that are not SURFACE
             for (let i = 0; i < nx; i++) {
                 for (let j = 0; j < ny; j++) {
@@ -355,7 +350,7 @@
 
                         const wn = this.calculateWindingNumber(vCenter);
                         if (wn > EPS.WINDING) {
-                            mask[idx] = 2; // INTERIOR
+                            mask[idx] = 2;
                         }
 
                         if (idx % 10000 === 0) await new Promise(r => setTimeout(r, 0));
@@ -378,7 +373,7 @@
             const v1 = [this.mesh.positions[i1], this.mesh.positions[i1 + 1], this.mesh.positions[i1 + 2]];
             const v2 = [this.mesh.positions[i2], this.mesh.positions[i2 + 1], this.mesh.positions[i2 + 2]];
 
-            // Move AABB to origin
+
             const center = [(boxMin[0] + boxMax[0]) / 2, (boxMin[1] + boxMax[1]) / 2, (boxMin[2] + boxMax[2]) / 2];
             const h = [(boxMax[0] - boxMin[0]) / 2, (boxMax[1] - boxMin[1]) / 2, (boxMax[2] - boxMin[2]) / 2];
 
@@ -386,17 +381,17 @@
             const b = [v1[0] - center[0], v1[1] - center[1], v1[2] - center[2]];
             const c = [v2[0] - center[0], v2[1] - center[1], v2[2] - center[2]];
 
-            // Edges
+
             const e0 = [b[0] - a[0], b[1] - a[1], b[2] - a[2]];
             const e1 = [c[0] - b[0], c[1] - b[1], c[2] - b[2]];
             const e2 = [a[0] - c[0], a[1] - c[1], a[2] - c[2]];
 
-            // 1. AABB face normals
+
             for (let i = 0; i < 3; i++) {
                 if (Math.min(a[i], b[i], c[i]) > h[i] || Math.max(a[i], b[i], c[i]) < -h[i]) return false;
             }
 
-            // 2. Triangle normal
+
             const n = [
                 e0[1] * (-e2[2]) - e0[2] * (-e2[1]),
                 e0[2] * (-e2[0]) - e0[0] * (-e2[2]),
@@ -451,7 +446,7 @@
         }
 
         async generateHash(mask, metadata) {
-            const metaStr = JSON.stringify(metadata, Object.keys(metadata).sort()); // Stable sort
+            const metaStr = JSON.stringify(metadata, Object.keys(metadata).sort());
             const encoder = new TextEncoder();
             const metaData = encoder.encode(metaStr);
             const combined = new Uint8Array(mask.length + metaData.length);
@@ -463,7 +458,7 @@
         }
     }
 
-    // Expose to WindSim global
+
     window.WindSimGeometry = {
         TriMesh,
         Voxelizer,

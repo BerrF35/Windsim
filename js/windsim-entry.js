@@ -175,7 +175,7 @@ function safeWriteJson(key, value) {
   try {
     window.localStorage.setItem(key, JSON.stringify(value));
   } catch (err) {
-    /* ignore storage failures */
+    
   }
 }
 

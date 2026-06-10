@@ -103,13 +103,13 @@
         break;
       }
       case 'gltf':
-        // Display a temporary box until the model loads
+
         mesh = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.5, 0.5), new THREE.MeshStandardMaterial({ color: 0x444444, wireframe: true }));
         if (THREE.GLTFLoader) {
           new THREE.GLTFLoader().load('./assets/' + def.modelFile, function(gltf) {
             var model = gltf.scene;
             
-            // Re-center and extract dimensions
+
             var box = new THREE.Box3().setFromObject(model);
             var size = new THREE.Vector3();
             var center = new THREE.Vector3();
@@ -120,10 +120,10 @@
             var maxDim = Math.max(size.x, size.y, size.z);
             if (maxDim > 0) {
               model.scale.setScalar(1.0 / maxDim);
-              model.position.sub(center.clone().multiplyScalar(1.0 / maxDim)); // offset to center
+              model.position.sub(center.clone().multiplyScalar(1.0 / maxDim));
             }
             
-            // Update physical parameters dynamically (Phase 4 integration)
+
             def.dims = [size.x, size.y, size.z];
             def.aero.chord = size.z;
             def.area = size.x * size.y; // approximate frontal area down Z

@@ -1,6 +1,4 @@
-/**
- * WindSim CFD — Phase C Deterministic Validation Suite
- */
+
 async function runPhaseCValidation() {
     console.log("%c Starting Phase C Deterministic Validation... ", "background: #1e293b; color: #35d1ff; font-weight: bold; padding: 4px;");
     
@@ -53,7 +51,7 @@ async function runPhaseCValidation() {
     s_pr.init([6,6,6], [32,32,32], { tau: 0.6, inletSpeed: 0.08, inletDir: '+x' }, null);
     s_pr.step(50);
     const snap = s_pr.getStateSnapshot(); 
-    s_pr.reset(); // Simulate clear
+    s_pr.reset();
     s_pr.loadStateSnapshot(snap);
     s_pr.step(50);
     const hash_pr = await s_pr.getBufferHash();
@@ -108,7 +106,7 @@ async function runPhaseCValidation() {
     // --- CASE 5: Symmetry Test ---
     console.log("Case 5: Measuring Symmetry (centered empty domain)...");
     const s_sym = new solver.LBMSolver();
-    // Resolve at 32x32x32
+
     s_sym.init([6,6,6], [32,32,32], { tau: 0.6, inletSpeed: 0.08, inletDir: '+x' }, null);
     s_sym.step(50);
     const fields = s_sym.getFieldBuffers();

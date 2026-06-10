@@ -7,7 +7,7 @@
   var UI = window.WindSimUI;
   var V3 = THREE.Vector3;
 
-  /* ---- constants ---- */
+  
 
   var FLOW_PROBE_GRID = 7;
   var FLOW_PROBE_SAMPLES = FLOW_PROBE_GRID * FLOW_PROBE_GRID;
@@ -37,13 +37,13 @@
   var FLOW_PROBE_LOW_RGB = T.rgbFromHex(0x4f6f88);
   var FLOW_PROBE_HIGH_RGB = T.rgbFromHex(0xffd166);
 
-  /* ---- utilities ---- */
+  
 
   function clamp(v, min, max) { return Math.min(max, Math.max(min, v)); }
   function lengthVec3(s) { return Math.hypot(s.x, s.y, s.z); }
   function $(id) { return document.getElementById(id); }
 
-  /* ---- install ---- */
+  
 
   function install(app, options) {
     var displayBody = options.displayBody;
@@ -55,7 +55,7 @@
     var tmpC = new V3();
     var tmpD = new V3();
 
-    /* ---- object visual ---- */
+    
 
     function setObjectVisual() {
       if (app.render.activeModel) {
@@ -66,7 +66,7 @@
       app.render.objectPivot.add(app.render.activeModel);
     }
 
-    /* ---- surface / ground / chamber ---- */
+    
 
     function refreshSurface() {
       var props = T.surfaceMaterialProps(app.cfg.surfKey);
@@ -104,7 +104,7 @@
         app.cfg.world.ceiling.toFixed(0) + ' m';
     }
 
-    /* ---- renderer setup ---- */
+    
 
     function resizeRenderer() {
       var width = app.render.mainEl.clientWidth;
@@ -150,7 +150,7 @@
         new THREE.RGBELoader().load('./assets/studio_small_09_1k.hdr', function (texture) {
           texture.mapping = THREE.EquirectangularReflectionMapping;
           render.scene.environment = texture;
-          // Clean aerospace background
+
           render.scene.background = new THREE.Color(0x0C1117);
         });
       }
@@ -185,7 +185,7 @@
       T.init(render.renderer);
     }
 
-    /* ---- particles ---- */
+    
 
     function particleSpan() {
       return {
@@ -232,7 +232,7 @@
       };
     }
 
-    /* ---- geometry layers ---- */
+    
 
     function initGeometryLayers() {
       app.render.trailPos = new Float32Array(D.TRAIL_MAX * 3);
@@ -312,7 +312,7 @@
       app.render.particleGeo.setDrawRange(0, count);
     }
 
-    /* ---- flow-probe slice ---- */
+    
 
     function flowProbeAnchor() {
       var body = displayBody();
@@ -451,7 +451,7 @@
       app.render.flowProbeStats.anchorZ = anchor.z;
     }
 
-    /* ---- particle update ---- */
+    
 
     function updateParticles(dt) {
       var count = Math.min(app.cfg.visuals.particleCount, D.PART_MAX);
@@ -480,7 +480,7 @@
       app.render.particlePoints.visible = app.cfg.env.part;
     }
 
-    /* ---- arrows / projection ---- */
+    
 
     function setArrow(key, origin, direction, length) {
       var arrow = app.render.arrows[key];
@@ -508,7 +508,7 @@
       return out;
     }
 
-    /* ---- trail / ruler / impacts sync ---- */
+    
 
     function syncTrails() {
       var def = currentDef();
@@ -617,7 +617,7 @@
       app.render.impactGroup.visible = !!app.cfg.analysis.impacts;
     }
 
-    /* ---- camera ---- */
+    
 
     function syncCameraInputs() {
       $('sCamDist').value = app.cfg.camera.distance.toFixed(1);
@@ -678,7 +678,7 @@
       app.render.camera.lookAt(app.render.focus);
     }
 
-    /* ---- lighting ---- */
+    
 
     function updateLighting() {
       var body = displayBody();
@@ -695,7 +695,7 @@
       app.render.lights.rim.position.set(app.render.camera.position.x * 0.35 + app.render.focus.x * 0.65, app.render.focus.y + 18, app.render.camera.position.z * 0.35 + app.render.focus.z * 0.65);
     }
 
-    /* ---- per-frame scene refresh ---- */
+    
 
     function refreshScene() {
       var body = displayBody();
@@ -740,12 +740,12 @@
       });
     }
 
-    /* ---- run setup ---- */
+    
 
     setupRenderer();
     initGeometryLayers();
 
-    /* ---- attach methods to app ---- */
+    
 
     app.setObjectVisual = setObjectVisual;
     app.refreshSurface = refreshSurface;

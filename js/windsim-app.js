@@ -298,7 +298,7 @@
     return app.solver.resolveObjectDef(app.cfg.objKey, app.cfg);
   }
 
-  /* ---- workflows ---- */
+  
 
   W.attach(app, {
     clamp: clamp,
@@ -312,7 +312,7 @@
     }
   });
 
-  /* ---- scene ---- */
+  
 
   Scene.install(app, {
     displayBody: displayBody,
@@ -320,7 +320,7 @@
     currentDef: currentDef
   });
 
-  /* ---- UI ---- */
+  
 
   UI.install(app);
   app.ui = {
@@ -338,7 +338,7 @@
     }
   };
 
-  /* ---- scenario orchestration ---- */
+  
 
   function applyScenario(source) {
     app.cfg = normalizeScenario(source);
@@ -408,7 +408,7 @@
     UI.syncValidationUi(app, displayTime());
   }
 
-  /* ---- controls ---- */
+  
 
   function togglePause() {
     if (app.state.playback.active) {
@@ -477,7 +477,7 @@
     app.syncCameraInputs();
   }
 
-  /* ---- input ---- */
+  
 
   function installInput() {
     var canvas = app.render.renderer.domElement;
@@ -564,7 +564,7 @@
     });
   }
 
-  /* ---- frame loop ---- */
+  
 
   function loop(ts) {
     if (!app.render.lastTs) app.render.lastTs = ts;
@@ -596,7 +596,7 @@
     requestAnimationFrame(loop);
   }
 
-  /* ---- snapshot / save / load ---- */
+  
 
   function getScenarioSnapshot() {
     return app.solver.defaultScenarioSnapshot(app);
@@ -621,7 +621,7 @@
     UI.syncStatus(app);
   }
 
-  /* ---- public API on app ---- */
+  
 
   app.resetObject = resetObject;
   app.applyPreset = applyPreset;
@@ -635,7 +635,7 @@
   app.resetCamera = resetCamera;
   app.setSolver = setSolver;
 
-  /* ---- bootstrap ---- */
+  
 
   installInput();
   applyPreset('baseline');

@@ -150,7 +150,7 @@
     try {
       localStorage.setItem(LAYOUT_STORAGE_KEY, JSON.stringify(app.layoutState));
     } catch (err) {
-      /* ignore storage failures */
+      
     }
   }
 
@@ -232,7 +232,7 @@
     try {
       localStorage.setItem(D.EXPERIMENT_STORAGE_KEY, JSON.stringify(app.state.experiment.savedRuns));
     } catch (err) {
-      /* ignore storage failures */
+      
     }
   }
 

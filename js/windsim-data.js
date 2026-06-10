@@ -105,7 +105,7 @@
       label: 'Sci-Fi Helmet (GLTF)',
       mass: 1.5,
       r: 0.25,
-      area: 0.18, // To be overridden by Phase 4 mesh introspection
+      area: 0.18,
       Cd0: 0.65,
       crO: 0.40,
       col: 0x909090,
