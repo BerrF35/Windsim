@@ -977,3 +977,26 @@ select.cfd-select option { background: var(--cfd-surf); }
   color: var(--cfd-txt2) !important;
 }
 
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto !important;
+  }
+
+  .cfd-toolbar *,
+  .cfd-body *,
+  .cfd-statusbar *,
+  .cfd-modal-overlay,
+  .cfd-modal {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+
+  .cfd-status-dot.is-running {
+    animation: none !important;
+  }
+
+  .cfd-modal-overlay {
+    backdrop-filter: none;
+  }
+}

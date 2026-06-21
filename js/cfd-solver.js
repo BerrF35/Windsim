@@ -190,15 +190,17 @@
 
                         const base = idx * Q;
                         
+                        // Calculate macroscopic (at source)
+                        let f0 = this.f[base]; let f1 = this.f[base+1]; let f2 = this.f[base+2]; let f3 = this.f[base+3];
+                        let f4 = this.f[base+4]; let f5 = this.f[base+5]; let f6 = this.f[base+6]; let f7 = this.f[base+7];
+                        let f8 = this.f[base+8]; let f9 = this.f[base+9]; let f10 = this.f[base+10]; let f11 = this.f[base+11];
+                        let f12 = this.f[base+12]; let f13 = this.f[base+13]; let f14 = this.f[base+14]; let f15 = this.f[base+15];
+                        let f16 = this.f[base+16]; let f17 = this.f[base+17]; let f18 = this.f[base+18];
 
-                        let rho = 0, ux = 0, uy = 0, uz = 0;
-                        for (let q = 0; q < Q; q++) {
-                            const val = this.f[base + q];
-                            rho += val;
-                            ux += val * E[q][0];
-                            uy += val * E[q][1];
-                            uz += val * E[q][2];
-                        }
+                        let rho = f0+f1+f2+f3+f4+f5+f6+f7+f8+f9+f10+f11+f12+f13+f14+f15+f16+f17+f18;
+                        let ux = f1 - f2 + f7 - f8 + f9 - f10 + f11 - f12 + f13 - f14;
+                        let uy = f3 - f4 + f7 - f8 - f9 + f10 + f15 - f16 + f17 - f18;
+                        let uz = f5 - f6 + f11 - f12 - f13 + f14 + f15 - f16 - f17 + f18;
                         
                         if (rho > 0) {
                             ux /= rho; uy /= rho; uz /= rho;
@@ -257,40 +259,340 @@
                         tauSum += tauEff;
                         const omega = 1.0 / tauEff;
 
-                        for (let q = 0; q < Q; q++) {
-                            const f_val = this.f[base + q];
-                            const eu = E[q][0]*ux + E[q][1]*uy + E[q][2]*uz;
-                            const feq = W[q] * rho * (1 + 3*eu + 4.5*eu*eu - 1.5*u2);
-                            
-                            const f_post = f_val + omega * (feq - f_val);
-
-                            // PRE-STREAMING RHO CAPTURE (for residual next step)
-                            // We capture the post-collision, pre-stream density change effectively by comparing 
-                            // the state at the end of each full step.
-
-                            // Streaming
-                            let nx_ = x + E[q][0];
-                            let ny_ = y + E[q][1];
-                            let nz_ = z + E[q][2];
-
-                            // Periodic or Outflow (Simple Periodic for now)
-                            if (nx_ < 0) nx_ = nx - 1; if (nx_ >= nx) nx_ = 0;
-                            if (ny_ < 0) ny_ = ny - 1; if (ny_ >= ny) ny_ = 0;
-                            if (nz_ < 0) nz_ = nz - 1; if (nz_ >= nz) nz_ = 0;
-
+                        // Direction 0: [0, 0, 0]
+                        {
+                            const feq = 0.3333333333333333 * rho * (1 - 1.5*u2);
+                            const f_post = f0 + omega * (feq - f0);
+                            this.f_tmp[base] = f_post;
+                        }
+                        // Direction 1: [1, 0, 0]
+                        {
+                            const eu = ux;
+                            const feq = 0.05555555555555555 * rho * (1 + 3*eu + 4.5*eu*eu - 1.5*u2);
+                            const f_post = f1 + omega * (feq - f1);
+                            let nx_ = x + 1;
+                            let ny_ = y;
+                            let nz_ = z;
+                            if (nx_ < 0) nx_ = nx - 1; else if (nx_ >= nx) nx_ = 0;
                             const targetIdx = nx_ + nx * (ny_ + ny * nz_);
-                            const targetBase = targetIdx * Q;
-
-                            // Voxel Bounce-back
                             if (this.mask && this.mask[targetIdx] > 0) {
-                                // Reflect back to source cell in opposite direction
-                                this.f_tmp[base + OPP[q]] = f_post;
-                                // Momentum Exchange Method (MEM) force accumulation
-                                fx += 2 * f_post * E[q][0];
-                                fy += 2 * f_post * E[q][1];
-                                fz += 2 * f_post * E[q][2];
+                                this.f_tmp[base + 2] = f_post;
+                                fx += 2 * f_post;
                             } else {
-                                this.f_tmp[targetBase + q] = f_post;
+                                this.f_tmp[targetIdx * 19 + 1] = f_post;
+                            }
+                        }
+                        // Direction 2: [-1, 0, 0]
+                        {
+                            const eu = -ux;
+                            const feq = 0.05555555555555555 * rho * (1 + 3*eu + 4.5*eu*eu - 1.5*u2);
+                            const f_post = f2 + omega * (feq - f2);
+                            let nx_ = x - 1;
+                            let ny_ = y;
+                            let nz_ = z;
+                            if (nx_ < 0) nx_ = nx - 1; else if (nx_ >= nx) nx_ = 0;
+                            const targetIdx = nx_ + nx * (ny_ + ny * nz_);
+                            if (this.mask && this.mask[targetIdx] > 0) {
+                                this.f_tmp[base + 1] = f_post;
+                                fx += -2 * f_post;
+                            } else {
+                                this.f_tmp[targetIdx * 19 + 2] = f_post;
+                            }
+                        }
+                        // Direction 3: [0, 1, 0]
+                        {
+                            const eu = uy;
+                            const feq = 0.05555555555555555 * rho * (1 + 3*eu + 4.5*eu*eu - 1.5*u2);
+                            const f_post = f3 + omega * (feq - f3);
+                            let nx_ = x;
+                            let ny_ = y + 1;
+                            let nz_ = z;
+                            if (ny_ < 0) ny_ = ny - 1; else if (ny_ >= ny) ny_ = 0;
+                            const targetIdx = nx_ + nx * (ny_ + ny * nz_);
+                            if (this.mask && this.mask[targetIdx] > 0) {
+                                this.f_tmp[base + 4] = f_post;
+                                fy += 2 * f_post;
+                            } else {
+                                this.f_tmp[targetIdx * 19 + 3] = f_post;
+                            }
+                        }
+                        // Direction 4: [0, -1, 0]
+                        {
+                            const eu = -uy;
+                            const feq = 0.05555555555555555 * rho * (1 + 3*eu + 4.5*eu*eu - 1.5*u2);
+                            const f_post = f4 + omega * (feq - f4);
+                            let nx_ = x;
+                            let ny_ = y - 1;
+                            let nz_ = z;
+                            if (ny_ < 0) ny_ = ny - 1; else if (ny_ >= ny) ny_ = 0;
+                            const targetIdx = nx_ + nx * (ny_ + ny * nz_);
+                            if (this.mask && this.mask[targetIdx] > 0) {
+                                this.f_tmp[base + 3] = f_post;
+                                fy += -2 * f_post;
+                            } else {
+                                this.f_tmp[targetIdx * 19 + 4] = f_post;
+                            }
+                        }
+                        // Direction 5: [0, 0, 1]
+                        {
+                            const eu = uz;
+                            const feq = 0.05555555555555555 * rho * (1 + 3*eu + 4.5*eu*eu - 1.5*u2);
+                            const f_post = f5 + omega * (feq - f5);
+                            let nx_ = x;
+                            let ny_ = y;
+                            let nz_ = z + 1;
+                            if (nz_ < 0) nz_ = nz - 1; else if (nz_ >= nz) nz_ = 0;
+                            const targetIdx = nx_ + nx * (ny_ + ny * nz_);
+                            if (this.mask && this.mask[targetIdx] > 0) {
+                                this.f_tmp[base + 6] = f_post;
+                                fz += 2 * f_post;
+                            } else {
+                                this.f_tmp[targetIdx * 19 + 5] = f_post;
+                            }
+                        }
+                        // Direction 6: [0, 0, -1]
+                        {
+                            const eu = -uz;
+                            const feq = 0.05555555555555555 * rho * (1 + 3*eu + 4.5*eu*eu - 1.5*u2);
+                            const f_post = f6 + omega * (feq - f6);
+                            let nx_ = x;
+                            let ny_ = y;
+                            let nz_ = z - 1;
+                            if (nz_ < 0) nz_ = nz - 1; else if (nz_ >= nz) nz_ = 0;
+                            const targetIdx = nx_ + nx * (ny_ + ny * nz_);
+                            if (this.mask && this.mask[targetIdx] > 0) {
+                                this.f_tmp[base + 5] = f_post;
+                                fz += -2 * f_post;
+                            } else {
+                                this.f_tmp[targetIdx * 19 + 6] = f_post;
+                            }
+                        }
+                        // Direction 7: [1, 1, 0]
+                        {
+                            const eu = ux + uy;
+                            const feq = 0.027777777777777776 * rho * (1 + 3*eu + 4.5*eu*eu - 1.5*u2);
+                            const f_post = f7 + omega * (feq - f7);
+                            let nx_ = x + 1;
+                            let ny_ = y + 1;
+                            let nz_ = z;
+                            if (nx_ < 0) nx_ = nx - 1; else if (nx_ >= nx) nx_ = 0;
+                            if (ny_ < 0) ny_ = ny - 1; else if (ny_ >= ny) ny_ = 0;
+                            const targetIdx = nx_ + nx * (ny_ + ny * nz_);
+                            if (this.mask && this.mask[targetIdx] > 0) {
+                                this.f_tmp[base + 8] = f_post;
+                                fx += 2 * f_post;
+                                fy += 2 * f_post;
+                            } else {
+                                this.f_tmp[targetIdx * 19 + 7] = f_post;
+                            }
+                        }
+                        // Direction 8: [-1, -1, 0]
+                        {
+                            const eu = -ux - uy;
+                            const feq = 0.027777777777777776 * rho * (1 + 3*eu + 4.5*eu*eu - 1.5*u2);
+                            const f_post = f8 + omega * (feq - f8);
+                            let nx_ = x - 1;
+                            let ny_ = y - 1;
+                            let nz_ = z;
+                            if (nx_ < 0) nx_ = nx - 1; else if (nx_ >= nx) nx_ = 0;
+                            if (ny_ < 0) ny_ = ny - 1; else if (ny_ >= ny) ny_ = 0;
+                            const targetIdx = nx_ + nx * (ny_ + ny * nz_);
+                            if (this.mask && this.mask[targetIdx] > 0) {
+                                this.f_tmp[base + 7] = f_post;
+                                fx += -2 * f_post;
+                                fy += -2 * f_post;
+                            } else {
+                                this.f_tmp[targetIdx * 19 + 8] = f_post;
+                            }
+                        }
+                        // Direction 9: [1, -1, 0]
+                        {
+                            const eu = ux - uy;
+                            const feq = 0.027777777777777776 * rho * (1 + 3*eu + 4.5*eu*eu - 1.5*u2);
+                            const f_post = f9 + omega * (feq - f9);
+                            let nx_ = x + 1;
+                            let ny_ = y - 1;
+                            let nz_ = z;
+                            if (nx_ < 0) nx_ = nx - 1; else if (nx_ >= nx) nx_ = 0;
+                            if (ny_ < 0) ny_ = ny - 1; else if (ny_ >= ny) ny_ = 0;
+                            const targetIdx = nx_ + nx * (ny_ + ny * nz_);
+                            if (this.mask && this.mask[targetIdx] > 0) {
+                                this.f_tmp[base + 10] = f_post;
+                                fx += 2 * f_post;
+                                fy += -2 * f_post;
+                            } else {
+                                this.f_tmp[targetIdx * 19 + 9] = f_post;
+                            }
+                        }
+                        // Direction 10: [-1, 1, 0]
+                        {
+                            const eu = -ux + uy;
+                            const feq = 0.027777777777777776 * rho * (1 + 3*eu + 4.5*eu*eu - 1.5*u2);
+                            const f_post = f10 + omega * (feq - f10);
+                            let nx_ = x - 1;
+                            let ny_ = y + 1;
+                            let nz_ = z;
+                            if (nx_ < 0) nx_ = nx - 1; else if (nx_ >= nx) nx_ = 0;
+                            if (ny_ < 0) ny_ = ny - 1; else if (ny_ >= ny) ny_ = 0;
+                            const targetIdx = nx_ + nx * (ny_ + ny * nz_);
+                            if (this.mask && this.mask[targetIdx] > 0) {
+                                this.f_tmp[base + 9] = f_post;
+                                fx += -2 * f_post;
+                                fy += 2 * f_post;
+                            } else {
+                                this.f_tmp[targetIdx * 19 + 10] = f_post;
+                            }
+                        }
+                        // Direction 11: [1, 0, 1]
+                        {
+                            const eu = ux + uz;
+                            const feq = 0.027777777777777776 * rho * (1 + 3*eu + 4.5*eu*eu - 1.5*u2);
+                            const f_post = f11 + omega * (feq - f11);
+                            let nx_ = x + 1;
+                            let ny_ = y;
+                            let nz_ = z + 1;
+                            if (nx_ < 0) nx_ = nx - 1; else if (nx_ >= nx) nx_ = 0;
+                            if (nz_ < 0) nz_ = nz - 1; else if (nz_ >= nz) nz_ = 0;
+                            const targetIdx = nx_ + nx * (ny_ + ny * nz_);
+                            if (this.mask && this.mask[targetIdx] > 0) {
+                                this.f_tmp[base + 12] = f_post;
+                                fx += 2 * f_post;
+                                fz += 2 * f_post;
+                            } else {
+                                this.f_tmp[targetIdx * 19 + 11] = f_post;
+                            }
+                        }
+                        // Direction 12: [-1, 0, -1]
+                        {
+                            const eu = -ux - uz;
+                            const feq = 0.027777777777777776 * rho * (1 + 3*eu + 4.5*eu*eu - 1.5*u2);
+                            const f_post = f12 + omega * (feq - f12);
+                            let nx_ = x - 1;
+                            let ny_ = y;
+                            let nz_ = z - 1;
+                            if (nx_ < 0) nx_ = nx - 1; else if (nx_ >= nx) nx_ = 0;
+                            if (nz_ < 0) nz_ = nz - 1; else if (nz_ >= nz) nz_ = 0;
+                            const targetIdx = nx_ + nx * (ny_ + ny * nz_);
+                            if (this.mask && this.mask[targetIdx] > 0) {
+                                this.f_tmp[base + 11] = f_post;
+                                fx += -2 * f_post;
+                                fz += -2 * f_post;
+                            } else {
+                                this.f_tmp[targetIdx * 19 + 12] = f_post;
+                            }
+                        }
+                        // Direction 13: [1, 0, -1]
+                        {
+                            const eu = ux - uz;
+                            const feq = 0.027777777777777776 * rho * (1 + 3*eu + 4.5*eu*eu - 1.5*u2);
+                            const f_post = f13 + omega * (feq - f13);
+                            let nx_ = x + 1;
+                            let ny_ = y;
+                            let nz_ = z - 1;
+                            if (nx_ < 0) nx_ = nx - 1; else if (nx_ >= nx) nx_ = 0;
+                            if (nz_ < 0) nz_ = nz - 1; else if (nz_ >= nz) nz_ = 0;
+                            const targetIdx = nx_ + nx * (ny_ + ny * nz_);
+                            if (this.mask && this.mask[targetIdx] > 0) {
+                                this.f_tmp[base + 14] = f_post;
+                                fx += 2 * f_post;
+                                fz += -2 * f_post;
+                            } else {
+                                this.f_tmp[targetIdx * 19 + 13] = f_post;
+                            }
+                        }
+                        // Direction 14: [-1, 0, 1]
+                        {
+                            const eu = -ux + uz;
+                            const feq = 0.027777777777777776 * rho * (1 + 3*eu + 4.5*eu*eu - 1.5*u2);
+                            const f_post = f14 + omega * (feq - f14);
+                            let nx_ = x - 1;
+                            let ny_ = y;
+                            let nz_ = z + 1;
+                            if (nx_ < 0) nx_ = nx - 1; else if (nx_ >= nx) nx_ = 0;
+                            if (nz_ < 0) nz_ = nz - 1; else if (nz_ >= nz) nz_ = 0;
+                            const targetIdx = nx_ + nx * (ny_ + ny * nz_);
+                            if (this.mask && this.mask[targetIdx] > 0) {
+                                this.f_tmp[base + 13] = f_post;
+                                fx += -2 * f_post;
+                                fz += 2 * f_post;
+                            } else {
+                                this.f_tmp[targetIdx * 19 + 14] = f_post;
+                            }
+                        }
+                        // Direction 15: [0, 1, 1]
+                        {
+                            const eu = uy + uz;
+                            const feq = 0.027777777777777776 * rho * (1 + 3*eu + 4.5*eu*eu - 1.5*u2);
+                            const f_post = f15 + omega * (feq - f15);
+                            let nx_ = x;
+                            let ny_ = y + 1;
+                            let nz_ = z + 1;
+                            if (ny_ < 0) ny_ = ny - 1; else if (ny_ >= ny) ny_ = 0;
+                            if (nz_ < 0) nz_ = nz - 1; else if (nz_ >= nz) nz_ = 0;
+                            const targetIdx = nx_ + nx * (ny_ + ny * nz_);
+                            if (this.mask && this.mask[targetIdx] > 0) {
+                                this.f_tmp[base + 16] = f_post;
+                                fy += 2 * f_post;
+                                fz += 2 * f_post;
+                            } else {
+                                this.f_tmp[targetIdx * 19 + 15] = f_post;
+                            }
+                        }
+                        // Direction 16: [0, -1, -1]
+                        {
+                            const eu = -uy - uz;
+                            const feq = 0.027777777777777776 * rho * (1 + 3*eu + 4.5*eu*eu - 1.5*u2);
+                            const f_post = f16 + omega * (feq - f16);
+                            let nx_ = x;
+                            let ny_ = y - 1;
+                            let nz_ = z - 1;
+                            if (ny_ < 0) ny_ = ny - 1; else if (ny_ >= ny) ny_ = 0;
+                            if (nz_ < 0) nz_ = nz - 1; else if (nz_ >= nz) nz_ = 0;
+                            const targetIdx = nx_ + nx * (ny_ + ny * nz_);
+                            if (this.mask && this.mask[targetIdx] > 0) {
+                                this.f_tmp[base + 15] = f_post;
+                                fy += -2 * f_post;
+                                fz += -2 * f_post;
+                            } else {
+                                this.f_tmp[targetIdx * 19 + 16] = f_post;
+                            }
+                        }
+                        // Direction 17: [0, 1, -1]
+                        {
+                            const eu = uy - uz;
+                            const feq = 0.027777777777777776 * rho * (1 + 3*eu + 4.5*eu*eu - 1.5*u2);
+                            const f_post = f17 + omega * (feq - f17);
+                            let nx_ = x;
+                            let ny_ = y + 1;
+                            let nz_ = z - 1;
+                            if (ny_ < 0) ny_ = ny - 1; else if (ny_ >= ny) ny_ = 0;
+                            if (nz_ < 0) nz_ = nz - 1; else if (nz_ >= nz) nz_ = 0;
+                            const targetIdx = nx_ + nx * (ny_ + ny * nz_);
+                            if (this.mask && this.mask[targetIdx] > 0) {
+                                this.f_tmp[base + 18] = f_post;
+                                fy += 2 * f_post;
+                                fz += -2 * f_post;
+                            } else {
+                                this.f_tmp[targetIdx * 19 + 17] = f_post;
+                            }
+                        }
+                        // Direction 18: [0, -1, 1]
+                        {
+                            const eu = -uy + uz;
+                            const feq = 0.027777777777777776 * rho * (1 + 3*eu + 4.5*eu*eu - 1.5*u2);
+                            const f_post = f18 + omega * (feq - f18);
+                            let nx_ = x;
+                            let ny_ = y - 1;
+                            let nz_ = z + 1;
+                            if (ny_ < 0) ny_ = ny - 1; else if (ny_ >= ny) ny_ = 0;
+                            if (nz_ < 0) nz_ = nz - 1; else if (nz_ >= nz) nz_ = 0;
+                            const targetIdx = nx_ + nx * (ny_ + ny * nz_);
+                            if (this.mask && this.mask[targetIdx] > 0) {
+                                this.f_tmp[base + 17] = f_post;
+                                fy += -2 * f_post;
+                                fz += 2 * f_post;
+                            } else {
+                                this.f_tmp[targetIdx * 19 + 18] = f_post;
                             }
                         }
                     }

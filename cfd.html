@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>WindSim - CFD Laboratory</title>
-  <meta name="description" content="WindSim CFD Laboratory Phase D. LBM D3Q19 solver core, geometry voxelization, and post-processing visualization." />
+  <meta name="description" content="WindSim CFD Laboratory Phase D with deterministic CPU LBM, geometry voxelization, regime advice, calibration gating, and WebGPU-backed visualization where available." />
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2322cded' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M2 12h4l2-2 4 4 4-4 2 2h4'/></svg>" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -34,6 +34,8 @@
       sessionStorage.removeItem('windsim_transition_x');
       sessionStorage.removeItem('windsim_transition_y');
       sessionStorage.removeItem('windsim_transition_color');
+
+      if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
 
       document.body.classList.add('transition-scaling');
       gsap.set(document.body, { scale: 1.05, filter: 'blur(10px) brightness(0.7)' });
@@ -364,7 +366,7 @@
                 <span class="cfd-ctl-val" id="v-steps">4</span>
               </div>
               <input type="range" class="cfd-range" id="s-steps" min="1" max="32" step="1" value="4" />
-              <div class="cfd-ctl-note">More steps = faster convergence but heavier GPU load.</div>
+              <div class="cfd-ctl-note">More steps = faster convergence but heavier CPU solver load.</div>
             </div>
             <div class="cfd-step-actions">
               <button id="btn-confirm-solver" class="cfd-step-btn">Lock solver settings</button>
@@ -617,34 +619,7 @@
         </div>
       </div>
 
-      
-      <div class="cfd-result-card" id="p-capability-advisor">
-        <div class="cfd-result-title">Simulation Capability</div>
-        <div class="cfd-result-grid">
-          <div class="cfd-result-item">
-            <div class="cfd-result-label">Recommended Grid</div>
-            <div class="cfd-result-value" id="r-cap-grid">—</div>
-          </div>
-          <div class="cfd-result-item">
-            <div class="cfd-result-label">Max Safe Grid</div>
-            <div class="cfd-result-value" id="r-cap-max">—</div>
-          </div>
-          <div class="cfd-result-item" style="grid-column: span 3; border-top: 1px solid var(--cfd-bg2); padding-top: 8px;">
-            <div class="cfd-result-label">Solver Advice</div>
-            <div class="cfd-result-value" id="r-cap-advice" style="font-size: 11px; color: var(--cfd-cyan);">—</div>
-          </div>
-          <div class="cfd-result-item" style="grid-column: span 3; border-top: 1px solid var(--cfd-bg2); padding-top: 8px;">
-            <div class="cfd-result-label">Coefficient Support</div>
-            <div class="cfd-result-value" id="r-cap-coeff" style="font-size: 11px;">—</div>
-          </div>
-          <div class="cfd-result-item" style="grid-column: span 3; border-top: 1px solid var(--cfd-bg2); padding-top: 8px;">
-            <div class="cfd-result-label">Warnings</div>
-            <div class="cfd-result-value" id="r-cap-warnings" style="font-size: 11px; color: var(--cfd-txt3);">none</div>
-          </div>
-        </div>
-      </div>
-
-      
+      <!-- Solver Info -->
       <div class="cfd-result-card">
         <div class="cfd-result-title">Solver Info</div>
         <div style="font-family: var(--cfd-mono); font-size: 10px; line-height: 2; color: var(--cfd-txt2);">

@@ -1,4 +1,3 @@
-
 (function () {
   'use strict';
 
@@ -156,24 +155,10 @@
       setText('r-coeff-reason', regime.coefficientAvailability.reason);
     }
     
-    // Update New Simulation Capability UI
     if (capability) {
-      setText('r-cap-grid', capability.recommendedGrid);
-      setText('r-cap-max', capability.maxSafeGrid);
-      setText('r-cap-advice', capability.solverModeAdvice);
-      setText('r-cap-coeff', capability.coefficientSupport);
-      
-      const warnEl = $('r-cap-warnings');
-      if (warnEl) {
-          warnEl.textContent = capability.warnings.length ? capability.warnings.join(', ') : 'none';
-          warnEl.style.color = capability.warnings.length ? '#ef4444' : 'var(--cfd-txt3)';
-      }
-      
-      // Update Run button based on canRun
       setDisabled('btn-run', !state.workflow.solver || !state.supportsKernel || state.solver.divergenceHalt || !capability.canRun);
     }
 
-    // Keep existing Regime/Capability section for backward compatibility
     const oldCap = assessment && assessment.capability;
     if (oldCap) {
       setText('r-capability-summary', oldCap.summary);
@@ -549,10 +534,14 @@ function initSolver() {
     saveSimulationState();
   }
 
+  let saveTimer = null;
   async function saveSimulationState() {
-    if (state.obs) {
-        await state.obs.saveSession(state, state.solverKernel);
-    }
+    if (saveTimer) clearTimeout(saveTimer);
+    saveTimer = setTimeout(async () => {
+        if (state.obs) {
+            await state.obs.saveSession(state, state.solverKernel);
+        }
+    }, 1000); // 1-second debounce
   }
 
   /**
@@ -1342,16 +1331,9 @@ function initSolver() {
         return false; 
     }
     try {
-        state.adapter = await navigator.gpu.requestAdapter();
-        if (!state.adapter) throw new Error('No adapter');
-        state.gpu = await state.adapter.requestDevice();
-        
-
-        const limits = state.adapter.limits;
-        const invocations = limits.maxComputeInvocationsPerWorkgroup || 0;
-        const bufferSize = limits.maxStorageBufferBindingSize || 0;
-        
-        if (invocations >= 256 && bufferSize >= 256 * 1024 * 1024 && cpuCores >= 8 && devMem >= 8) {
+        // We no longer allocate a WebGPU device since the compute solver is removed,
+        // but we still infer tier from CPU/RAM to guide the advisor layer.
+        if (cpuCores >= 8 && devMem >= 8) {
             state.executionTier = 'full';
         } else {
             state.executionTier = 'reduced';
@@ -1360,12 +1342,12 @@ function initSolver() {
         state.gpuReady = true;
         state.hardware.gpuReady = true;
         state.hardware.rendererTier = state.executionTier;
-        updateGPUStatus('ready', `WebGPU Visualization Active`);
+        updateGPUStatus('ready', `WebGPU visualization supported`);
     } catch (e) {
         state.executionTier = 'demo';
         state.hardware.gpuReady = false;
         state.hardware.rendererTier = 'demo';
-        updateGPUStatus('error', 'WebGPU Driver Error');
+        updateGPUStatus('error', 'WebGPU Check Error');
     }
     
     enforceTierLimits();
