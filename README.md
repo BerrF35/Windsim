@@ -7,13 +7,6 @@ WindSim is a browser-native aerodynamics project with two distinct surfaces:
 
 The launcher at `index.html` routes between them.
 
-## Source Of Truth
-
-docs/CFD_MASTER_BLUEPRINT.md → CFD implementation phases
-docs/WINDSIM_ENGINEERING_PLAN.md → full system architecture and requirements
-
-That blueprint is the active plan for the CFD side of the repo. The core rule is simple: the UI must not imply solved physics that the code does not actually compute.
-
 ## Current State
 
 ### Sandbox
@@ -65,13 +58,5 @@ What is not real yet:
   CFD workbench modules (geometry, coefficients, solver, observability, post-processing, regime, and engine).
 - `js/windsim-cfd.js`
   Experimental sandbox-side grid solver work.
-- `docs/CFD_MASTER_BLUEPRINT.md`
-  Active CFD implementation blueprint.
 - `docs/CHANGELOG.md`
   High-level change history.
-
-## Honesty Rules
-
-- The sandbox can use reduced-order and heuristic models, but it must label them honestly.
-- The CFD lab must not show fake solved outputs.
-- If a feature is not wired to real computation yet, it should stay locked, blank, or explicitly marked as shell-only.
