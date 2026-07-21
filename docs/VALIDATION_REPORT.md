@@ -63,4 +63,3 @@ The aerodynamic force implementation in the WindSim CFD Lab has been rigorously 
 - **Inlet Speed**: 0.01 - 0.15 lu/ts (Stable). Avoid > 0.20 to prevent LBM compressibility artifacts.
 - **Relaxation ($\tau$)**: 0.51 - 2.0. Values near 0.5 are highly unstable; 0.6 is the recommended minimum for engineering work.
 
-**Conclusion**: The force implementation is physically credible and numerically sound for Phase C.
